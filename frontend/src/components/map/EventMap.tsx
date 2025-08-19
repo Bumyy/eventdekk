@@ -14,8 +14,8 @@ import Map, {
   MapRef,
   NavigationControl,
   FullscreenControl,
-} from "react-map-gl";
-import type { LayerProps } from "react-map-gl";
+} from "react-map-gl/maplibre";
+import type { LayerProps } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css"; // Import MapLibre CSS
 import { format } from "date-fns";
 import bbox from "@turf/bbox"; // For calculating bounding box
@@ -178,6 +178,7 @@ const EventMap: React.FC<EventMapProps> = ({
   const [airportData, setAirportData] = useState<Map<string, Airport>>(
     new Map()
   );
+
   const [loadingAirports, setLoadingAirports] = useState(true);
   const [airportError, setAirportError] = useState<string | null>(null);
 
@@ -188,7 +189,7 @@ const EventMap: React.FC<EventMapProps> = ({
     latitude: number;
   } | null>(null);
 
-  const [initialViewState, setInitialViewState] = useState({
+  const [initialViewState] = useState({
     longitude: -98.5795, // Centered on US initially
     latitude: 39.8283,
     zoom: 3,
