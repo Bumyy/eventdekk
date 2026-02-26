@@ -1,6 +1,5 @@
-// src/pages/AuthCallbackPage.tsx
 import React, { useEffect } from "react";
-import { useAuth } from "@/components/AuthProvider"; // Assuming useAuth is set up correctly
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 

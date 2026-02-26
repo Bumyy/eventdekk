@@ -1,14 +1,12 @@
 import { useState, useMemo } from "react";
 import { EventCard } from "@/components/EventCard";
 import EventDialog from "@/components/EventDialog";
-import { Event } from "@/module_bindings/event_type";
 import {
   useEvents,
   useSubEvents,
   useDiscoveryEvents,
   useGroups,
 } from "@/hooks/spacetimeHooks";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import {
   differenceInDays,
   differenceInHours,
@@ -19,14 +17,17 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
+import { Event as SpacetimeEvent } from "../module_bindings";
+import { Infer } from "spacetimedb";
+
+type EventType = Infer<typeof SpacetimeEvent>;
 
 const Home = () => {
-  const { connection } = useSpacetime();
-  const events = useEvents(connection);
-  const subEvents = useSubEvents(connection);
-  const discoveryEvents = useDiscoveryEvents(connection);
-  const groups = useGroups(connection);
-  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const events = useEvents();
+  const subEvents = useSubEvents();
+  const discoveryEvents = useDiscoveryEvents();
+  const groups = useGroups();
+  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -115,7 +116,7 @@ const Home = () => {
     groupMap,
   ]);
 
-  const isLive = (event: Event) => {
+  const isLive = (event: EventType) => {
     const now = new Date();
     const eventDate = event.startTime.toDate();
     const hoursSinceStart = differenceInHours(now, eventDate);
@@ -124,7 +125,7 @@ const Home = () => {
 
   const navigate = useNavigate();
 
-  const handleEventClick = (event: Event) => {
+  const handleEventClick = (event: EventType) => {
     if (isLive(event)) {
       navigate(`/live-event/${event.eventId}`);
       return;
@@ -133,7 +134,7 @@ const Home = () => {
     setDialogOpen(true);
   };
 
-  const getEventCountdown = (event: Event) => {
+  const getEventCountdown = (event: EventType) => {
     const eventDate = event.startTime.toDate();
     const daysLeft = differenceInDays(eventDate, now);
     const hoursLeft = differenceInHours(eventDate, now);

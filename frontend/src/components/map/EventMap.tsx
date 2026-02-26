@@ -1,4 +1,3 @@
-// src/components/map/EventMap.tsx
 import React, {
   useState,
   useEffect,
@@ -21,15 +20,18 @@ import { format } from "date-fns";
 import bbox from "@turf/bbox"; // For calculating bounding box
 import { WebMercatorViewport } from "@deck.gl/core"; // For fitting bounds
 
-import { SubEvent } from "@/module_bindings/sub_event_type";
-import { FlightSignup } from "@/module_bindings/flight_signup_type";
-import { Group } from "@/module_bindings/group_type";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
-import { Timestamp } from "@clockworklabs/spacetimedb-sdk";
+import type { SubEvent } from "@/module_bindings";
+import type { FlightSignup } from "@/module_bindings";
+import type { Group } from "@/module_bindings";
+import { SubEventType } from "@/module_bindings";
+import { Timestamp, Infer } from "spacetimedb";
 import { useTheme } from "../ThemeProvider";
 import { fetchAirportsByIcao } from "../../services/airportService";
 
-// Interfaces (Airport, Flight, EventMapProps - unchanged)
+type SubEvent = Infer<typeof SubEvent>;
+type FlightSignup = Infer<typeof FlightSignup>;
+type Group = Infer<typeof Group>;
+
 interface Airport {
   id: number;
   icao: string;
@@ -592,7 +594,8 @@ const EventMap: React.FC<EventMapProps> = ({
     }> = ({ title, children }) => (
       <div style={popupStyle}>
         {" "}
-        <h3 className="font-semibold text-base mb-2">{title}</h3> {children}{" "}
+        <h3 className="font-semibold text-base mb-2">{title}</h3>{" "}
+        {children}{" "}
       </div>
     );
 

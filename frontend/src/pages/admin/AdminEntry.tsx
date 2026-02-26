@@ -2,52 +2,50 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { Building2 } from "lucide-react";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { useGroups, useGroupMemberships } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
+import { useSpacetimeDB } from "spacetimedb/react";
 
 export default function AdminEntry() {
   const navigate = useNavigate();
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
-  const memberships = useGroupMemberships(connection);
+  const { identity } = useSpacetimeDB();
+  const groups = useGroups();
+  const memberships = useGroupMemberships();
 
   // Filter and map groups to include role information
   const userGroups = groups
     .filter((group) => {
       // Check if user is CEO or a member
       const isCEO =
-        connection?.identity &&
-        group.ceoIdentity.toHexString() === connection.identity.toHexString();
+        identity && group.ceoIdentity.toHexString() === identity.toHexString();
       const isMember = memberships.some(
         (m) =>
           m.groupId === group.groupId &&
-          m.userIdentity.toHexString() === connection?.identity?.toHexString()
+          m.userIdentity.toHexString() === identity?.toHexString()
       );
       return isCEO || isMember;
     })
     .map((group) => {
       const isCEO =
-        connection?.identity &&
-        group.ceoIdentity.toHexString() === connection.identity.toHexString();
+        identity && group.ceoIdentity.toHexString() === identity.toHexString();
       const membership = memberships.find(
         (m) =>
           m.groupId === group.groupId &&
-          m.userIdentity.toHexString() === connection?.identity?.toHexString()
+          m.userIdentity.toHexString() === identity?.toHexString()
       );
 
       return {
         ...group,
         role: isCEO
-          ? { tag: "Ceo" as const }
+          ? { tag: "CEO" as const }
           : membership?.permissionLevel || { tag: "Member" as const },
         memberCount: memberships.filter((m) => m.groupId === group.groupId)
           .length,
       };
     });
 
-  const canManageGroup = (role: { tag: "Ceo" | "Staff" | "Member" }) => {
-    return role.tag === "Ceo" || role.tag === "Staff";
+  const canManageGroup = (role: { tag: "CEO" | "Staff" | "Member" }) => {
+    return role.tag === "CEO" || role.tag === "Staff";
   };
 
   return (

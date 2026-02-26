@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import {
   useEvents,
   useSubEvents,
@@ -18,7 +17,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Separator } from "@/components/ui/separator";
 import {
   Dialog,
   DialogContent,
@@ -65,20 +63,25 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon2,
 } from "lucide-react";
-import { Timestamp } from "@clockworklabs/spacetimedb-sdk";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
-import { Event } from "@/module_bindings/event_type";
+import { Timestamp } from "spacetimedb";
+import { Event, SubEventType } from "@/module_bindings";
 import EventStatus from "@/module_bindings/event_status_type";
 import { uploadImage } from "@/api/apiService";
+import { Infer } from "spacetimedb";
+import { useSpacetimeDB } from "spacetimedb/react";
+
+type Event = Infer<typeof Event>;
+type SubEventType = Infer<typeof SubEventType>;
 
 export default function EditEvent() {
   const { eventId, groupId } = useParams();
   const navigate = useNavigate();
-  const { connection } = useSpacetime();
-  const events = useEvents(connection);
-  const subEvents = useSubEvents(connection);
-  const groups = useGroups(connection);
-  const flightSignups = useFlightSignups(connection);
+  const events = useEvents();
+  const subEvents = useSubEvents();
+  const groups = useGroups();
+  const flightSignups = useFlightSignups();
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
 
   // Event data states
   const [name, setName] = useState("");
@@ -197,12 +200,15 @@ export default function EditEvent() {
   );
 
   // Group signups by sub-event
-  const signupsBySubEvent = eventSubEvents.reduce((acc, subEvent) => {
-    acc[subEvent.subEventId.toString()] = eventSignups.filter(
-      (signup) => signup.subEventId === subEvent.subEventId
-    );
-    return acc;
-  }, {} as Record<string, typeof flightSignups>);
+  const signupsBySubEvent = eventSubEvents.reduce(
+    (acc, subEvent) => {
+      acc[subEvent.subEventId.toString()] = eventSignups.filter(
+        (signup) => signup.subEventId === subEvent.subEventId
+      );
+      return acc;
+    },
+    {} as Record<string, typeof flightSignups>
+  );
 
   // Load existing own flight signups
   useEffect(() => {
@@ -237,7 +243,7 @@ export default function EditEvent() {
           arrivalTime: signup.desiredArrivalTime
             ? format(signup.desiredArrivalTime.toDate(), "yyyy-MM-dd'T'HH:mm")
             : "",
-          route: signup.route || "",
+          route: signup.routeDetails || "",
           customDepartureIcao: signup.departureIcao || "",
           customArrivalIcao: signup.arrivalIcao || "",
         };
@@ -315,19 +321,15 @@ export default function EditEvent() {
       );
 
       // Determine which to add and which to remove
-      const existingSubEventIds = existingSignups.map(
-        (signup) => signup.subEventId
-      );
-      const subEventsToAdd = selectedOwnSubEvents.filter(
-        (id) => !existingSubEventIds.includes(id)
-      );
       const subEventsToRemove = existingSignups.filter(
         (signup) => !selectedOwnSubEvents.includes(signup.subEventId)
       );
 
       // Remove signups that are no longer selected
       for (const signup of subEventsToRemove) {
-        await connection.reducers.deleteFlightSignup(signup.signupId);
+        await connection.reducers.deleteFlightSignup({
+          signupId: signup.signupId,
+        });
       }
 
       // Add new signups and update existing ones
@@ -381,29 +383,29 @@ export default function EditEvent() {
 
         if (existingSignup) {
           // Update existing signup
-          connection.reducers.updateFlightSignup(
-            existingSignup.signupId,
-            departureIcao,
-            arrivalIcao,
-            details.route || undefined,
-            details.callsign || null,
-            details.aircraftType || null,
-            departureTime || undefined,
-            arrivalTime || undefined
-          );
+          connection.reducers.updateFlightSignup({
+            signupId: existingSignup.signupId,
+            departureIcao: departureIcao,
+            arrivalIcao: arrivalIcao,
+            routeDetails: details.route || undefined,
+            callsign: details.callsign || null,
+            aircraftType: details.aircraftType || null,
+            desiredDepartureTime: departureTime || undefined,
+            desiredArrivalTime: arrivalTime || undefined,
+          });
         } else {
           // Add new signup
-          connection.reducers.signupForFlight(
-            subEventId,
-            BigInt(groupId),
-            departureIcao,
-            arrivalIcao,
-            details.route || undefined,
-            details.callsign || null,
-            details.aircraftType || null,
-            departureTime || undefined,
-            arrivalTime || undefined
-          );
+          connection.reducers.signupForFlight({
+            subEventId: subEventId,
+            groupId: BigInt(groupId),
+            departureIcao: departureIcao,
+            arrivalIcao: arrivalIcao,
+            routeDetails: details.route || undefined,
+            callsign: details.callsign || null,
+            aircraftType: details.aircraftType || null,
+            desiredDepartureTime: departureTime || undefined,
+            desiredArrivalTime: arrivalTime || undefined,
+          });
         }
       }
 
@@ -449,16 +451,16 @@ export default function EditEvent() {
     }
 
     try {
-      connection.reducers.updateEvent(
-        BigInt(eventId),
-        name,
-        description,
-        startTime ? Timestamp.fromDate(startTime) : null,
-        endTime ? Timestamp.fromDate(endTime) : null,
-        ifcEventLink || null,
-        finalBannerUrl || null,
-        EventStatus.Published
-      );
+      connection.reducers.updateEvent({
+        eventId: BigInt(eventId),
+        name: name,
+        description: description,
+        startTime: startTime ? Timestamp.fromDate(startTime) : null,
+        endTime: endTime ? Timestamp.fromDate(endTime) : null,
+        ifcEventLink: ifcEventLink || null,
+        bannerUrl: finalBannerUrl || null,
+        status: EventStatus.Published,
+      });
 
       // Update local state with the new banner URL
       setBannerUrl(finalBannerUrl);
@@ -494,25 +496,29 @@ export default function EditEvent() {
     }
 
     try {
-      connection.reducers.addSubEvent(
-        BigInt(eventId),
-        subEventForm.name,
-        subEventForm.description,
-        subEventType,
-        Timestamp.fromDate(subEventForm.startTime),
-        Timestamp.fromDate(subEventForm.endTime),
-        subEventForm.type === "FlyIn" || subEventForm.type === "FlyOut"
-          ? subEventForm.hubIcao
-          : undefined,
-        subEventForm.type === "GroupFlight"
-          ? subEventForm.departureIcao
-          : undefined,
-        subEventForm.type === "GroupFlight"
-          ? subEventForm.arrivalIcao
-          : undefined,
-        subEventForm.type === "GroupFlight" ? subEventForm.route : undefined,
-        subEventForm.notes || undefined
-      );
+      connection.reducers.addSubEvent({
+        eventId: BigInt(eventId),
+        name: subEventForm.name,
+        description: subEventForm.description,
+        subEventType: subEventType,
+        scheduledStartTime: Timestamp.fromDate(subEventForm.startTime),
+        scheduledEndTime: Timestamp.fromDate(subEventForm.endTime),
+        hubIcao:
+          subEventForm.type === "FlyIn" || subEventForm.type === "FlyOut"
+            ? subEventForm.hubIcao
+            : undefined,
+        groupFlightDepartureIcao:
+          subEventForm.type === "GroupFlight"
+            ? subEventForm.departureIcao
+            : undefined,
+        groupFlightArrivalIcao:
+          subEventForm.type === "GroupFlight"
+            ? subEventForm.arrivalIcao
+            : undefined,
+        groupFlightRoute:
+          subEventForm.type === "GroupFlight" ? subEventForm.route : undefined,
+        notes: subEventForm.notes || undefined,
+      });
 
       setShowAddSubEventDialog(false);
       setSubEventForm({
@@ -542,7 +548,7 @@ export default function EditEvent() {
   const handleDeleteSubEvent = (subEventId: bigint) => {
     if (!connection) return;
     if (confirm("Are you sure you want to delete this sub-event?")) {
-      connection.reducers.deleteSubEvent(subEventId);
+      connection.reducers.deleteSubEvent({ subEventId: subEventId });
       toast.success("Sub-event deleted", {
         description: "The sub-event was deleted successfully.",
       });
@@ -567,7 +573,10 @@ export default function EditEvent() {
 
     Promise.all(
       selectedGroups.map((group) =>
-        connection.reducers.inviteGroupToEvent(eventIdBigInt, group.id)
+        connection.reducers.inviteGroupToEvent({
+          eventId: eventIdBigInt,
+          invitedGroupId: group.id,
+        })
       )
     )
       .then(() => {
@@ -1262,10 +1271,8 @@ export default function EditEvent() {
                             const group = groups.find(
                               (g) => g.groupId === signup.groupId
                             );
-                            const groupName = group?.name || "Unknown Group";
                             const groupTag = group?.tag || "N/A";
                             const groupLogo = group?.logoUrl;
-                            const groupColor = group?.color || "gray";
                             const isAccepted = !!signup.desiredDepartureTime;
 
                             // Format departure/arrival times if available
@@ -1425,7 +1432,10 @@ export default function EditEvent() {
                     <DropdownMenuContent className="w-[300px]" align="start">
                       <ScrollArea className="h-[300px]">
                         {groups
-                          ?.filter((group) => group.groupId !== BigInt(groupId)) // Don't include current group
+                          ?.filter(
+                            (group) =>
+                              groupId && group.groupId !== BigInt(groupId)
+                          ) // Don't include current group
                           .map((group) => (
                             <DropdownMenuItem
                               key={group.groupId.toString()}
@@ -1645,8 +1655,8 @@ export default function EditEvent() {
                                       {isGroupFlight
                                         ? "Departure Airport (Fixed)"
                                         : isFlyOut
-                                        ? "Departure Airport (Hub)"
-                                        : "Departure Airport"}
+                                          ? "Departure Airport (Hub)"
+                                          : "Departure Airport"}
                                     </Label>
                                     <Input
                                       id={`own-departure-icao-${subEvent.subEventId}`}
@@ -1655,10 +1665,10 @@ export default function EditEvent() {
                                           ? subEvent.groupFlightDepartureIcao ||
                                             ""
                                           : isFlyOut
-                                          ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customDepartureIcao || ""
+                                            ? subEvent.hubIcao || ""
+                                            : ownFlightDetails[
+                                                subEvent.subEventId.toString()
+                                              ]?.customDepartureIcao || ""
                                       }
                                       onChange={(e) =>
                                         updateOwnFlightDetail(
@@ -1699,8 +1709,8 @@ export default function EditEvent() {
                                       {isGroupFlight
                                         ? "Arrival Airport (Fixed)"
                                         : isFlyIn
-                                        ? "Arrival Airport (Hub)"
-                                        : "Arrival Airport"}
+                                          ? "Arrival Airport (Hub)"
+                                          : "Arrival Airport"}
                                     </Label>
                                     <Input
                                       id={`own-arrival-icao-${subEvent.subEventId}`}
@@ -1709,10 +1719,10 @@ export default function EditEvent() {
                                           ? subEvent.groupFlightArrivalIcao ||
                                             ""
                                           : isFlyIn
-                                          ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customArrivalIcao || ""
+                                            ? subEvent.hubIcao || ""
+                                            : ownFlightDetails[
+                                                subEvent.subEventId.toString()
+                                              ]?.customArrivalIcao || ""
                                       }
                                       onChange={(e) =>
                                         updateOwnFlightDetail(

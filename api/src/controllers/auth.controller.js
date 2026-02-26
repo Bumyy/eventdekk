@@ -22,70 +22,84 @@ class AuthController {
 
   // --- OAuth Callbacks ---
   // Provider redirects back here after user authorizes/denies
-  googleCallback(req, res, next) {
+  googleCallback = (req, res, next) => {
+    // Helper to build callback URL
+    const getCallbackUrl = (tokenOrError, type = "token") => {
+      const baseUrl =
+        process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
+      const callbackPath = baseUrl.includes("/auth/callback")
+        ? ""
+        : "/auth/callback";
+      const param =
+        type === "token"
+          ? `token=${encodeURIComponent(tokenOrError)}`
+          : `error=${tokenOrError}`;
+      return `${baseUrl}${callbackPath}?${param}`;
+    };
+
     passport.authenticate(
       "google",
       {
-        failureRedirect: `${process.env.REDIRECT_URI}?error=google_failed`, // Redirect on failure
-        session: false, // We are not using sessions for login state persistence
+        failureRedirect: getCallbackUrl("google_failed", "error"),
+        session: false,
       },
       (err, data, info) => {
-        // Custom callback to handle the result
         if (err) {
           console.error("Google Auth Error:", err);
-          // Redirect to a frontend page showing a generic error
-          return res.redirect(`${process.env.REDIRECT_URI}?error=auth_error`);
+          return res.redirect(getCallbackUrl("auth_error", "error"));
         }
         if (!data || !data.sdbToken) {
-          // Authentication failed (e.g., user denied access on Google's page)
           console.log(
             "Google Auth Failed:",
             info?.message || "No SDB token returned."
           );
-          return res.redirect(
-            `${process.env.REDIRECT_URI}?error=google_failed`
-          );
+          return res.redirect(getCallbackUrl("google_failed", "error"));
         }
 
         console.log("Google Auth Success. Redirecting with token.");
-        res.redirect(
-          `${process.env.REDIRECT_URI}?token=${encodeURIComponent(
-            data.sdbToken
-          )}`
-        ); // Redirect to a success handler page/route
+        res.redirect(getCallbackUrl(data.sdbToken, "token"));
       }
     )(req, res, next);
-  }
+  };
 
-  discordCallback(req, res, next) {
+  discordCallback = (req, res, next) => {
+    // Helper to build callback URL
+    const getCallbackUrl = (tokenOrError, type = "token") => {
+      const baseUrl =
+        process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
+      const callbackPath = baseUrl.includes("/auth/callback")
+        ? ""
+        : "/auth/callback";
+      const param =
+        type === "token"
+          ? `token=${encodeURIComponent(tokenOrError)}`
+          : `error=${tokenOrError}`;
+      return `${baseUrl}${callbackPath}?${param}`;
+    };
+
     passport.authenticate(
       "discord",
       {
-        failureRedirect: `${process.env.REDIRECT_URI}?error=discord_failed`,
+        failureRedirect: getCallbackUrl("discord_failed", "error"),
         session: false,
       },
       (err, data, info) => {
-        // Custom callback
         if (err) {
           console.error("Discord Auth Error:", err);
-          return res.redirect(`${process.env.REDIRECT_URI}?error=auth_error`);
+          return res.redirect(getCallbackUrl("auth_error", "error"));
         }
         if (!data || !data.sdbToken) {
           console.log(
             "Discord Auth Failed:",
             info?.message || "No SDB token returned."
           );
-          return res.redirect("/login?error=discord_failed");
+          return res.redirect(getCallbackUrl("discord_failed", "error"));
         }
         console.log("Discord Auth Success. Redirecting with token.");
-        res.redirect(
-          `${process.env.REDIRECT_URI}?token=${encodeURIComponent(
-            data.sdbToken
-          )}`
-        );
+        res.redirect(getCallbackUrl(data.sdbToken, "token"));
       }
     )(req, res, next);
-  }
+  };
 
   // --- Username/Password Registration ---
   async register(req, res) {
@@ -146,86 +160,6 @@ class AuthController {
           .json({ message: "Login successful.", token: data.sdbToken });
       }
     )(req, res, next);
-  }
-
-  // --- Simple Success Route ---
-  // A route to redirect to after successful OAuth that can pass the token
-  // In a real app, this might be a frontend route '/login/success'
-  handleSuccess(req, res) {
-    const token = req.query.token;
-    if (!token) {
-      return res
-        .status(400)
-        .send("Authentication succeeded but token is missing.");
-    }
-    // Send a simple response or render a page that communicates the token to the client-side app
-    res.send(`
-            <h1>Authentication Successful</h1>
-            <p>Your SpacetimeDB Token:</p>
-            <pre id="token" style="word-wrap: break-word; white-space: pre-wrap; background-color: #f0f0f0; padding: 10px; border-radius: 5px;">${token}</pre>
-            <p>In a real application, JavaScript would likely grab this token and store it (e.g., in localStorage or memory) and then redirect the user.</p>
-            <script>
-                // Example: Storing token in localStorage and redirecting
-                try {
-                    const token = document.getElementById('token').textContent;
-                    localStorage.setItem('sdb_token', token);
-                    // Redirect to the main app page after a short delay
-                     // window.location.href = '/app'; // Or wherever your app lives
-                     console.log('Token stored in localStorage:', token);
-                     alert('Login successful! Token stored in localStorage (check console). You would typically redirect now.');
-                } catch (e) {
-                    console.error('Could not access localStorage or process token.', e);
-                    alert('Login succeeded, but could not store token automatically. Please copy the token above.');
-                }
-            </script>
-        `);
-  }
-
-  // --- Placeholder Login Page Route ---
-  // You'd likely serve a real HTML page here
-  serveLoginPage(req, res) {
-    const error = req.query.error;
-    let errorMessage = "";
-    if (error) {
-      errorMessage = `<p style="color: red;">Login failed: ${error.replace(
-        /_/g,
-        " "
-      )}</p>`;
-    }
-    res.send(`
-            <h1>Login</h1>
-            ${errorMessage}
-            <h2>Login with Username/Password</h2>
-            <form action="/auth/login" method="post">
-                <div>
-                    <label for="username">Username:</label>
-                    <input type="text" id="username" name="username" required>
-                </div>
-                <div>
-                    <label for="password">Password:</label>
-                    <input type="password" id="password" name="password" required>
-                </div>
-                <button type="submit">Login</button>
-            </form>
-            <hr>
-             <h2>Register Username/Password</h2>
-             <form action="/auth/register" method="post">
-                <div>
-                    <label for="reg_username">Username:</label>
-                    <input type="text" id="reg_username" name="username" required>
-                </div>
-                <div>
-                    <label for="reg_password">Password:</label>
-                    <input type="password" id="reg_password" name="password" required>
-                </div>
-                <button type="submit">Register</button>
-            </form>
-            <hr>
-            <h2>Login with OAuth</h2>
-            <a href="/auth/google"><button>Login with Google</button></a>
-            <br><br>
-            <a href="/auth/discord"><button>Login with Discord</button></a>
-        `);
   }
 }
 

@@ -1,28 +1,29 @@
 import { Card } from "@/components/ui/card";
-import { Event } from "@/module_bindings/event_type";
 import { format } from "date-fns";
 import { Clock } from "lucide-react";
 import { useGroups } from "@/hooks/spacetimeHooks";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { cn } from "@/lib/utils";
-import { Link } from "react-router-dom";
-import { differenceInHours } from "date-fns";
+import { Infer } from "spacetimedb";
+import { Event } from "@/module_bindings";
+
+type Event = Infer<typeof Event>;
 
 interface EventCardProps {
   event: Event;
 }
 
 export const EventCard = ({ event }: EventCardProps) => {
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
+  const groups = useGroups();
 
   // Get host group information
   const hostGroup = groups?.find((g) => g.groupId === event.creatorGroupId);
   const groupColor = hostGroup?.color || "#000000";
 
   return (
-    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 p-0">
+    <Card
+      className="group overflow-hidden hover:shadow-lg transition-all duration-300 p-0 border-l-4"
+      style={{ borderLeftColor: groupColor }}
+    >
       {/* Event Image with Info Overlay */}
       <div className="relative w-full overflow-hidden aspect-video">
         <img
@@ -43,13 +44,19 @@ export const EventCard = ({ event }: EventCardProps) => {
           <h3 className="font-semibold text-sm line-clamp-1">{event.name}</h3>
 
           {/* Host information */}
-          <div className="flex items-center gap-1 text-xs text-white/70">
+          <div
+            className="flex items-center gap-1 text-xs text-white/70 rounded px-1 -mx-1"
+            style={{ backgroundColor: `${groupColor}20` }}
+          >
             <Avatar className="h-4 w-4">
               <AvatarImage
                 src={hostGroup?.logoUrl}
                 alt={hostGroup?.name || "Host"}
               />
-              <AvatarFallback className="text-[8px] bg-black/50">
+              <AvatarFallback
+                className="text-[8px]"
+                style={{ backgroundColor: groupColor }}
+              >
                 {hostGroup?.tag || hostGroup?.name?.substring(0, 2) || "H"}
               </AvatarFallback>
             </Avatar>

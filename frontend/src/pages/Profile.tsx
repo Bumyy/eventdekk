@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { useUsers } from "@/hooks/spacetimeHooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +11,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Upload, Globe } from "lucide-react"; // Removed Search icon
+import { Loader2, Upload, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { uploadImage } from "@/api/apiService";
 import {
@@ -24,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useSpacetimeDB } from "spacetimedb/react";
 
 // More comprehensive timezone list organized by region
 const TIMEZONE_GROUPS = {
@@ -113,8 +113,9 @@ const TIMEZONE_GROUPS = {
 const ALL_TIMEZONES = Object.values(TIMEZONE_GROUPS).flat();
 
 const Profile = () => {
-  const { connection, identity } = useSpacetime();
-  const users = useUsers(connection);
+  const { getConnection, identity } = useSpacetimeDB();
+  const connection = getConnection();
+  const users = useUsers();
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -225,12 +226,12 @@ const Profile = () => {
     }
 
     try {
-      connection.reducers.setUserProfile(
-        formData.displayName,
-        uploadedImageUrl,
-        formData.ifcCallsignPrefix,
-        formData.timezone || detectUserTimezone()
-      );
+      connection.reducers.setUserProfile({
+        displayName: formData.displayName,
+        ifcProfileUrl: uploadedImageUrl,
+        ifcCallsignPrefix: formData.ifcCallsignPrefix,
+        timezone: formData.timezone || detectUserTimezone(),
+      });
 
       setFormData((prev) => ({
         ...prev,

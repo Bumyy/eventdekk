@@ -20,9 +20,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  Upload,
   Loader2,
-  Image as ImageIcon,
 } from "lucide-react";
 import {
   Popover,
@@ -33,9 +31,12 @@ import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Plane } from "lucide-react";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
+import { SubEventType } from "@/module_bindings";
 import { uploadImage } from "@/api/apiService";
 import { toast } from "sonner";
+import { Infer } from "spacetimedb";
+
+type SubEventType = Infer<typeof SubEventType>;
 
 interface SubEventFormData {
   subEventType: SubEventType;
@@ -475,8 +476,8 @@ export function EventTypeDialog({
                                   value === "GroupFlight"
                                     ? ({ tag: "GroupFlight" } as SubEventType)
                                     : value === "FlyIn"
-                                    ? ({ tag: "FlyIn" } as SubEventType)
-                                    : ({ tag: "FlyOut" } as SubEventType),
+                                      ? ({ tag: "FlyIn" } as SubEventType)
+                                      : ({ tag: "FlyOut" } as SubEventType),
                               })
                             }
                             className="grid grid-cols-3 gap-4"

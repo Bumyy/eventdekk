@@ -7,7 +7,6 @@ import {
   differenceInMinutes,
   startOfDay,
   endOfDay,
-  isWithinInterval,
 } from "date-fns";
 import {
   Dialog,
@@ -16,29 +15,25 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Event } from "@/module_bindings/event_type";
-import { SubEvent } from "@/module_bindings/sub_event_type";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  CalendarIcon,
-  Clock,
-  ExternalLink,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Group } from "@/module_bindings/group_type";
+import { Group, Event, SubEvent } from "@/module_bindings";
 import { cn } from "@/lib/utils";
 import { areIntervalsOverlapping } from "date-fns";
+import { Infer } from "spacetimedb";
+
+type Event = Infer<typeof Event>;
+type SubEvent = Infer<typeof SubEvent>;
+type Group = Infer<typeof Group>;
 
 interface DayCalendarDialogProps {
   date: Date;
-  events: Event[];
-  subEvents?: SubEvent[];
-  groups: Group[];
+  events: readonly Event[];
+  subEvents?: readonly SubEvent[];
+  groups: readonly Group[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onEventClick: (event: Event) => void;
@@ -57,12 +52,14 @@ export default function DayCalendarDialog({
 }: DayCalendarDialogProps) {
   // Update currentDate when initialDate changes to fix the day selection issue
   const [currentDate, setCurrentDate] = useState(initialDate);
-  const [currentEvents, setCurrentEvents] = useState<Event[]>(initialEvents);
+  const [currentEvents, setCurrentEvents] = useState<Event[]>([
+    ...initialEvents,
+  ]);
 
   useEffect(() => {
     if (initialDate) {
       setCurrentDate(new Date(initialDate));
-      setCurrentEvents(initialEvents);
+      setCurrentEvents([...initialEvents]);
     }
   }, [initialDate, initialEvents]);
 
@@ -276,10 +273,10 @@ export default function DayCalendarDialog({
                       {hour === 0
                         ? "12am"
                         : hour === 12
-                        ? "12pm"
-                        : hour > 12
-                        ? `${hour - 12}pm`
-                        : `${hour}am`}
+                          ? "12pm"
+                          : hour > 12
+                            ? `${hour - 12}pm`
+                            : `${hour}am`}
                     </div>
                     <div className="flex-1 border-t relative">
                       {/* Hour line */}
@@ -379,13 +376,11 @@ export default function DayCalendarDialog({
                           borderLeft: `4px solid ${creatorGroup.color}`,
                           // Set default background color with 10% opacity
                           backgroundColor: `${creatorGroup.color}10`,
-                          // Use CSS variable for hover effect
-                          "--hover-bg": `${creatorGroup.color}30`,
                         }}
                         onClick={() => onEventClick(event)}
                         // Use CSS-in-JS for hover effect based on the dynamic color
                         onMouseEnter={(e) =>
-                          (e.currentTarget.style.backgroundColor = `var(--hover-bg)`)
+                          (e.currentTarget.style.backgroundColor = `${creatorGroup.color}30`)
                         }
                         onMouseLeave={(e) =>
                           (e.currentTarget.style.backgroundColor = `${creatorGroup.color}10`)

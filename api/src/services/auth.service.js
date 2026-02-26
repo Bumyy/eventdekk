@@ -1,17 +1,23 @@
 const UserModel = require("../models/user.model");
 const AuthMethodModel = require("../models/auth.method.model");
 const bcrypt = require("bcrypt");
-const fetch = require("node-fetch"); // Or axios if you prefer
 require("dotenv").config();
 
 const SALT_ROUNDS = 10;
 
 async function generateSpacetimeDBToken() {
-  console.log("Simulating SpacetimeDB token generation...");
+  console.log("Generating SpacetimeDB token...");
+  console.log("URL:", process.env.SPACETIME_DB_IDENTITY_URL);
+
+  // Use global fetch (Node.js 18+) or import node-fetch properly
   const response = await fetch(process.env.SPACETIME_DB_IDENTITY_URL, {
     method: "POST",
   });
-  if (!response.ok) throw new Error("Failed to generate SDB token");
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("STDB token response error:", errorText);
+    throw new Error("Failed to generate SDB token");
+  }
   const data = await response.json();
   console.log("Generated new STDB token: " + data.token);
 

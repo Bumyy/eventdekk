@@ -1,24 +1,19 @@
-// src/components/Navigation.tsx
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import {
   Calendar,
   Home,
-  Users, // Keep if public profile list exists
   Shield,
   LogOut,
-  Settings,
-  User,
-  LogIn, // Import LogIn icon
-  Loader2, // Import Loader
+  User as UserIcon,
+  LogIn,
+  Loader2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
-
 import eventdekkLogo from "../assets/eventdekk_logo.png";
 import { cn } from "@/lib/utils";
-import { useSpacetime } from "@/components/SpacetimeProvider";
-import { useUsers } from "@/hooks/spacetimeHooks"; // Assuming this hook exists and works
+import { useUsers } from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -28,56 +23,60 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-// Import useAuth
-import { useAuth } from "@/components/AuthProvider";
-import { SpacetimeDbClient } from "@clockworklabs/spacetimedb-sdk"; // Needed for User type if used
+import { useAuth } from "@/contexts/AuthContext";
+import { Infer } from "spacetimedb";
+import { User } from "../module_bindings";
+import { useSpacetimeDB } from "spacetimedb/react";
 
-// Define User type if not globally available (adjust based on your actual type)
-type SpacetimeUser = InstanceType<typeof SpacetimeDbClient.DbSets.User>;
+type User = Infer<typeof User>;
 
 const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  // Use both Auth and Spacetime contexts
+
   const { isAuthenticated, logout, isLoading: isAuthLoading } = useAuth();
-  const { connection, identity, isConnected, isInitialized } = useSpacetime();
-  const users = useUsers(connection); // This hook likely needs the connection
 
-  const [currentUser, setCurrentUser] = useState<SpacetimeUser | undefined>(
-    undefined
-  );
+  const { identity, isActive: isConnected } = useSpacetimeDB();
 
-  // Update currentUser when users array or identity changes AND connection is ready
+  const users = useUsers();
+  const [currentUser, setCurrentUser] = useState<User | undefined>(undefined);
+
   useEffect(() => {
-    if (isConnected && identity && users.length > 0) {
+    if (isConnected && identity) {
       const foundUser = users.find(
         (u) => u.identity.toHexString() === identity.toHexString()
       );
-      setCurrentUser(foundUser);
-      console.log(
-        "Navigation: Found current user in Spacetime:",
-        foundUser?.displayName
-      );
+
+      console.log(users);
+
+      if (foundUser) {
+        setCurrentUser(foundUser);
+      } else {
+        console.warn(
+          "Navigation: Authenticated, but no User row found in DB for this identity."
+        );
+        // This is a common case if your backend hasn't run a 'create_user' reducer yet.
+        setCurrentUser(undefined);
+      }
     } else {
-      console.log(
-        "Navigation: Clearing current user (disconnected or no identity/users)."
-      );
-      setCurrentUser(undefined); // Clear user if disconnected or identity is lost
+      setCurrentUser(undefined);
     }
-  }, [users, identity, isConnected]); // Depend on connection status too
+  }, [users, identity, isConnected]);
 
   const handleLogout = async () => {
-    await logout(); // AuthContext handles redirect
+    await logout();
   };
 
-  // Determine overall loading state (auth check OR spacetime connection/init)
-  const isLoading =
-    isAuthLoading || (isAuthenticated && (!isConnected || !isInitialized));
+  const isLoading = isAuthLoading || (isAuthenticated && !isConnected);
+
+  const getInitials = (name?: string) => {
+    return name ? name.slice(0, 2).toUpperCase() : "??";
+  };
 
   return (
     <header className="sticky px-2 top-0 z-30 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="flex h-14 items-center">
-        {/* Logo and Public Nav (mostly unchanged) */}
+        {/* --- Left Side (Logo & Links) --- */}
         <div className="mr-4 flex">
           <Link to="/" className="mr-4 flex items-center space-x-2">
             <img
@@ -125,28 +124,26 @@ const Navigation = () => {
           </nav>
         </div>
 
-        {/* Right Side: Theme Toggle, Auth Buttons/User Menu */}
+        {/* --- Right Side (User & Actions) --- */}
         <div className="flex flex-1 items-center justify-between space-x-2">
-          <div className="w-full flex-1">{/* Search placeholder */}</div>
+          <div className="w-full flex-1"></div>
           <nav className="flex items-center space-x-2">
             <ThemeToggle />
 
-            {/* Loading Indicator */}
+            {/* Global Loader (Connecting/Syncing) */}
             {isLoading && (
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             )}
 
-            {/* Auth Buttons / User Menu */}
-            {!isLoading && ( // Don't show buttons while initially loading
+            {!isLoading && (
               <>
                 {!isAuthenticated ? (
-                  // Show Login Button if not authenticated
                   <Button variant="outline" onClick={() => navigate("/login")}>
                     <LogIn className="mr-2 h-4 w-4" />
                     Login
                   </Button>
-                ) : currentUser ? (
-                  // Show User Dropdown if authenticated and currentUser data is available
+                ) : (
+                  /* Authenticated State */
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button
@@ -154,15 +151,14 @@ const Navigation = () => {
                         className="relative h-8 w-8 rounded-full"
                       >
                         <Avatar className="h-8 w-8">
-                          <AvatarImage
-                            src={currentUser.ifcProfileUrl || undefined}
-                          />
+                          {currentUser?.ifcProfileUrl && (
+                            <AvatarImage src={currentUser.ifcProfileUrl} />
+                          )}
                           <AvatarFallback>
-                            {currentUser.displayName
-                              ? currentUser.displayName
-                                  .slice(0, 2)
-                                  .toUpperCase()
-                              : "???"}
+                            {/* If we have a user object, show initials. If null (record missing), show '??' */}
+                            {currentUser
+                              ? getInitials(currentUser.displayName)
+                              : "??"}
                           </AvatarFallback>
                         </Avatar>
                       </Button>
@@ -175,49 +171,47 @@ const Navigation = () => {
                       <DropdownMenuLabel className="font-normal">
                         <div className="flex flex-col space-y-1">
                           <p className="text-sm font-medium leading-none">
-                            {currentUser.displayName || "Unnamed User"}
+                            {currentUser?.displayName || "Profile Not Found"}
                           </p>
                           <p className="text-xs leading-none text-muted-foreground truncate">
-                            {currentUser.identity.toHexString()}
+                            {identity?.toHexString().slice(0, 10)}...
                           </p>
                         </div>
                       </DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild>
-                        <Link to="/profile" className="flex items-center">
-                          <User className="w-4 h-4 mr-2" />
-                          My Profile
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem disabled>
-                        {" "}
-                        {/* Placeholder Settings */}
-                        <Settings className="w-4 h-4 mr-2" />
-                        Settings
-                      </DropdownMenuItem>
+
+                      {currentUser ? (
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to="/profile"
+                            className="flex items-center cursor-pointer"
+                          >
+                            <UserIcon className="w-4 h-4 mr-2" />
+                            My Profile
+                          </Link>
+                        </DropdownMenuItem>
+                      ) : (
+                        <DropdownMenuItem asChild>
+                          <Link
+                            to="/onboarding"
+                            className="flex items-center text-orange-500 cursor-pointer"
+                          >
+                            <UserIcon className="w-4 h-4 mr-2" />
+                            Create Profile
+                          </Link>
+                        </DropdownMenuItem>
+                      )}
+
                       <DropdownMenuSeparator />
                       <DropdownMenuItem
                         onClick={handleLogout}
-                        className="text-red-600 focus:text-red-700 focus:bg-red-50"
+                        className="text-red-600 focus:text-red-700 focus:bg-red-50 cursor-pointer"
                       >
                         <LogOut className="w-4 h-4 mr-2" />
                         Logout
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
-                ) : (
-                  // Authenticated but user data not yet loaded from Spacetime
-                  <Button
-                    variant="ghost"
-                    className="relative h-8 w-8 rounded-full"
-                    disabled
-                  >
-                    <Avatar className="h-8 w-8">
-                      <AvatarFallback>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                      </AvatarFallback>
-                    </Avatar>
-                  </Button>
                 )}
               </>
             )}

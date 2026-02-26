@@ -6,9 +6,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Event } from "@/module_bindings/event_type";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
+import { Infer } from "spacetimedb";
+import { Event, SubEventType } from "@/module_bindings";
 import { format } from "date-fns";
+
+type Event = Infer<typeof Event>;
+type SubEventType = Infer<typeof SubEventType>;
 import {
   Calendar,
   Clock,
@@ -24,7 +27,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import {
   useSubEvents,
   useGroups,
@@ -49,13 +51,12 @@ const EventDialog = ({
 }: EventDialogProps) => {
   const { copied, copyToClipboard } = useCopyToClipboard();
   const [activeTab, setActiveTab] = useState("details");
-  const { connection } = useSpacetime();
 
   // Use hooks to get real-time data
-  const subEvents = useSubEvents(connection);
-  const groups = useGroups(connection);
-  const flightSignups = useFlightSignups(connection);
-  const eventParticipants = useEventParticipants(connection);
+  const subEvents = useSubEvents();
+  const groups = useGroups();
+  const flightSignups = useFlightSignups();
+  const eventParticipants = useEventParticipants();
 
   const handleShare = () => {
     const eventUrl = `${window.location.origin}/event/${event.eventId}`;
@@ -71,12 +72,15 @@ const EventDialog = ({
   );
 
   // Group signups by sub-event
-  const signupsBySubEvent = eventSubEvents.reduce((acc, subEvent) => {
-    acc[subEvent.subEventId.toString()] = eventSignups.filter(
-      (signup) => signup.subEventId === subEvent.subEventId
-    );
-    return acc;
-  }, {} as Record<string, typeof flightSignups>);
+  const signupsBySubEvent = eventSubEvents.reduce(
+    (acc, subEvent) => {
+      acc[subEvent.subEventId.toString()] = eventSignups.filter(
+        (signup) => signup.subEventId === subEvent.subEventId
+      );
+      return acc;
+    },
+    {} as Record<string, typeof flightSignups>
+  );
 
   // Calculate how many unique groups are participating
   const participatingGroups = [

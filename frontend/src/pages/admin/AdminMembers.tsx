@@ -2,7 +2,6 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import {
   useGroups,
   useGroupMemberships,
@@ -25,18 +24,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PermissionLevel } from "@/module_bindings/permission_level_type";
-import { Identity } from "@clockworklabs/spacetimedb-sdk";
+import { PermissionLevel } from "@/module_bindings";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { Infer, Identity } from "spacetimedb";
+import { useSpacetimeDB } from "spacetimedb/react";
+
+type PermissionLevel = Infer<typeof PermissionLevel>;
 
 export default function AdminMembers() {
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
-  const memberships = useGroupMemberships(connection);
-  const users = useUsers(connection);
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
+  const groups = useGroups();
+  const memberships = useGroupMemberships();
+  const users = useUsers();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,7 +80,7 @@ export default function AdminMembers() {
         membershipId: BigInt(0), // Special ID for CEO
         groupId: currentGroup.groupId,
         userIdentity: currentGroup.ceoIdentity,
-        permissionLevel: { tag: "Ceo" as const },
+        permissionLevel: { tag: "CEO" as const },
         user: users?.find(
           (u) =>
             u.identity.toHexString() === currentGroup.ceoIdentity.toHexString()
@@ -110,11 +113,11 @@ export default function AdminMembers() {
     if (!connection || !groupIdBigInt || !selectedUserId) return;
 
     try {
-      connection.reducers.addGroupMember(
-        groupIdBigInt,
-        Identity.fromString(selectedUserId),
-        newMemberPermission
-      );
+      connection.reducers.addGroupMember({
+        groupId: groupIdBigInt,
+        userIdentity: Identity.fromString(selectedUserId),
+        permissionLevel: newMemberPermission,
+      });
       setShowAddDialog(false);
       setSelectedUserId("");
       setSearchQuery("");
@@ -127,10 +130,10 @@ export default function AdminMembers() {
     if (!connection || !groupIdBigInt || isCeo) return; // Prevent removing CEO
 
     try {
-      connection.reducers.removeGroupMember(
-        groupIdBigInt,
-        Identity.fromString(userIdentity)
-      );
+      connection.reducers.removeGroupMember({
+        groupId: groupIdBigInt,
+        userIdentity: Identity.fromString(userIdentity),
+      });
     } catch (error) {
       console.error("Failed to remove member:", error);
     }
@@ -201,7 +204,7 @@ export default function AdminMembers() {
                     value={newMemberPermission.tag}
                     onValueChange={(value) =>
                       setNewMemberPermission({
-                        tag: value as "Ceo" | "Staff" | "Member",
+                        tag: value as "CEO" | "Staff" | "Member",
                       })
                     }
                   >
@@ -248,7 +251,7 @@ export default function AdminMembers() {
                     </h3>
                     <Badge
                       variant={
-                        member.permissionLevel.tag === "Ceo"
+                        member.permissionLevel.tag === "CEO"
                           ? "default"
                           : "secondary"
                       }

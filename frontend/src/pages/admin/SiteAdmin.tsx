@@ -3,13 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Plus, Building2, Users, Calendar } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { useGroups } from "@/hooks/spacetimeHooks";
 import { useNavigate } from "react-router-dom";
 
 export default function SiteAdmin() {
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
+  const groups = useGroups();
   const navigate = useNavigate();
 
   return (

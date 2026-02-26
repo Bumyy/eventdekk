@@ -11,7 +11,6 @@ import {
   Calendar,
   Users,
 } from "lucide-react";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import {
   useEvents,
   useSubEvents,
@@ -21,23 +20,28 @@ import {
 } from "@/hooks/spacetimeHooks";
 import { format } from "date-fns";
 import { EventTypeDialog } from "@/components/EventTypeDialog";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
-import { Timestamp } from "@clockworklabs/spacetimedb-sdk";
+import { SubEventType, EventStatus, Event } from "@/module_bindings";
 import { useParams, useNavigate } from "react-router-dom";
-import { EventStatus } from "@/module_bindings/event_status_type";
+import { DbContext, Infer, Timestamp } from "spacetimedb";
+import { useSpacetimeDB } from "spacetimedb/react";
 import { toast } from "sonner";
 import { EventInvitationDialog } from "@/components/EventInvitationDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
+type Event = Infer<typeof Event>;
+type SubEventType = Infer<typeof SubEventType>;
+type EventStatus = Infer<typeof EventStatus>;
+
 export default function AdminEvents() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<string[]>([]);
-  const { connection } = useSpacetime();
-  const events = useEvents(connection);
-  const subEvents = useSubEvents(connection);
-  const eventParticipants = useEventParticipants(connection);
-  const flightSignups = useFlightSignups(connection);
-  const groups = useGroups(connection);
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
+  const events = useEvents();
+  const subEvents = useSubEvents();
+  const eventParticipants = useEventParticipants();
+  const flightSignups = useFlightSignups();
+  const groups = useGroups();
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const navigate = useNavigate();
@@ -146,16 +150,16 @@ export default function AdminEvents() {
       }));
 
       // Create event with sub-events
-      connection.reducers.createEvent(
-        BigInt(groupId ?? "0"),
-        eventData.name,
-        eventData.description,
-        Timestamp.fromDate(eventData.startTime),
-        Timestamp.fromDate(eventData.endTime),
-        eventData.ifcEventLink,
-        eventData.bannerUrl,
-        subEventsData
-      );
+      connection.reducers.createEvent({
+        creatorGroupId: BigInt(groupId ?? "0"),
+        name: eventData.name,
+        description: eventData.description,
+        startTime: Timestamp.fromDate(eventData.startTime),
+        endTime: Timestamp.fromDate(eventData.endTime),
+        ifcEventLink: eventData.ifcEventLink,
+        bannerUrl: eventData.bannerUrl,
+        subEventsData: subEventsData,
+      });
 
       setShowCreateDialog(false);
       toast.success("Event created successfully!");
@@ -203,7 +207,7 @@ export default function AdminEvents() {
     navigate(`/admin/groups/${groupId}/events/${eventId}/edit`);
   };
 
-  const handleManageParticipation = (event: any) => {
+  const handleManageParticipation = (event: Event) => {
     // Find the participant record for this event and group
     const participation = eventParticipants?.find(
       (p) => p.eventId === event.eventId && p.groupId === groupIdBigInt
@@ -276,16 +280,16 @@ export default function AdminEvents() {
   const handleDeleteEvent = (eventId: bigint) => {
     if (!connection) return;
     if (confirm("Are you sure you want to delete this event?")) {
-      connection.reducers.updateEvent(
-        eventId,
-        null, // name (null means don't update)
-        null, // description
-        null, // startTime
-        null, // endTime
-        null, // ifcEventLink
-        null, // bannerUrl
-        { tag: "Cancelled" } as EventStatus // Set status to cancelled
-      );
+      connection.reducers.updateEvent({
+        eventId: eventId,
+        name: null,
+        description: null,
+        startTime: null,
+        endTime: null,
+        ifcEventLink: null,
+        bannerUrl: null,
+        status: { tag: "Cancelled" } as EventStatus,
+      });
       toast.success("Event deleted successfully!");
     }
   };
@@ -324,33 +328,32 @@ export default function AdminEvents() {
 
       // Step 1: Respond to the invitation with a promise wrapper for callback
       await new Promise<void>((resolve, reject) => {
-        const callbackId = connection.reducers.onRespondToEventInvitation(
-          (ctx, eventId, groupId, response) => {
-            console.log(ctx, eventId, groupId, response);
-            // Clean up the callback after we get a response
-            connection.reducers.removeOnRespondToEventInvitation(callbackId);
+        const respondCallback = (ctx: any, args: any) => {
+          console.log(ctx, args);
+          // Clean up the callback after we get a response
+          connection.reducers.removeOnRespondToEventInvitation(respondCallback);
 
-            if (ctx.event.status.tag === "Failed") {
-              reject(
-                new Error(
-                  `Failed to respond to invitation: ${ctx.event.status.value}`
-                )
-              );
-            } else {
-              toast.loading(`Processing flight signups...`, {
-                id: toastId,
-              });
-              resolve();
-            }
+          if (ctx.event.status.tag === "Failed") {
+            reject(
+              new Error(
+                `Failed to respond to invitation: ${ctx.event.status.value}`
+              )
+            );
+          } else {
+            toast.loading(`Processing flight signups...`, {
+              id: toastId,
+            });
+            resolve();
           }
-        );
+        };
+        connection.reducers.onRespondToEventInvitation(respondCallback);
 
         // Invoke the reducer
-        connection.reducers.respondToEventInvitation(
-          invitation.eventId,
-          invitation.groupId,
-          { tag: "Accepted" }
-        );
+        connection.reducers.respondToEventInvitation({
+          eventId: invitation.eventId,
+          groupId: invitation.groupId,
+          response: { tag: "Accepted" },
+        });
       });
 
       // Process sub-events one by one for better error handling
@@ -395,37 +398,36 @@ export default function AdminEvents() {
         try {
           // Create a promise wrapper for each signup
           await new Promise<void>((resolve, reject) => {
-            const signupCallbackId = connection.reducers.onSignupForFlight(
-              (ctx) => {
-                // Clean up the callback after we get a response
-                connection.reducers.removeOnSignupForFlight(signupCallbackId);
+            const signupCallback = (ctx: any, args: any) => {
+              // Clean up the callback after we get a response
+              connection.reducers.removeOnSignupForFlight(signupCallback);
 
-                if (ctx.event.status.tag === "Failed") {
-                  failureCount++;
-                  reject(
-                    new Error(
-                      `Failed to sign up for ${subEvent.name}: ${ctx.event.status.value}`
-                    )
-                  );
-                } else {
-                  successCount++;
-                  resolve();
-                }
+              if (ctx.event.status.tag === "Failed") {
+                failureCount++;
+                reject(
+                  new Error(
+                    `Failed to sign up for ${subEvent.name}: ${ctx.event.status.value}`
+                  )
+                );
+              } else {
+                successCount++;
+                resolve();
               }
-            );
+            };
+            connection.reducers.onSignupForFlight(signupCallback);
 
             // Create flight signup with route details included
-            connection.reducers.signupForFlight(
-              subEventId,
-              groupIdBigInt!,
-              departureIcao,
-              arrivalIcao,
-              details.route || "", // Include the route details
-              details.callsign,
-              details.aircraftType,
-              departureTime,
-              arrivalTime
-            );
+            connection.reducers.signupForFlight({
+              subEventId: subEventId,
+              groupId: groupIdBigInt!,
+              departureIcao: departureIcao,
+              arrivalIcao: arrivalIcao,
+              routeDetails: details.route || "",
+              callsign: details.callsign,
+              aircraftType: details.aircraftType,
+              desiredDepartureTime: departureTime,
+              desiredArrivalTime: arrivalTime,
+            });
           });
         } catch (error) {
           console.error(
@@ -474,23 +476,22 @@ export default function AdminEvents() {
       const toastId = toast.loading("Declining invitation...");
 
       await new Promise<void>((resolve, reject) => {
-        const callbackId = connection.reducers.onRespondToEventInvitation(
-          (ctx, result, error) => {
-            connection.reducers.removeOnRespondToEventInvitation(callbackId);
+        const declineCallback = (ctx: any, args: any) => {
+          connection.reducers.removeOnRespondToEventInvitation(declineCallback);
 
-            if (error) {
-              reject(new Error(`Failed to decline: ${error.message}`));
-            } else {
-              resolve();
-            }
+          if (ctx.event.status.tag === "Failed") {
+            reject(new Error(`Failed to decline: ${ctx.event.status.value}`));
+          } else {
+            resolve();
           }
-        );
+        };
+        connection.reducers.onRespondToEventInvitation(declineCallback);
 
-        connection.reducers.respondToEventInvitation(
-          invitation.eventId,
-          invitation.participationId,
-          { tag: "Declined" }
-        );
+        connection.reducers.respondToEventInvitation({
+          eventId: invitation.eventId,
+          groupId: invitation.groupId,
+          response: { tag: "Declined" },
+        });
       });
 
       toast.success("Invitation declined successfully", { id: toastId });
@@ -549,25 +550,26 @@ export default function AdminEvents() {
       for (const signup of signupsToDelete) {
         try {
           await new Promise<void>((resolve, reject) => {
-            const callbackId = connection.reducers.onDeleteFlightSignup(
-              (ctx) => {
-                connection.reducers.removeOnDeleteFlightSignup(callbackId);
+            const deleteCallback = (ctx: any, args: any) => {
+              connection.reducers.removeOnDeleteFlightSignup(deleteCallback);
 
-                if (ctx.event.status.tag === "Failed") {
-                  failedCount++;
-                  reject(
-                    new Error(
-                      `Failed to delete signup: ${ctx.event.status.value}`
-                    )
-                  );
-                } else {
-                  removedCount++;
-                  resolve();
-                }
+              if (ctx.event.status.tag === "Failed") {
+                failedCount++;
+                reject(
+                  new Error(
+                    `Failed to delete signup: ${ctx.event.status.value}`
+                  )
+                );
+              } else {
+                removedCount++;
+                resolve();
               }
-            );
+            };
+            connection.reducers.onDeleteFlightSignup(deleteCallback);
 
-            connection.reducers.deleteFlightSignup(signup.signupId);
+            connection.reducers.deleteFlightSignup({
+              signupId: signup.signupId,
+            });
           });
         } catch (error) {
           console.error(`Error deleting flight signup:`, error);
@@ -615,68 +617,66 @@ export default function AdminEvents() {
           if (existingSignup) {
             // Update existing signup
             await new Promise<void>((resolve, reject) => {
-              const callbackId = connection.reducers.onUpdateFlightSignup(
-                (ctx) => {
-                  connection.reducers.removeOnUpdateFlightSignup(callbackId);
+              const updateCallback = (ctx: any, args: any) => {
+                connection.reducers.removeOnUpdateFlightSignup(updateCallback);
 
-                  if (ctx.event.status.tag === "Failed") {
-                    failedCount++;
-                    reject(
-                      new Error(
-                        `Failed to update signup: ${ctx.event.status.value}`
-                      )
-                    );
-                  } else {
-                    updatedCount++;
-                    resolve();
-                  }
+                if (ctx.event.status.tag === "Failed") {
+                  failedCount++;
+                  reject(
+                    new Error(
+                      `Failed to update signup: ${ctx.event.status.value}`
+                    )
+                  );
+                } else {
+                  updatedCount++;
+                  resolve();
                 }
-              );
+              };
+              connection.reducers.onUpdateFlightSignup(updateCallback);
 
-              connection.reducers.updateFlightSignup(
-                existingSignup.signupId,
-                departureIcao,
-                arrivalIcao,
-                details.route || "",
-                details.callsign,
-                details.aircraftType,
-                departureTime,
-                arrivalTime
-              );
+              connection.reducers.updateFlightSignup({
+                signupId: existingSignup.signupId,
+                departureIcao: departureIcao,
+                arrivalIcao: arrivalIcao,
+                routeDetails: details.route || "",
+                callsign: details.callsign,
+                aircraftType: details.aircraftType,
+                desiredDepartureTime: departureTime,
+                desiredArrivalTime: arrivalTime,
+              });
             });
           } else {
             // Create new signup
             await new Promise<void>((resolve, reject) => {
-              const callbackId = connection.reducers.onSignupForFlight(
-                (ctx) => {
-                  connection.reducers.removeOnSignupForFlight(callbackId);
+              const createCallback = (ctx: any, args: any) => {
+                connection.reducers.removeOnSignupForFlight(createCallback);
 
-                  if (ctx.event.status.tag === "Failed") {
-                    failedCount++;
-                    reject(
-                      new Error(
-                        `Failed to create signup: ${ctx.event.status.value}`
-                      )
-                    );
-                  } else {
-                    addedCount++;
-                    resolve();
-                  }
+                if (ctx.event.status.tag === "Failed") {
+                  failedCount++;
+                  reject(
+                    new Error(
+                      `Failed to create signup: ${ctx.event.status.value}`
+                    )
+                  );
+                } else {
+                  addedCount++;
+                  resolve();
                 }
-              );
+              };
+              connection.reducers.onSignupForFlight(createCallback);
 
               // Create flight signup
-              connection.reducers.signupForFlight(
-                subEventId,
-                groupIdBigInt!,
-                departureIcao,
-                arrivalIcao,
-                details.route || "",
-                details.callsign,
-                details.aircraftType,
-                departureTime,
-                arrivalTime
-              );
+              connection.reducers.signupForFlight({
+                subEventId: subEventId,
+                groupId: groupIdBigInt!,
+                departureIcao: departureIcao,
+                arrivalIcao: arrivalIcao,
+                routeDetails: details.route || "",
+                callsign: details.callsign,
+                aircraftType: details.aircraftType,
+                desiredDepartureTime: departureTime,
+                desiredArrivalTime: arrivalTime,
+              });
             });
           }
         } catch (error) {

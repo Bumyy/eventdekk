@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useState } from "react";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { useGroups } from "@/hooks/spacetimeHooks";
 
 const navigation = [
@@ -41,8 +40,7 @@ const navigation = [
 function SidebarContent() {
   const location = useLocation();
   const { groupId } = useParams();
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
+  const groups = useGroups();
   const isEntryPage = location.pathname === "/admin";
   const isSiteAdmin = location.pathname === "/admin/site";
 
@@ -59,8 +57,8 @@ function SidebarContent() {
             {isEntryPage
               ? "Select Group"
               : isSiteAdmin
-              ? "Site Administration"
-              : currentGroup?.name || "Loading..."}
+                ? "Site Administration"
+                : currentGroup?.name || "Loading..."}
           </span>
         </Link>
       </div>

@@ -1,7 +1,6 @@
-// src/components/ProtectedRoute.tsx
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react"; // Or your preferred loading indicator
 
 interface ProtectedRouteProps {

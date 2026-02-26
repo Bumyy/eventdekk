@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useParams } from "react-router-dom";
-import { useSpacetime } from "@/components/SpacetimeProvider";
-import { LiveChatMessage } from "@/module_bindings/live_chat_message_type";
-import { Event } from "@/module_bindings/event_type";
+import { Infer } from "spacetimedb";
+import { LiveChatMessage, Group } from "@/module_bindings";
+import { useSpacetimeDB } from "spacetimedb/react";
 import {
   useEvents,
   useLiveChatMessages,
@@ -27,6 +27,9 @@ import { Pencil, Trash2, Crown } from "lucide-react";
 import EventMap from "@/components/map/EventMap";
 import "leaflet/dist/leaflet.css";
 
+type LiveChatMessage = Infer<typeof LiveChatMessage>;
+type Group = Infer<typeof Group>;
+
 // Flight type definition
 interface Flight {
   flight_id: string;
@@ -43,14 +46,15 @@ interface Flight {
 
 const LiveEvent = () => {
   const { eventId } = useParams<{ eventId: string }>();
-  const { connection, identity } = useSpacetime();
-  const events = useEvents(connection);
-  const chatMessages = useLiveChatMessages(connection);
-  const users = useUsers(connection);
-  const groups = useGroups(connection);
-  const groupMembers = useGroupMemberships(connection);
-  const allSubEvents = useSubEvents(connection);
-  const allFlightSignups = useFlightSignups(connection);
+  const { identity, getConnection } = useSpacetimeDB();
+  const connection = getConnection();
+  const events = useEvents();
+  const chatMessages = useLiveChatMessages();
+  const users = useUsers();
+  const groups = useGroups();
+  const groupMembers = useGroupMemberships();
+  const allSubEvents = useSubEvents();
+  const allFlightSignups = useFlightSignups();
 
   const [newMessage, setNewMessage] = useState("");
   const [editingMessage, setEditingMessage] = useState<LiveChatMessage | null>(
@@ -139,9 +143,14 @@ const LiveEvent = () => {
   }, [groups]);
 
   // Filter messages for this event and sort by timestamp
-  const eventMessages = chatMessages
-    .filter((msg) => msg.eventId.toString() === eventId)
-    .sort((a, b) => Number(a.timestamp.toDate() - b.timestamp.toDate()));
+  const eventMessages = useMemo(() => {
+    return chatMessages
+      .filter((msg) => msg.eventId.toString() === eventId)
+      .sort(
+        (a, b) =>
+          a.timestamp.toDate().getTime() - b.timestamp.toDate().getTime()
+      );
+  }, [chatMessages, eventId]);
 
   // Group messages by sender, group, and adjacent timestamps
   const groupedMessages = useMemo(() => {
@@ -232,18 +241,18 @@ const LiveEvent = () => {
 
     if (editingMessage) {
       // Edit existing message
-      connection?.reducers.editLiveChatMessage(
-        editingMessage.messageId,
-        newMessage
-      );
+      connection?.reducers.editLiveChatMessage({
+        messageId: editingMessage.messageId,
+        newMessage,
+      });
       setEditingMessage(null);
     } else {
       // Create new message using the selected group
-      connection?.reducers.addLiveChatMessage(
-        BigInt(selectedGroupId),
-        BigInt(eventId!),
-        newMessage
-      );
+      connection?.reducers.addLiveChatMessage({
+        selectedGroupId: BigInt(selectedGroupId),
+        eventId: BigInt(eventId!),
+        newMessage,
+      });
     }
 
     setNewMessage("");

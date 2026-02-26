@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { useGroups } from "@/hooks/spacetimeHooks";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -13,13 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Loader2, Upload, Link, Info, Palette } from "lucide-react";
 import { uploadImage } from "@/api/apiService";
+import { useSpacetimeDB } from "spacetimedb/react";
 
 export default function AdminGroupSettings() {
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const navigate = useNavigate();
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
+  const groups = useGroups();
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -125,9 +126,9 @@ export default function AdminGroupSettings() {
 
       // Create a promise wrapper for the callback
       await new Promise<void>((resolve, reject) => {
-        const callbackId = connection.reducers.onUpdateGroup((ctx) => {
+        const callback = (ctx: any) => {
           // Clean up the callback after we get a response
-          connection.reducers.removeOnUpdateGroup(callbackId);
+          connection.reducers.removeOnUpdateGroup(callback);
 
           if (ctx.event.status.tag === "Failed") {
             reject(
@@ -136,18 +137,20 @@ export default function AdminGroupSettings() {
           } else {
             resolve();
           }
-        });
+        };
+
+        connection.reducers.onUpdateGroup(callback);
 
         // Call the reducer
-        connection.reducers.updateGroup(
-          groupIdBigInt,
-          name,
-          tag,
-          description,
-          websiteUrl,
-          finalLogoUrl,
-          color
-        );
+        connection.reducers.updateGroup({
+          groupId: groupIdBigInt,
+          name: name,
+          tag: tag,
+          description: description,
+          websiteUrl: websiteUrl,
+          logoUrl: finalLogoUrl,
+          color: color,
+        });
       });
 
       // Update success toast

@@ -1,6 +1,4 @@
 import { useState, useEffect } from "react";
-import { Timestamp } from "@clockworklabs/spacetimedb-sdk";
-import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
@@ -25,9 +23,12 @@ import {
   MapPin,
   Plane,
 } from "lucide-react";
-import { SubEventType } from "@/module_bindings/sub_event_type_type";
-import { Event } from "@/module_bindings/event_type";
-import { SubEvent } from "@/module_bindings/sub_event_type";
+import { Infer } from "spacetimedb";
+import { SubEventType, Event, SubEvent } from "@/module_bindings";
+
+type SubEventType = Infer<typeof SubEventType>;
+type Event = Infer<typeof Event>;
+type SubEvent = Infer<typeof SubEvent>;
 
 interface FlightDetails {
   callsign?: string;
@@ -62,7 +63,6 @@ export function EventInvitationDialog({
   invitation,
   events,
   subEvents,
-  groupId,
   onAccept,
   onDecline,
   preSelectedSubEvents = [],
@@ -370,8 +370,8 @@ export function EventInvitationDialog({
                                   {isGroupFlight
                                     ? "Departure Airport (Fixed)"
                                     : isFlyOut
-                                    ? "Departure Airport (Hub)"
-                                    : "Departure Airport"}
+                                      ? "Departure Airport (Hub)"
+                                      : "Departure Airport"}
                                 </Label>
                                 <Input
                                   id={`departure-icao-${subEvent.subEventId}`}
@@ -379,10 +379,10 @@ export function EventInvitationDialog({
                                     isGroupFlight
                                       ? subEvent.groupFlightDepartureIcao || ""
                                       : isFlyOut
-                                      ? subEvent.hubIcao || ""
-                                      : flightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.customDepartureIcao || ""
+                                        ? subEvent.hubIcao || ""
+                                        : flightDetails[
+                                            subEvent.subEventId.toString()
+                                          ]?.customDepartureIcao || ""
                                   }
                                   onChange={(e) =>
                                     updateFlightDetail(
@@ -421,8 +421,8 @@ export function EventInvitationDialog({
                                   {isGroupFlight
                                     ? "Arrival Airport (Fixed)"
                                     : isFlyIn
-                                    ? "Arrival Airport (Hub)"
-                                    : "Arrival Airport"}
+                                      ? "Arrival Airport (Hub)"
+                                      : "Arrival Airport"}
                                 </Label>
                                 <Input
                                   id={`arrival-icao-${subEvent.subEventId}`}
@@ -430,10 +430,10 @@ export function EventInvitationDialog({
                                     isGroupFlight
                                       ? subEvent.groupFlightArrivalIcao || ""
                                       : isFlyIn
-                                      ? subEvent.hubIcao || ""
-                                      : flightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.customArrivalIcao || ""
+                                        ? subEvent.hubIcao || ""
+                                        : flightDetails[
+                                            subEvent.subEventId.toString()
+                                          ]?.customArrivalIcao || ""
                                   }
                                   onChange={(e) =>
                                     updateFlightDetail(

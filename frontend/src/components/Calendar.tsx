@@ -5,26 +5,15 @@ import {
   endOfMonth,
   eachDayOfInterval,
   isSameMonth,
-  isSameDay,
   startOfWeek,
   endOfWeek,
   isToday,
   addMonths,
   subMonths,
-  areIntervalsOverlapping,
   isWithinInterval,
 } from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Search,
-  Calendar as CalendarIcon,
-  Tag,
-  X,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Search, Tag, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Event } from "@/module_bindings/event_type";
-import { SubEvent } from "@/module_bindings/sub_event_type";
 import EventDialog from "@/components/EventDialog";
 import DayCalendarDialog from "@/components/DayCalendarDialog";
 import { Input } from "@/components/ui/input";
@@ -39,11 +28,15 @@ import {
 import { cn } from "@/lib/utils";
 import { useGroups } from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { useSpacetime } from "@/components/SpacetimeProvider";
+import { Infer } from "spacetimedb";
+import { Event, SubEvent } from "@/module_bindings";
+
+type Event = Infer<typeof Event>;
+type SubEvent = Infer<typeof SubEvent>;
 
 interface CalendarProps {
-  events: Event[];
-  subEvents?: SubEvent[];
+  events: readonly Event[];
+  subEvents?: readonly SubEvent[];
 }
 
 const Calendar = ({ events, subEvents = [] }: CalendarProps) => {
@@ -127,8 +120,7 @@ const Calendar = ({ events, subEvents = [] }: CalendarProps) => {
   };
 
   // Add groups for displaying logos
-  const { connection } = useSpacetime();
-  const groups = useGroups(connection);
+  const groups = useGroups();
 
   // Get group info for avatar display
   const getGroupInfo = (groupId: bigint) => {
@@ -139,17 +131,6 @@ const Calendar = ({ events, subEvents = [] }: CalendarProps) => {
       tag: group?.tag || "",
       color: group?.color || "#000000", // Add color to group info
     };
-  };
-
-  // Check if an event spans multiple days
-  const isMultiDayEvent = (event: Event) => {
-    const startDate = new Date(event.startTime.toDate());
-    startDate.setHours(0, 0, 0, 0);
-
-    const endDate = new Date(event.endTime.toDate());
-    endDate.setHours(23, 59, 59, 999);
-
-    return endDate.getTime() - startDate.getTime() > 24 * 60 * 60 * 1000;
   };
 
   // Get all events that should appear on this day (including multi-day events)

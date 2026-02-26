@@ -1,16 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useSpacetime } from "@/components/SpacetimeProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Building2 } from "lucide-react";
+import { useSpacetimeDB } from "spacetimedb/react";
 
 export default function CreateGroup() {
   const navigate = useNavigate();
-  const { connection } = useSpacetime();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -19,6 +18,8 @@ export default function CreateGroup() {
     websiteUrl: "",
     logoUrl: "",
   });
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,13 +27,13 @@ export default function CreateGroup() {
 
     setIsLoading(true);
     try {
-      connection.reducers.registerGroup(
-        formData.name,
-        formData.tag,
-        formData.description,
-        formData.websiteUrl,
-        formData.logoUrl
-      );
+      connection.reducers.registerGroup({
+        name: formData.name,
+        tag: formData.tag,
+        description: formData.description,
+        websiteUrl: formData.websiteUrl,
+        logoUrl: formData.logoUrl,
+      });
       navigate("/admin/site");
     } catch (error) {
       console.error("Failed to create group:", error);

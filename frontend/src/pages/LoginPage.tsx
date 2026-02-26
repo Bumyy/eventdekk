@@ -1,7 +1,5 @@
-// src/pages/LoginPage.tsx
 import React from "react";
-// Correct the import path if AuthContext is elsewhere
-import { useAuth } from "@/components/AuthProvider";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
   Card,

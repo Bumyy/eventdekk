@@ -1,16 +1,13 @@
 import { useState } from "react";
 import Calendar from "@/components/Calendar";
-import { Button } from "@/components/ui/button";
-import { Check, Loader2 } from "lucide-react";
-import { useSpacetime } from "@/components/SpacetimeProvider";
+import { Loader2 } from "lucide-react";
 import { useEvents, useSubEvents, useGroups } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 
 const CalendarView = () => {
-  const { connection } = useSpacetime();
-  const events = useEvents(connection);
-  const subEvents = useSubEvents(connection);
-  const groups = useGroups(connection);
+  const events = useEvents();
+  const subEvents = useSubEvents();
+  const groups = useGroups();
 
   // For managing selected groups (could be expanded with actual filtering)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]);
