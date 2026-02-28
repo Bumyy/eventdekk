@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -35,49 +35,113 @@ import CreateGroup from "./pages/admin/CreateGroup";
 import EditEvent from "./pages/admin/EditEvent";
 import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
 
-// ==========================================
-// 1. Create the SpacetimeDB Wrapper Component
-// ==========================================
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   const { sdbToken, isLoading } = useAuth();
 
-  // Rebuild the connection ONLY when the sdbToken changes
+  // We use this as a React 'key' to force the Provider to completely remount.
+  const [connectionKey, setConnectionKey] = useState(0);
+
+  // Keep track of connection state for the UI
+  const [isConnecting, setIsConnecting] = useState(true);
+  const isConnectedRef = useRef(false);
+
+  // ---------------------------------------------------------
+  // Focus & Network Event Listeners
+  // ---------------------------------------------------------
+  useEffect(() => {
+    const triggerReconnect = () => {
+      if (!isConnectedRef.current) {
+        console.log("Network restored. Remounting SpacetimeDB...");
+        setIsConnecting(true);
+        // Incrementing the key completely destroys the old SpacetimeDBProvider
+        // and creates a fresh one, preventing the "WebSocket is CLOSED" errors.
+        setConnectionKey((prev) => prev + 1);
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        triggerReconnect();
+      }
+    };
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", triggerReconnect);
+
+    return () => {
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", triggerReconnect);
+    };
+  }, []);
+
+  // ---------------------------------------------------------
+  // Connection Builder
+  // ---------------------------------------------------------
   const connectionBuilder = useMemo(() => {
+    void connectionKey;
+
     return DbConnection.builder()
       .withUri(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000")
       .withModuleName("eventdekk")
-      .withToken(sdbToken || undefined) // Pass the token from AuthContext
+      .withToken(sdbToken || undefined)
       .onConnect((conn: DbConnection, identity: Identity, token: string) => {
+        isConnectedRef.current = true;
+        setIsConnecting(false); // Hide loading state
         console.log("Connected to STDB with identity:", identity.toHexString());
-        // If logged out (sdbToken is null), STDB will generate an anonymous token.
-        // We save it so anonymous users don't lose their identity on refresh.
+
         if (!sdbToken) {
           localStorage.setItem("eventdekk_auth_token", token);
         }
       })
       .onDisconnect(() => {
-        console.log("Disconnected from SpacetimeDB");
+        isConnectedRef.current = false;
+        console.warn("Disconnected from SpacetimeDB");
+
+        // Auto-reconnect mechanism
+        setTimeout(() => {
+          if (!isConnectedRef.current) {
+            setIsConnecting(true);
+            setConnectionKey((prev) => prev + 1);
+          }
+        }, 3000);
       })
       .onConnectError((_ctx: ErrorContext, err: Error) => {
+        isConnectedRef.current = false;
         console.error("Error connecting to SpacetimeDB:", err);
-      });
-  }, [sdbToken]);
 
-  // Wait for AuthContext to check local storage / process OAuth URLs
+        // Auto-retry mechanism
+        setTimeout(() => {
+          if (!isConnectedRef.current) {
+            setIsConnecting(true);
+            setConnectionKey((prev) => prev + 1);
+          }
+        }, 5000);
+      });
+  }, [sdbToken, connectionKey]); // Rebuild when connectionKey changes
+
   if (isLoading) {
     return <AuthLoading />;
   }
 
   return (
-    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
+    // The key={connectionKey} is the magic fix here.
+    // It guarantees old websockets/subscriptions are wiped from React's memory.
+    <SpacetimeDBProvider
+      key={connectionKey}
+      connectionBuilder={connectionBuilder}
+    >
+      {/* Optional: Show a subtle reconnecting banner to the user */}
+      {isConnecting && connectionKey > 0 && (
+        <div className="fixed top-0 left-0 w-full bg-yellow-500 text-black text-center py-1 z-50 text-sm font-semibold">
+          Reconnecting to server...
+        </div>
+      )}
+
       {children}
     </SpacetimeDBProvider>
   );
 };
 
-// ==========================================
-// 2. Main App Component
-// ==========================================
 function App() {
   return (
     <ThemeProvider defaultTheme="dark">
