@@ -124,7 +124,7 @@ const Navigation = () => {
         <div className="flex items-center gap-4">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden -ml-2">
+              <Button variant="ghost" size="icon" className="lg:hidden -ml-2">
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
@@ -215,14 +215,16 @@ const Navigation = () => {
             </SheetContent>
           </Sheet>
 
-          {/* Desktop Logo (Hidden on Mobile) */}
-          <img
-            src={eventdekkLogo}
-            alt="EventDekk Logo"
-            className="h-12 w-auto"
-          />
+          {/* Desktop Logos - Hidden on Mobile */}
+          <div className="hidden lg:block">
+            <img
+              src={eventdekkLogo}
+              alt="EventDekk Logo"
+              className="h-12 w-auto"
+            />
+          </div>
           {isAdminArea && (
-            <div className="flex items-center border-l pl-3 ml-1 h-8">
+            <div className="hidden lg:flex items-center border-l pl-3 ml-1 h-8">
               <Shield className="h-4 w-4 text-primary mr-2" />
               <span className="font-semibold text-sm max-w-[200px] truncate text-muted-foreground">
                 {currentGroup ? currentGroup.name : "Admin Panel"}
@@ -231,7 +233,7 @@ const Navigation = () => {
           )}
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-1 ml-4">
+          <nav className="hidden lg:flex items-center gap-1 ml-4">
             {navLinks.map((link) => {
               const isActive =
                 location.pathname === link.path ||
@@ -269,26 +271,19 @@ const Navigation = () => {
           </nav>
         </div>
 
-        {/* --- Center Side (Mobile Logo Centered) --- */}
-        <div className="md:hidden absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-          <Link to="/" className="flex flex-col items-center">
-            <img
-              src={eventdekkLogo}
-              alt="EventDekk Logo"
-              className="h-10 w-auto"
-            />
-            {isAdminArea && currentGroup && (
-              <span className="text-[10px] font-semibold text-primary/80 -mt-1 truncate max-w-[120px]">
-                {currentGroup.name}
-              </span>
-            )}
-          </Link>
+        {/* Mobile Center Logo */}
+        <div className="lg:hidden absolute left-1/2 -translate-x-1/2">
+          <img
+            src={eventdekkLogo}
+            alt="EventDekk Logo"
+            className="h-8 w-auto"
+          />
         </div>
 
         {/* --- Right Side (Theme, Back to App & Profile) --- */}
         <div className="flex items-center gap-3">
           {isAdminArea && (
-            <div className="hidden md:flex items-center pr-2 mr-2 border-r border-border/50">
+            <div className="hidden lg:flex items-center pr-2 mr-2 border-r border-border/50">
               <Button
                 variant="ghost"
                 size="sm"
@@ -303,7 +298,7 @@ const Navigation = () => {
             </div>
           )}
 
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <ThemeToggle />
           </div>
 
