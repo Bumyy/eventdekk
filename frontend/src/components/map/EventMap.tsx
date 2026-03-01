@@ -20,17 +20,15 @@ import { format } from "date-fns";
 import bbox from "@turf/bbox"; // For calculating bounding box
 import { WebMercatorViewport } from "@deck.gl/core"; // For fitting bounds
 
-import type { SubEvent } from "@/module_bindings";
-import type { FlightSignup } from "@/module_bindings";
-import type { Group } from "@/module_bindings";
-import { SubEventType } from "@/module_bindings";
-import { Timestamp, Infer } from "spacetimedb";
+import {
+  SubEventType,
+  Group,
+  FlightSignup,
+  SubEvent,
+} from "@/module_bindings/types";
+import { Timestamp } from "spacetimedb";
 import { useTheme } from "../ThemeProvider";
 import { fetchAirportsByIcao } from "../../services/airportService";
-
-type SubEvent = Infer<typeof SubEvent>;
-type FlightSignup = Infer<typeof FlightSignup>;
-type Group = Infer<typeof Group>;
 
 interface Airport {
   id: number;

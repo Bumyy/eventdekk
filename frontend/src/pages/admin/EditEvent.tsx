@@ -64,14 +64,9 @@ import {
   Calendar as CalendarIcon2,
 } from "lucide-react";
 import { Timestamp } from "spacetimedb";
-import { Event, SubEventType } from "@/module_bindings";
-import EventStatus from "@/module_bindings/event_status_type";
+import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
-import { Infer } from "spacetimedb";
 import { useSpacetimeDB } from "spacetimedb/react";
-
-type Event = Infer<typeof Event>;
-type SubEventType = Infer<typeof SubEventType>;
 
 export default function EditEvent() {
   const { eventId, groupId } = useParams();

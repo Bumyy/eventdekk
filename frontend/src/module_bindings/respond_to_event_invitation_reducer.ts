@@ -10,7 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import ParticipantStatus from "./participant_status_type";
+import {
+  ParticipantStatus,
+} from "./types";
 
 export default {
   eventId: __t.u64(),

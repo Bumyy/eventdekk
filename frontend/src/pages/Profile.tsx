@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
-import { useUsers } from "@/hooks/spacetimeHooks";
+import { useState, useEffect, useRef } from "react";
+import { useCurrentUser } from "@/hooks/spacetimeHooks";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,7 +11,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Loader2, Upload, Globe } from "lucide-react";
+import { Loader2, Upload, Globe, User } from "lucide-react";
 import { toast } from "sonner";
 import { uploadImage } from "@/api/apiService";
 import {
@@ -24,101 +24,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useSpacetimeDB } from "spacetimedb/react";
-
-// More comprehensive timezone list organized by region
-const TIMEZONE_GROUPS = {
-  "UTC/GMT": ["UTC"],
-  Africa: [
-    "Africa/Cairo",
-    "Africa/Johannesburg",
-    "Africa/Lagos",
-    "Africa/Nairobi",
-  ],
-  Americas: [
-    "America/Anchorage",
-    "America/Bogota",
-    "America/Buenos_Aires",
-    "America/Caracas",
-    "America/Chicago",
-    "America/Denver",
-    "America/Halifax",
-    "America/Los_Angeles",
-    "America/Mexico_City",
-    "America/New_York",
-    "America/Phoenix",
-    "America/Santiago",
-    "America/Sao_Paulo",
-    "America/St_Johns",
-    "America/Toronto",
-    "America/Vancouver",
-  ],
-  Asia: [
-    "Asia/Baghdad",
-    "Asia/Bangkok",
-    "Asia/Dhaka",
-    "Asia/Dubai",
-    "Asia/Hong_Kong",
-    "Asia/Istanbul",
-    "Asia/Jakarta",
-    "Asia/Jerusalem",
-    "Asia/Karachi",
-    "Asia/Kolkata",
-    "Asia/Kuala_Lumpur",
-    "Asia/Manila",
-    "Asia/Riyadh",
-    "Asia/Seoul",
-    "Asia/Shanghai",
-    "Asia/Singapore",
-    "Asia/Taipei",
-    "Asia/Tehran",
-    "Asia/Tokyo",
-  ],
-  Europe: [
-    "Europe/Amsterdam",
-    "Europe/Athens",
-    "Europe/Belgrade",
-    "Europe/Berlin",
-    "Europe/Brussels",
-    "Europe/Budapest",
-    "Europe/Copenhagen",
-    "Europe/Dublin",
-    "Europe/Helsinki",
-    "Europe/Lisbon",
-    "Europe/London",
-    "Europe/Madrid",
-    "Europe/Moscow",
-    "Europe/Oslo",
-    "Europe/Paris",
-    "Europe/Prague",
-    "Europe/Rome",
-    "Europe/Stockholm",
-    "Europe/Vienna",
-    "Europe/Warsaw",
-    "Europe/Zurich",
-  ],
-  Oceania: [
-    "Australia/Adelaide",
-    "Australia/Brisbane",
-    "Australia/Darwin",
-    "Australia/Melbourne",
-    "Australia/Perth",
-    "Australia/Sydney",
-    "Pacific/Auckland",
-    "Pacific/Fiji",
-    "Pacific/Honolulu",
-  ],
-};
-
-// Flatten the timezone groups for searching
-const ALL_TIMEZONES = Object.values(TIMEZONE_GROUPS).flat();
+import {
+  TIMEZONE_GROUPS,
+  detectUserTimezone,
+  formatTimezoneName,
+} from "../utils/timezoneUtils";
 
 const Profile = () => {
   const { getConnection, identity } = useSpacetimeDB();
   const connection = getConnection();
-  const users = useUsers();
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  const currentUser = useCurrentUser();
+  const detectedTz = detectUserTimezone();
+
   const [formData, setFormData] = useState({
     displayName: "",
     ifcProfileUrl: "",
@@ -126,42 +47,25 @@ const Profile = () => {
     timezone: "",
   });
 
-  // Function to detect user's timezone
-  const detectUserTimezone = useCallback(() => {
-    try {
-      const userTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      return ALL_TIMEZONES.includes(userTimezone) ? userTimezone : "UTC";
-    } catch (error) {
-      console.error("Error detecting timezone:", error);
-      return "UTC";
-    }
-  }, []);
+  // Track if we've populated form data from currentUser
+  const hasPopulatedFromUser = useRef(false);
 
-  // Format timezone name for display
-  const formatTimezone = useCallback((tz: string) => {
-    const parts = tz.split("/");
-    if (parts.length === 1) return tz;
-    return parts[parts.length - 1].replace(/_/g, " ");
-  }, []);
-
-  // Find the current user based on identity
-  const currentUser = users?.find(
-    (u) => u.identity.toHexString() === identity?.toHexString()
-  );
-
-  // Effect to populate form data when currentUser is loaded
+  // Effect to populate form data when currentUser is loaded (only once when identity is stable)
   useEffect(() => {
-    if (currentUser) {
+    // Only populate once we have a stable identity and user data
+    if (currentUser && identity && !hasPopulatedFromUser.current) {
       setFormData({
         displayName: currentUser.displayName || "",
         ifcProfileUrl: currentUser.ifcProfileUrl || "",
         ifcCallsignPrefix: currentUser.ifcCallsignPrefix || "",
-        timezone: currentUser.timezone || detectUserTimezone(),
+        // Do NOT autofill detectedTz. Strictly rely on what the DB returns.
+        timezone: currentUser.timezone || "",
       });
       setPreviewUrl(null);
       setSelectedFile(null);
+      hasPopulatedFromUser.current = true;
     }
-  }, [currentUser, detectUserTimezone]);
+  }, [currentUser?.identity, identity, currentUser]);
 
   // Effect to create/revoke preview URL
   useEffect(() => {
@@ -230,7 +134,7 @@ const Profile = () => {
         displayName: formData.displayName,
         ifcProfileUrl: uploadedImageUrl,
         ifcCallsignPrefix: formData.ifcCallsignPrefix,
-        timezone: formData.timezone || detectUserTimezone(),
+        timezone: formData.timezone,
       });
 
       setFormData((prev) => ({
@@ -289,7 +193,7 @@ const Profile = () => {
                   {formData.displayName ? (
                     formData.displayName.slice(0, 2).toUpperCase()
                   ) : (
-                    <UserIcon className="h-10 w-10" />
+                    <User className="h-10 w-10 text-muted-foreground" />
                   )}
                 </AvatarFallback>
               </Avatar>
@@ -329,8 +233,12 @@ const Profile = () => {
               <Input
                 id="displayName"
                 value={formData.displayName}
+                // ALWAYS use functional state updates (prev => ...) to prevent race condition bugs
                 onChange={(e) =>
-                  setFormData({ ...formData, displayName: e.target.value })
+                  setFormData((prev) => ({
+                    ...prev,
+                    displayName: e.target.value,
+                  }))
                 }
                 placeholder="Your display name"
                 maxLength={50}
@@ -344,10 +252,10 @@ const Profile = () => {
                 id="ifcCallsignPrefix"
                 value={formData.ifcCallsignPrefix}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
+                  setFormData((prev) => ({
+                    ...prev,
                     ifcCallsignPrefix: e.target.value.toUpperCase(),
-                  })
+                  }))
                 }
                 maxLength={10}
                 placeholder="E.g., QVA"
@@ -362,10 +270,12 @@ const Profile = () => {
               </Label>
 
               <Select
-                value={formData.timezone || detectUserTimezone()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, timezone: value })
-                }
+                value={formData.timezone}
+                onValueChange={(value) => {
+                  if (!value || value.trim() === "") return;
+
+                  setFormData((prev) => ({ ...prev, timezone: value }));
+                }}
                 disabled={isSaving}
               >
                 <SelectTrigger id="timezone" className="w-full">
@@ -378,7 +288,7 @@ const Profile = () => {
                         <SelectLabel>{region}</SelectLabel>
                         {timezones.map((tz) => (
                           <SelectItem key={tz} value={tz}>
-                            {formatTimezone(tz)}
+                            {formatTimezoneName(tz)}
                             <span className="text-xs text-muted-foreground ml-2">
                               {new Date().toLocaleTimeString(undefined, {
                                 timeZone: tz,
@@ -393,13 +303,57 @@ const Profile = () => {
                   )}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Your local timezone was automatically detected as{" "}
-                <span className="font-medium">
-                  {formatTimezone(detectUserTimezone())}
-                </span>
-                .
-              </p>
+
+              {/* Smart notification for timezone suggestions */}
+              {!formData.timezone && detectedTz ? (
+                <div className="flex items-center justify-between bg-muted/50 p-3 rounded-md border mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    You haven't set a timezone. We detected{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatTimezoneName(detectedTz)}
+                    </span>
+                    .
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0 ml-2"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, timezone: detectedTz }))
+                    }
+                  >
+                    Use Detected
+                  </Button>
+                </div>
+              ) : formData.timezone &&
+                formData.timezone !== detectedTz &&
+                detectedTz ? (
+                <div className="flex items-center justify-between bg-muted/50 p-3 rounded-md border mt-2">
+                  <p className="text-sm text-muted-foreground">
+                    We detected your local time as{" "}
+                    <span className="font-semibold text-foreground">
+                      {formatTimezoneName(detectedTz)}
+                    </span>
+                    .
+                  </p>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 shrink-0 ml-2"
+                    onClick={() =>
+                      setFormData((prev) => ({ ...prev, timezone: detectedTz }))
+                    }
+                  >
+                    Update to Detected
+                  </Button>
+                </div>
+              ) : formData.timezone === detectedTz ? (
+                <p className="text-xs text-muted-foreground pt-1">
+                  Your timezone matches your automatically detected local time.
+                </p>
+              ) : null}
             </div>
 
             <div className="flex justify-end pt-4">
@@ -420,18 +374,5 @@ const Profile = () => {
     </div>
   );
 };
-
-// Simple User Icon for Fallback
-const UserIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
-    stroke="none"
-    {...props}
-  >
-    <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
-  </svg>
-);
 
 export default Profile;

@@ -9,7 +9,9 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
-import PermissionLevel from "./permission_level_type";
+import {
+  PermissionLevel,
+} from "./types";
 
 
 export default __t.row({

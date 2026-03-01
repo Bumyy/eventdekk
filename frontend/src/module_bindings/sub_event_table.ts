@@ -9,7 +9,9 @@ import {
   type AlgebraicTypeType as __AlgebraicTypeType,
   type Infer as __Infer,
 } from "spacetimedb";
-import SubEventType from "./sub_event_type_type";
+import {
+  SubEventType,
+} from "./types";
 
 
 export default __t.row({

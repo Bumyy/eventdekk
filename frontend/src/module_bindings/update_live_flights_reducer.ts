@@ -10,7 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import LiveFlightData from "./live_flight_data_type";
+import {
+  LiveFlightData,
+} from "./types";
 
 export default {
   get flights() {

@@ -23,12 +23,7 @@ import {
   MapPin,
   Plane,
 } from "lucide-react";
-import { Infer } from "spacetimedb";
-import { SubEventType, Event, SubEvent } from "@/module_bindings";
-
-type SubEventType = Infer<typeof SubEventType>;
-type Event = Infer<typeof Event>;
-type SubEvent = Infer<typeof SubEvent>;
+import { SubEventType, Event, SubEvent } from "@/module_bindings/types";
 
 interface FlightDetails {
   callsign?: string;

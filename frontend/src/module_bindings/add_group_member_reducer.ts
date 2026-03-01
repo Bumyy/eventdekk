@@ -10,7 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import PermissionLevel from "./permission_level_type";
+import {
+  PermissionLevel,
+} from "./types";
 
 export default {
   groupId: __t.u64(),

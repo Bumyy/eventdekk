@@ -20,17 +20,18 @@ import {
 } from "@/hooks/spacetimeHooks";
 import { format } from "date-fns";
 import { EventTypeDialog } from "@/components/EventTypeDialog";
-import { SubEventType, EventStatus, Event } from "@/module_bindings";
+import { SubEventType, EventStatus, Event } from "@/module_bindings/types";
 import { useParams, useNavigate } from "react-router-dom";
-import { DbContext, Infer, Timestamp } from "spacetimedb";
+import { Timestamp } from "spacetimedb";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { toast } from "sonner";
 import { EventInvitationDialog } from "@/components/EventInvitationDialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-
-type Event = Infer<typeof Event>;
-type SubEventType = Infer<typeof SubEventType>;
-type EventStatus = Infer<typeof EventStatus>;
+import {
+  useUserTimezone,
+  formatDateInTimezone,
+  formatTimeInTimezone,
+} from "@/utils/timezoneUtils";
 
 export default function AdminEvents() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
@@ -42,6 +43,7 @@ export default function AdminEvents() {
   const eventParticipants = useEventParticipants();
   const flightSignups = useFlightSignups();
   const groups = useGroups();
+  const userTimezone = useUserTimezone();
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const navigate = useNavigate();
@@ -780,11 +782,17 @@ export default function AdminEvents() {
                           </p>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span>
-                              {format(event.startTime.toDate(), "MMMM d, yyyy")}
+                              {formatDateInTimezone(
+                                event.startTime,
+                                userTimezone
+                              )}
                             </span>
                             <span>•</span>
                             <span>
-                              {format(event.startTime.toDate(), "h:mm a")}
+                              {formatTimeInTimezone(
+                                event.startTime,
+                                userTimezone
+                              )}
                             </span>
                           </div>
                         </div>
@@ -834,16 +842,16 @@ export default function AdminEvents() {
                                 </p>
                                 <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                                   <span>
-                                    {format(
-                                      subEvent.scheduledStartTime.toDate(),
-                                      "MMMM d, yyyy"
+                                    {formatDateInTimezone(
+                                      subEvent.scheduledStartTime,
+                                      userTimezone
                                     )}
                                   </span>
                                   <span>•</span>
                                   <span>
-                                    {format(
-                                      subEvent.scheduledStartTime.toDate(),
-                                      "h:mm a"
+                                    {formatTimeInTimezone(
+                                      subEvent.scheduledStartTime,
+                                      userTimezone
                                     )}
                                   </span>
                                   {subEvent.subEventType.tag ===
@@ -954,11 +962,17 @@ export default function AdminEvents() {
                           </p>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
                             <span>
-                              {format(event.startTime.toDate(), "MMMM d, yyyy")}
+                              {formatDateInTimezone(
+                                event.startTime,
+                                userTimezone
+                              )}
                             </span>
                             <span>•</span>
                             <span>
-                              {format(event.startTime.toDate(), "h:mm a")}
+                              {formatTimeInTimezone(
+                                event.startTime,
+                                userTimezone
+                              )}
                             </span>
                             <span>•</span>
                             <div className="flex items-center gap-2">
@@ -1044,16 +1058,16 @@ export default function AdminEvents() {
                                   </p>
                                   <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                                     <span>
-                                      {format(
-                                        subEvent.scheduledStartTime.toDate(),
-                                        "MMMM d, yyyy"
+                                      {formatDateInTimezone(
+                                        subEvent.scheduledStartTime,
+                                        userTimezone
                                       )}
                                     </span>
                                     <span>•</span>
                                     <span>
-                                      {format(
-                                        subEvent.scheduledStartTime.toDate(),
-                                        "h:mm a"
+                                      {formatTimeInTimezone(
+                                        subEvent.scheduledStartTime,
+                                        userTimezone
                                       )}
                                     </span>
                                     {subEvent.subEventType.tag ===
@@ -1123,11 +1137,17 @@ export default function AdminEvents() {
                         </p>
                         <div className="flex items-center gap-4 text-sm text-muted-foreground">
                           <span>
-                            {format(event.startTime.toDate(), "MMMM d, yyyy")}
+                            {formatDateInTimezone(
+                              event.startTime,
+                              userTimezone
+                            )}
                           </span>
                           <span>•</span>
                           <span>
-                            {format(event.startTime.toDate(), "h:mm a")}
+                            {formatTimeInTimezone(
+                              event.startTime,
+                              userTimezone
+                            )}
                           </span>
                           <span>•</span>
                           <Badge
@@ -1183,11 +1203,11 @@ export default function AdminEvents() {
                       </p>
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>
-                          {format(event.startTime.toDate(), "MMMM d, yyyy")}
+                          {formatDateInTimezone(event.startTime, userTimezone)}
                         </span>
                         <span>•</span>
                         <span>
-                          {format(event.startTime.toDate(), "h:mm a")}
+                          {formatTimeInTimezone(event.startTime, userTimezone)}
                         </span>
                       </div>
                     </div>

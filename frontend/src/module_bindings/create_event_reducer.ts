@@ -10,7 +10,9 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
-import SubEventData from "./sub_event_data_type";
+import {
+  SubEventData,
+} from "./types";
 
 export default {
   creatorGroupId: __t.u64(),

@@ -82,7 +82,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
 
     return DbConnection.builder()
       .withUri(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000")
-      .withModuleName("eventdekk")
+      .withDatabaseName("eventdekk")
       .withToken(sdbToken || undefined)
       .onConnect((conn: DbConnection, identity: Identity, token: string) => {
         isConnectedRef.current = true;
