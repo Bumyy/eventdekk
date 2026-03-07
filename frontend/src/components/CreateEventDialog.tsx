@@ -12,31 +12,14 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useEffect, useState } from "react";
-import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
-import {
-  CalendarIcon,
-  Plus,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Loader2,
-} from "lucide-react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { Plus, Trash2, ChevronDown, ChevronUp, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MapPin, Plane } from "lucide-react";
-import { SubEventType } from "@/module_bindings";
+import { SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { toast } from "sonner";
-import { Infer } from "spacetimedb";
-
-type SubEventType = Infer<typeof SubEventType>;
 
 interface SubEventFormData {
   subEventType: SubEventType;
@@ -61,23 +44,21 @@ interface EventFormData {
   subEvents: SubEventFormData[];
 }
 
-interface EventTypeDialogProps {
+interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (eventData: EventFormData) => void;
 }
 
-export function EventTypeDialog({
+export function CreateEventDialog({
   open,
   onOpenChange,
   onSubmit,
-}: EventTypeDialogProps) {
+}: CreateEventDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [startDate, setStartDate] = useState<Date>();
-  const [endDate, setEndDate] = useState<Date>();
-  const [startTime, setStartTime] = useState("");
-  const [endTime, setEndTime] = useState("");
+  const [startDateTime, setStartDateTime] = useState<Date | undefined>();
+  const [endDateTime, setEndDateTime] = useState<Date | undefined>();
   const [ifcEventLink, setIfcEventLink] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [subEvents, setSubEvents] = useState<SubEventFormData[]>([]);
@@ -130,7 +111,9 @@ export function EventTypeDialog({
 
   const handleAddSubEvent = () => {
     const newIndex = subEvents.length;
-    const defaultStartTime = startDate ? new Date(startDate) : new Date();
+    const defaultStartTime = startDateTime
+      ? new Date(startDateTime)
+      : new Date();
     const defaultEndTime = new Date(defaultStartTime);
     defaultEndTime.setHours(defaultEndTime.getHours() + 2);
 
@@ -162,7 +145,7 @@ export function EventTypeDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startDate || !endDate || !startTime || !endTime) {
+    if (!startDateTime || !endDateTime) {
       toast.error("Please fill out all required fields");
       return;
     }
@@ -188,14 +171,6 @@ export function EventTypeDialog({
       }
     }
 
-    const startDateTime = new Date(startDate);
-    const [startHours, startMinutes] = startTime.split(":");
-    startDateTime.setHours(parseInt(startHours), parseInt(startMinutes));
-
-    const endDateTime = new Date(endDate);
-    const [endHours, endMinutes] = endTime.split(":");
-    endDateTime.setHours(parseInt(endHours), parseInt(endMinutes));
-
     onSubmit({
       name,
       description,
@@ -213,10 +188,8 @@ export function EventTypeDialog({
     // Reset form fields
     setName("");
     setDescription("");
-    setStartDate(undefined);
-    setEndDate(undefined);
-    setStartTime("");
-    setEndTime("");
+    setStartDateTime(undefined);
+    setEndDateTime(undefined);
     setIfcEventLink("");
     setBannerUrl("");
     setSubEvents([]);
@@ -264,12 +237,12 @@ export function EventTypeDialog({
       {" "}
       {/* Add a backdrop div that animates blur and covers the header */}
       <div
-        className={`fixed inset-0 backdrop-blur-sm transition-all duration-200 z-[49] ${
+        className={`fixed inset-0 backdrop-blur-sm transition-all duration-200 z-[60] ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       />
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-[50vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-[50vw] max-h-[90vh] overflow-y-auto z-[60] data-[state=open]:z-[60]">
           <DialogHeader>
             <DialogTitle>Create New Event</DialogTitle>
             <DialogDescription>
@@ -303,81 +276,19 @@ export function EventTypeDialog({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Start Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !startDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate ? format(startDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
+                <DateTimePicker
+                  label="Start Time"
+                  value={startDateTime}
+                  onChange={setStartDateTime}
+                  placeholder="Select start date and time"
+                />
 
-                <div className="space-y-2">
-                  <Label htmlFor="startTime">Start Time</Label>
-                  <Input
-                    id="startTime"
-                    type="time"
-                    value={startTime}
-                    onChange={(e) => setStartTime(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>End Date</Label>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <Button
-                        variant="outline"
-                        className={cn(
-                          "w-full justify-start text-left font-normal",
-                          !endDate && "text-muted-foreground"
-                        )}
-                      >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {endDate ? format(endDate, "PPP") : "Pick a date"}
-                      </Button>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0">
-                      <Calendar
-                        mode="single"
-                        selected={endDate}
-                        onSelect={setEndDate}
-                        initialFocus
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="endTime">End Time</Label>
-                  <Input
-                    id="endTime"
-                    type="time"
-                    value={endTime}
-                    onChange={(e) => setEndTime(e.target.value)}
-                    required
-                  />
-                </div>
+                <DateTimePicker
+                  label="End Time"
+                  value={endDateTime}
+                  onChange={setEndDateTime}
+                  placeholder="Select end date and time"
+                />
               </div>
 
               <div className="space-y-2">

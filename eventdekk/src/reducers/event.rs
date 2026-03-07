@@ -8,15 +8,17 @@ use crate::utils::*;
 pub fn create_event(
     ctx: &ReducerContext, creator_group_id: u64, name: String, description: String,
     start_time: Timestamp, end_time: Timestamp, ifc_event_link: Option<String>,
-    banner_url: Option<String>, sub_events_data: Vec<SubEventData>,
+    banner_url: Option<String>, sub_events_data: Vec<SubEventData>, status: Option<EventStatus>,
 ) -> Result<(), String> {
     check_permission(ctx, creator_group_id, PermissionLevel::CEO)?;
     if name.trim().is_empty() { return Err("Event name cannot be empty.".to_string()); }
     if start_time >= end_time { return Err("Event start time must be before end time.".to_string()); }
 
+    let event_status = status.unwrap_or(EventStatus::Draft);
+
     let new_event = Event {
         event_id: 0, creator_group_id, name, description, start_time, end_time,
-        ifc_event_link, banner_url, status: EventStatus::Published, created_at: ctx.timestamp,
+        ifc_event_link, banner_url, status: event_status, created_at: ctx.timestamp,
     };
     let inserted_event = ctx.db.event().insert(new_event);
     let new_event_id = inserted_event.event_id;
@@ -197,5 +199,16 @@ pub fn delete_sub_event(ctx: &ReducerContext, sub_event_id: u64) -> Result<(), S
     
     ctx.db.sub_event().sub_event_id().delete(sub_event_id);
     info!("SubEvent ID {} deleted from Event {}", sub_event_id, sub_event.event_id);
+    Ok(())
+}
+
+#[reducer]
+pub fn delete_event(ctx: &ReducerContext, event_id: u64) -> Result<(), String> {
+    is_event_host_staff_or_ceo(ctx, event_id)?;
+    let mut event = find_event_or_err(ctx, event_id)?;
+
+    event.status = EventStatus::Cancelled;
+    ctx.db.event().event_id().update(event);
+    info!("Event {} cancelled by user {:?}", event_id, ctx.sender);
     Ok(())
 }

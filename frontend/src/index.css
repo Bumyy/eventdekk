@@ -201,3 +201,12 @@
   scrollbar-width: thin;
   scrollbar-color: var(--muted) transparent;
 }
+
+/* Sonner toaster z-index override */
+[data-sonner-toaster] {
+  z-index: 9999 !important;
+}
+
+[data-sonner-toast] {
+  z-index: 9999 !important;
+}

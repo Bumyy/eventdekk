@@ -12,6 +12,7 @@ import {
 
 import {
   SubEventData,
+  EventStatus,
 } from "./types";
 
 export default {
@@ -24,5 +25,8 @@ export default {
   bannerUrl: __t.option(__t.string()),
   get subEventsData() {
     return __t.array(SubEventData);
+  },
+  get status() {
+    return __t.option(EventStatus);
   },
 };

@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Toaster } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 // --- SpacetimeDB Imports ---
 import { SpacetimeDBProvider } from "spacetimedb/react";
@@ -149,10 +149,11 @@ function App() {
         <AuthProvider>
           {/* 3. Wrap your UI in the SpacetimeWrapper */}
           <SpacetimeWrapper>
+            <Toaster richColors />
+
             <div className="relative isolate min-h-screen bg-background text-foreground">
               <AppBackground />
               <Navigation />
-              <Toaster richColors />
 
               <main>
                 <Routes>

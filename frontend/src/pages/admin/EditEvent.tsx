@@ -44,29 +44,34 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Calendar } from "@/components/ui/calendar";
 import { format } from "date-fns";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   MapPin,
   Plane,
-  CalendarIcon,
   ChevronDown,
   Plus,
   X,
   Trash2,
   Loader2,
   Upload,
-  Image as ImageIcon,
   Clock,
   Check,
   Users,
   CheckCircle2,
   Calendar as CalendarIcon2,
+  Send,
 } from "lucide-react";
-import { Timestamp } from "spacetimedb";
+import { SenderError, Timestamp } from "spacetimedb";
 import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { useSpacetimeDB } from "spacetimedb/react";
+import {
+  formatDateInTimezone,
+  formatTimeInTimezone,
+  formatDateTimeInTimezone,
+  useUserTimezone,
+} from "@/utils/timezoneUtils";
 
 export default function EditEvent() {
   const { eventId, groupId } = useParams();
@@ -77,6 +82,7 @@ export default function EditEvent() {
   const flightSignups = useFlightSignups();
   const { getConnection } = useSpacetimeDB();
   const connection = getConnection();
+  const userTimezone = useUserTimezone();
 
   // Event data states
   const [name, setName] = useState("");
@@ -85,6 +91,7 @@ export default function EditEvent() {
   const [endTime, setEndTime] = useState<Date | null>(null);
   const [ifcEventLink, setIfcEventLink] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
+  const [eventStatus, setEventStatus] = useState<EventStatus | null>(null);
 
   // Image upload related state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -182,6 +189,7 @@ export default function EditEvent() {
     setEndTime(event.endTime.toDate());
     setIfcEventLink(event.ifcEventLink || "");
     setBannerUrl(event.bannerUrl || "");
+    setEventStatus(event.status);
   }, [events, eventId, navigate]);
 
   // Get sub events for this event
@@ -322,9 +330,21 @@ export default function EditEvent() {
 
       // Remove signups that are no longer selected
       for (const signup of subEventsToRemove) {
-        await connection.reducers.deleteFlightSignup({
-          signupId: signup.signupId,
-        });
+        try {
+          await connection.reducers.deleteFlightSignup({
+            signupId: signup.signupId,
+          });
+        } catch (error) {
+          if (error instanceof SenderError) {
+            toast.error("Error removing flight signup", {
+              description: `${error.message}`,
+            });
+          } else {
+            toast.error("Error removing flight signup", {
+              description: "There was a problem removing your flight signup.",
+            });
+          }
+        }
       }
 
       // Add new signups and update existing ones
@@ -378,29 +398,53 @@ export default function EditEvent() {
 
         if (existingSignup) {
           // Update existing signup
-          connection.reducers.updateFlightSignup({
-            signupId: existingSignup.signupId,
-            departureIcao: departureIcao,
-            arrivalIcao: arrivalIcao,
-            routeDetails: details.route || undefined,
-            callsign: details.callsign || null,
-            aircraftType: details.aircraftType || null,
-            desiredDepartureTime: departureTime || undefined,
-            desiredArrivalTime: arrivalTime || undefined,
-          });
+          try {
+            await connection.reducers.updateFlightSignup({
+              signupId: existingSignup.signupId,
+              departureIcao: departureIcao,
+              arrivalIcao: arrivalIcao,
+              routeDetails: details.route || undefined,
+              callsign: details.callsign || null,
+              aircraftType: details.aircraftType || null,
+              desiredDepartureTime: departureTime || undefined,
+              desiredArrivalTime: arrivalTime || undefined,
+            });
+          } catch (error) {
+            if (error instanceof SenderError) {
+              toast.error("Error updating flight signup", {
+                description: `${error.message}`,
+              });
+            } else {
+              toast.error("Error updating flight signup", {
+                description: "There was a problem updating your flight signup.",
+              });
+            }
+          }
         } else {
           // Add new signup
-          connection.reducers.signupForFlight({
-            subEventId: subEventId,
-            groupId: BigInt(groupId),
-            departureIcao: departureIcao,
-            arrivalIcao: arrivalIcao,
-            routeDetails: details.route || undefined,
-            callsign: details.callsign || null,
-            aircraftType: details.aircraftType || null,
-            desiredDepartureTime: departureTime || undefined,
-            desiredArrivalTime: arrivalTime || undefined,
-          });
+          try {
+            await connection.reducers.signupForFlight({
+              subEventId: subEventId,
+              groupId: BigInt(groupId),
+              departureIcao: departureIcao,
+              arrivalIcao: arrivalIcao,
+              routeDetails: details.route || undefined,
+              callsign: details.callsign || null,
+              aircraftType: details.aircraftType || null,
+              desiredDepartureTime: departureTime || undefined,
+              desiredArrivalTime: arrivalTime || undefined,
+            });
+          } catch (error) {
+            if (error instanceof SenderError) {
+              toast.error("Error signing up for flight", {
+                description: `${error.message}`,
+              });
+            } else {
+              toast.error("Error signing up for flight", {
+                description: "There was a problem signing up for the flight.",
+              });
+            }
+          }
         }
       }
 
@@ -410,16 +454,22 @@ export default function EditEvent() {
 
       setShowManageOwnFlightsDialog(false);
     } catch (error) {
-      console.error("Error submitting flights:", error);
-      toast.error("Error saving flight details", {
-        description: "There was a problem updating your flight signups.",
-      });
+      if (error instanceof SenderError) {
+        toast.error("Error saving flight details", {
+          description: `${error.message}`,
+        });
+      } else {
+        console.error("Error submitting flights:", error);
+        toast.error("Error saving flight details", {
+          description: "There was a problem updating your flight signups.",
+        });
+      }
     } finally {
       setIsSubmittingFlights(false);
     }
   };
 
-  const handleUpdateEvent = async () => {
+  const handleUpdateEvent = async (publish: boolean = false) => {
     if (!connection || !eventId) return;
 
     setIsLoading(true);
@@ -436,8 +486,8 @@ export default function EditEvent() {
           name || "Event Banner"
         );
         toast.success("Banner image uploaded successfully!");
-      } catch (error: any) {
-        toast.error(`Image upload failed: ${error.message}`);
+      } catch (error: unknown) {
+        toast.error(`Image upload failed: ${(error as Error).message}`);
         setIsLoading(false);
         return; // Don't proceed if upload fails
       } finally {
@@ -445,8 +495,11 @@ export default function EditEvent() {
       }
     }
 
+    // If publishing, set to Published. Otherwise, keep the current status
+    const newStatus = publish ? EventStatus.Published : eventStatus;
+
     try {
-      connection.reducers.updateEvent({
+      await connection.reducers.updateEvent({
         eventId: BigInt(eventId),
         name: name,
         description: description,
@@ -454,27 +507,33 @@ export default function EditEvent() {
         endTime: endTime ? Timestamp.fromDate(endTime) : null,
         ifcEventLink: ifcEventLink || null,
         bannerUrl: finalBannerUrl || null,
-        status: EventStatus.Published,
+        status: newStatus,
       });
 
-      // Update local state with the new banner URL
+      // Update local state with the new banner URL and status
       setBannerUrl(finalBannerUrl);
       setSelectedFile(null);
+      setEventStatus(newStatus);
 
-      toast.success("Event updated", {
-        description: "Your changes have been saved successfully.",
+      toast.success(publish ? "Event published!" : "Event saved as draft", {
+        description: publish
+          ? "Your event is now visible to everyone."
+          : "Your changes have been saved as draft.",
       });
     } catch (error) {
-      toast.error("Error updating event", {
-        description: "There was a problem updating the event.",
-      });
+      if (error instanceof SenderError) {
+        toast.error("Error updating event", {
+          description: `${error.message}`,
+        });
+      }
+
       console.error("Error updating event:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddSubEvent = () => {
+  const handleAddSubEvent = async () => {
     if (!connection || !eventId) return;
 
     let subEventType: SubEventType;
@@ -491,7 +550,7 @@ export default function EditEvent() {
     }
 
     try {
-      connection.reducers.addSubEvent({
+      await connection.reducers.addSubEvent({
         eventId: BigInt(eventId),
         name: subEventForm.name,
         description: subEventForm.description,
@@ -533,20 +592,39 @@ export default function EditEvent() {
         description: "The sub-event was added successfully.",
       });
     } catch (error) {
-      toast.error("Error adding sub-event", {
-        description: "There was a problem adding the sub-event.",
-      });
+      if (error instanceof SenderError) {
+        toast.error("Error adding sub-event", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error adding sub-event", {
+          description: "There was a problem adding the sub-event.",
+        });
+      }
       console.error("Error adding sub-event:", error);
     }
   };
 
-  const handleDeleteSubEvent = (subEventId: bigint) => {
+  const handleDeleteSubEvent = async (subEventId: bigint) => {
     if (!connection) return;
     if (confirm("Are you sure you want to delete this sub-event?")) {
-      connection.reducers.deleteSubEvent({ subEventId: subEventId });
-      toast.success("Sub-event deleted", {
-        description: "The sub-event was deleted successfully.",
-      });
+      try {
+        await connection.reducers.deleteSubEvent({ subEventId: subEventId });
+        toast.success("Sub-event deleted", {
+          description: "The sub-event was deleted successfully.",
+        });
+      } catch (error) {
+        if (error instanceof SenderError) {
+          toast.error("Error deleting sub-event", {
+            description: `${error.message}`,
+          });
+        } else {
+          toast.error("Error deleting sub-event", {
+            description: "There was a problem deleting the sub-event.",
+          });
+        }
+        console.error("Error deleting sub-event:", error);
+      }
     }
   };
 
@@ -561,32 +639,38 @@ export default function EditEvent() {
     setSelectedGroups((prev) => prev.filter((g) => g.id !== groupId));
   };
 
-  const handleInviteGroups = () => {
+  const handleInviteGroups = async () => {
     if (!connection || !eventId) return;
 
     const eventIdBigInt = BigInt(eventId);
 
-    Promise.all(
-      selectedGroups.map((group) =>
-        connection.reducers.inviteGroupToEvent({
-          eventId: eventIdBigInt,
-          invitedGroupId: group.id,
-        })
-      )
-    )
-      .then(() => {
-        toast.success("Groups invited", {
-          description: `Successfully invited ${selectedGroups.length} group(s) to the event.`,
+    try {
+      await Promise.all(
+        selectedGroups.map((group) =>
+          connection.reducers.inviteGroupToEvent({
+            eventId: eventIdBigInt,
+            invitedGroupId: group.id,
+          })
+        )
+      );
+
+      toast.success("Groups invited", {
+        description: `Successfully invited ${selectedGroups.length} group(s) to the event.`,
+      });
+      setSelectedGroups([]);
+      setShowInviteGroupsDialog(false);
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error inviting groups", {
+          description: `${error.message}`,
         });
-        setSelectedGroups([]);
-        setShowInviteGroupsDialog(false);
-      })
-      .catch((error) => {
+      } else {
         toast.error("Error inviting groups", {
           description: "There was a problem inviting groups to the event.",
         });
-        console.error("Error inviting groups:", error);
-      });
+      }
+      console.error("Error inviting groups:", error);
+    }
   };
 
   const getSubEventTypeBadge = (type: SubEventType) => {
@@ -626,12 +710,31 @@ export default function EditEvent() {
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
-            onClick={() => navigate(`/admin/groups/${groupId}/events`)}
+            onClick={() => navigate(`/admin/events/${groupId}`)}
           >
             Cancel
           </Button>
+          {eventStatus?.tag === "Draft" && (
+            <Button
+              variant="default"
+              onClick={() => handleUpdateEvent(true)}
+              disabled={isLoading || isUploading}
+            >
+              {isLoading || isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Publishing...
+                </>
+              ) : (
+                <>
+                  <Send className="mr-2 h-4 w-4" />
+                  Publish Event
+                </>
+              )}
+            </Button>
+          )}
           <Button
-            onClick={handleUpdateEvent}
+            onClick={() => handleUpdateEvent(false)}
             disabled={isLoading || isUploading}
           >
             {isLoading || isUploading ? (
@@ -639,6 +742,8 @@ export default function EditEvent() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 {isUploading ? "Uploading..." : "Saving..."}
               </>
+            ) : eventStatus?.tag === "Draft" ? (
+              "Save as Draft"
             ) : (
               "Save Changes"
             )}
@@ -674,119 +779,27 @@ export default function EditEvent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="startTime">Start Time</Label>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startTime
-                      ? format(startTime, "PPP p")
-                      : "Select date and time"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Select Start Time</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <Calendar
-                      mode="single"
-                      selected={startTime}
-                      onSelect={(date) => date && setStartTime(date)}
-                      initialFocus
-                    />
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        "00:00",
-                        "04:00",
-                        "08:00",
-                        "12:00",
-                        "16:00",
-                        "18:00",
-                        "20:00",
-                        "22:00",
-                      ].map((time) => (
-                        <Button
-                          key={time}
-                          variant="outline"
-                          onClick={() => {
-                            const [hours, minutes] = time
-                              .split(":")
-                              .map(Number);
-                            const newDate = new Date(startTime);
-                            newDate.setHours(hours, minutes);
-                            setStartTime(newDate);
-                          }}
-                        >
-                          {time}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <DateTimePicker
+              label="Start Time"
+              value={startTime}
+              onChange={(date) => setStartTime(date || null)}
+              placeholder={
+                startTime
+                  ? formatDateTimeInTimezone(startTime, userTimezone)
+                  : "Select date and time"
+              }
+            />
 
-            <div className="space-y-2">
-              <Label htmlFor="endTime">End Time</Label>
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endTime
-                      ? format(endTime, "PPP p")
-                      : "Select date and time"}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                  <DialogHeader>
-                    <DialogTitle>Select End Time</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-4 py-4">
-                    <Calendar
-                      mode="single"
-                      selected={endTime}
-                      onSelect={(date) => date && setEndTime(date)}
-                      initialFocus
-                    />
-                    <div className="grid grid-cols-4 gap-2">
-                      {[
-                        "00:00",
-                        "04:00",
-                        "08:00",
-                        "12:00",
-                        "16:00",
-                        "18:00",
-                        "20:00",
-                        "22:00",
-                      ].map((time) => (
-                        <Button
-                          key={time}
-                          variant="outline"
-                          onClick={() => {
-                            const [hours, minutes] = time
-                              .split(":")
-                              .map(Number);
-                            const newDate = new Date(endTime);
-                            newDate.setHours(hours, minutes);
-                            setEndTime(newDate);
-                          }}
-                        >
-                          {time}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
+            <DateTimePicker
+              label="End Time"
+              value={endTime}
+              onChange={(date) => setEndTime(date || null)}
+              placeholder={
+                endTime
+                  ? formatDateTimeInTimezone(endTime, userTimezone)
+                  : "Select date and time"
+              }
+            />
           </div>
 
           <div className="space-y-2">
@@ -953,137 +966,37 @@ export default function EditEvent() {
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Start Time</Label>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(subEventForm.startTime, "PPP p")}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                          <DialogHeader>
-                            <DialogTitle>Select Start Time</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <Calendar
-                              mode="single"
-                              selected={subEventForm.startTime}
-                              onSelect={(date) =>
-                                date &&
-                                setSubEventForm({
-                                  ...subEventForm,
-                                  startTime: date,
-                                })
-                              }
-                              initialFocus
-                            />
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                "00:00",
-                                "04:00",
-                                "08:00",
-                                "12:00",
-                                "16:00",
-                                "18:00",
-                                "20:00",
-                                "22:00",
-                              ].map((time) => (
-                                <Button
-                                  key={time}
-                                  variant="outline"
-                                  onClick={() => {
-                                    const [hours, minutes] = time
-                                      .split(":")
-                                      .map(Number);
-                                    const newDate = new Date(
-                                      subEventForm.startTime
-                                    );
-                                    newDate.setHours(hours, minutes);
-                                    setSubEventForm({
-                                      ...subEventForm,
-                                      startTime: newDate,
-                                    });
-                                  }}
-                                >
-                                  {time}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                    <DateTimePicker
+                      label="Start Time"
+                      value={subEventForm.startTime}
+                      onChange={(date) =>
+                        date &&
+                        setSubEventForm({
+                          ...subEventForm,
+                          startTime: date,
+                        })
+                      }
+                      placeholder={formatDateTimeInTimezone(
+                        subEventForm.startTime,
+                        userTimezone
+                      )}
+                    />
 
-                    <div className="space-y-2">
-                      <Label>End Time</Label>
-                      <Dialog>
-                        <DialogTrigger asChild>
-                          <Button
-                            variant="outline"
-                            className="w-full justify-start text-left font-normal"
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {format(subEventForm.endTime, "PPP p")}
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
-                          <DialogHeader>
-                            <DialogTitle>Select End Time</DialogTitle>
-                          </DialogHeader>
-                          <div className="grid gap-4 py-4">
-                            <Calendar
-                              mode="single"
-                              selected={subEventForm.endTime}
-                              onSelect={(date) =>
-                                date &&
-                                setSubEventForm({
-                                  ...subEventForm,
-                                  endTime: date,
-                                })
-                              }
-                              initialFocus
-                            />
-                            <div className="grid grid-cols-4 gap-2">
-                              {[
-                                "00:00",
-                                "04:00",
-                                "08:00",
-                                "12:00",
-                                "16:00",
-                                "18:00",
-                                "20:00",
-                                "22:00",
-                              ].map((time) => (
-                                <Button
-                                  key={time}
-                                  variant="outline"
-                                  onClick={() => {
-                                    const [hours, minutes] = time
-                                      .split(":")
-                                      .map(Number);
-                                    const newDate = new Date(
-                                      subEventForm.endTime
-                                    );
-                                    newDate.setHours(hours, minutes);
-                                    setSubEventForm({
-                                      ...subEventForm,
-                                      endTime: newDate,
-                                    });
-                                  }}
-                                >
-                                  {time}
-                                </Button>
-                              ))}
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </div>
+                    <DateTimePicker
+                      label="End Time"
+                      value={subEventForm.endTime}
+                      onChange={(date) =>
+                        date &&
+                        setSubEventForm({
+                          ...subEventForm,
+                          endTime: date,
+                        })
+                      }
+                      placeholder={formatDateTimeInTimezone(
+                        subEventForm.endTime,
+                        userTimezone
+                      )}
+                    />
                   </div>
 
                   {subEventForm.type === "FlyIn" ||
@@ -1224,14 +1137,17 @@ export default function EditEvent() {
                     </p>
                     <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
                       <span>
-                        {format(
+                        {formatDateInTimezone(
                           subEvent.scheduledStartTime.toDate(),
-                          "MMMM d, yyyy"
+                          userTimezone
                         )}
                       </span>
                       <span>•</span>
                       <span>
-                        {format(subEvent.scheduledStartTime.toDate(), "h:mm a")}
+                        {formatTimeInTimezone(
+                          subEvent.scheduledStartTime.toDate(),
+                          userTimezone
+                        )}
                       </span>
                       {isGroupFlight &&
                         subEvent.groupFlightDepartureIcao &&
@@ -1272,15 +1188,15 @@ export default function EditEvent() {
 
                             // Format departure/arrival times if available
                             const departureTime = signup.desiredDepartureTime
-                              ? format(
+                              ? formatDateTimeInTimezone(
                                   signup.desiredDepartureTime.toDate(),
-                                  "MMM d, h:mm a"
+                                  userTimezone
                                 )
                               : null;
                             const arrivalTime = signup.desiredArrivalTime
-                              ? format(
+                              ? formatDateTimeInTimezone(
                                   signup.desiredArrivalTime.toDate(),
-                                  "MMM d, h:mm a"
+                                  userTimezone
                                 )
                               : null;
 
@@ -1554,16 +1470,16 @@ export default function EditEvent() {
                             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
                               <span className="flex items-center">
                                 <CalendarIcon2 className="h-3 w-3 mr-1" />
-                                {format(
+                                {formatDateInTimezone(
                                   subEvent.scheduledStartTime.toDate(),
-                                  "PPP"
+                                  userTimezone
                                 )}
                               </span>
                               <span className="flex items-center">
                                 <Clock className="h-3 w-3 mr-1" />
-                                {format(
+                                {formatTimeInTimezone(
                                   subEvent.scheduledStartTime.toDate(),
-                                  "p"
+                                  userTimezone
                                 )}
                               </span>
 

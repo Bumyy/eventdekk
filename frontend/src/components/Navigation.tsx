@@ -15,10 +15,10 @@ import {
   Settings,
   ArrowLeft,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import eventdekkLogo from "../assets/eventdekk_logo.png";
 import { cn } from "@/lib/utils";
-import { useUsers, useGroups } from "@/hooks/spacetimeHooks";
+import { useGroups, useCurrentUser } from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -35,34 +35,18 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
-import { Infer } from "spacetimedb";
-import { User } from "../module_bindings";
 import { useSpacetimeDB } from "spacetimedb/react";
-
-type UserType = Infer<typeof User>;
 
 const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, logout, isLoading: isAuthLoading } = useAuth();
   const { identity, isActive: isConnected } = useSpacetimeDB();
-  const users = useUsers();
   const groups = useGroups();
-  const [currentUser, setCurrentUser] = useState<UserType | undefined>(
-    undefined
-  );
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  useEffect(() => {
-    if (isConnected && identity) {
-      const foundUser = users.find(
-        (u) => u.identity.toHexString() === identity.toHexString()
-      );
-      setCurrentUser(foundUser || undefined);
-    } else {
-      setCurrentUser(undefined);
-    }
-  }, [users, identity, isConnected]);
+  const currentUser = useCurrentUser();
+
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isLoading = isAuthLoading || (isAuthenticated && !isConnected);
 
