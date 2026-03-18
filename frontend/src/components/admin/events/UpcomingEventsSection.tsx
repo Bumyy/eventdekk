@@ -10,6 +10,8 @@ interface UpcomingEventsSectionProps {
   userTimezone: string;
   groupId: bigint;
   expandedEvents: string[];
+  currentUser?: any;
+  users?: any[];
   onToggleExpand: (eventId: string) => void;
   onManageEvent: (eventId: bigint) => void;
   onDeleteEvent: (eventId: bigint) => void;
@@ -26,6 +28,8 @@ export function UpcomingEventsSection({
   userTimezone,
   groupId,
   expandedEvents,
+  currentUser,
+  users,
   onToggleExpand,
   onManageEvent,
   onDeleteEvent,
@@ -73,6 +77,8 @@ export function UpcomingEventsSection({
                   userTimezone={userTimezone}
                   isHosting={true}
                   expanded={expandedEvents.includes(event.eventId.toString())}
+                  currentUser={currentUser}
+                  users={users}
                   onToggleExpand={() =>
                     onToggleExpand(event.eventId.toString())
                   }
@@ -128,6 +134,8 @@ export function UpcomingEventsSection({
                   expanded={expandedEvents.includes(
                     `attending-${event.eventId.toString()}`
                   )}
+                  currentUser={currentUser}
+                  users={users}
                   onToggleExpand={() =>
                     onToggleExpand(`attending-${event.eventId.toString()}`)
                   }

@@ -1,4 +1,4 @@
-use spacetimedb::{reducer, ReducerContext, Timestamp, Table};
+use spacetimedb::{reducer, ReducerContext, Timestamp, Table, Identity};
 use log::{info, warn};
 use crate::enums::*;
 use crate::tables::*;
@@ -9,6 +9,7 @@ pub fn create_event(
     ctx: &ReducerContext, creator_group_id: u64, name: String, description: String,
     start_time: Timestamp, end_time: Timestamp, ifc_event_link: Option<String>,
     banner_url: Option<String>, sub_events_data: Vec<SubEventData>, status: Option<EventStatus>,
+    is_internal: bool,
 ) -> Result<(), String> {
     check_permission(ctx, creator_group_id, PermissionLevel::CEO)?;
     if name.trim().is_empty() { return Err("Event name cannot be empty.".to_string()); }
@@ -18,7 +19,7 @@ pub fn create_event(
 
     let new_event = Event {
         event_id: 0, creator_group_id, name, description, start_time, end_time,
-        ifc_event_link, banner_url, status: event_status, created_at: ctx.timestamp,
+        ifc_event_link, banner_url, status: event_status,  is_internal, created_at: ctx.timestamp,
     };
     let inserted_event = ctx.db.event().insert(new_event);
     let new_event_id = inserted_event.event_id;
@@ -63,6 +64,7 @@ pub fn create_event(
             sub_event_type: sub_data.sub_event_type,
             scheduled_start_time: sub_data.scheduled_start_time,
             scheduled_end_time: sub_data.scheduled_end_time,
+            event_lead: sub_data.event_lead,
             hub_icao: validated_hub_icao.map(|s| s.to_uppercase()),
             group_flight_departure_icao: validated_gf_dep_icao.map(|s| s.to_uppercase()),
             group_flight_arrival_icao: validated_gf_arr_icao.map(|s| s.to_uppercase()),
@@ -78,7 +80,7 @@ pub fn create_event(
 pub fn update_event(
     ctx: &ReducerContext, event_id: u64, name: String, description: String,
     start_time: Timestamp, end_time: Timestamp, ifc_event_link: Option<String>,
-    banner_url: Option<String>, status: EventStatus,
+    banner_url: Option<String>, status: EventStatus, is_internal: bool,
 ) -> Result<(), String> {
     is_event_host_staff_or_ceo(ctx, event_id)?;
     let mut event = find_event_or_err(ctx, event_id)?;
@@ -89,13 +91,14 @@ pub fn update_event(
     event.name = name; event.description = description; event.start_time = start_time;
     event.end_time = end_time; event.ifc_event_link = ifc_event_link; event.banner_url = banner_url;
     event.status = status;
+    event.is_internal = is_internal; 
 
     ctx.db.event().event_id().update(event);
     info!("Event {} updated by user {:?}", event_id, ctx.sender);
 
-    if status != EventStatus::Published && ctx.db.discovery_event().event_id().find(event_id).is_some() {
-         ctx.db.discovery_event().event_id().delete(event_id);
-         info!("Event {} removed from discovery due to status change.", event_id);
+    if (status != EventStatus::Published || is_internal) && ctx.db.discovery_event().event_id().find(event_id).is_some() {
+        ctx.db.discovery_event().event_id().delete(event_id);
+        info!("Event {} removed from discovery due to status change.", event_id);
     }
     Ok(())
 }
@@ -146,6 +149,7 @@ pub fn respond_to_event_invitation(
 pub fn add_sub_event(
     ctx: &ReducerContext, event_id: u64, name: String, description: Option<String>,
     sub_event_type: SubEventType, scheduled_start_time: Timestamp, scheduled_end_time: Timestamp,
+    event_lead: Option<Identity>,
     hub_icao: Option<String>, group_flight_departure_icao: Option<String>,
     group_flight_arrival_icao: Option<String>, group_flight_route: Option<String>,
     notes: Option<String>,
@@ -177,6 +181,7 @@ pub fn add_sub_event(
     let new_sub_event = SubEvent {
         sub_event_id: 0, event_id, name, description, sub_event_type,
         scheduled_start_time, scheduled_end_time,
+        event_lead,
         hub_icao: validated_hub_icao.map(|s| s.to_uppercase()),
         group_flight_departure_icao: validated_gf_dep_icao.map(|s| s.to_uppercase()),
         group_flight_arrival_icao: validated_gf_arr_icao.map(|s| s.to_uppercase()),
@@ -185,6 +190,58 @@ pub fn add_sub_event(
 
     let inserted_sub_event = ctx.db.sub_event().insert(new_sub_event);
     info!("SubEvent '{}' added to Event {}", inserted_sub_event.name, event_id);
+    Ok(())
+}
+
+#[reducer]
+pub fn update_sub_event(
+    ctx: &ReducerContext, sub_event_id: u64, name: String, description: Option<String>,
+    sub_event_type: SubEventType, scheduled_start_time: Timestamp, scheduled_end_time: Timestamp,
+    event_lead: Option<Identity>,
+    hub_icao: Option<String>, group_flight_departure_icao: Option<String>,
+    group_flight_arrival_icao: Option<String>, group_flight_route: Option<String>,
+    notes: Option<String>,
+) -> Result<(), String> {
+    let mut sub_event = find_sub_event_or_err(ctx, sub_event_id)?;
+    is_event_host_staff_or_ceo(ctx, sub_event.event_id)?;
+    
+    let event = find_event_or_err(ctx, sub_event.event_id)?;
+
+    if name.trim().is_empty() { return Err("SubEvent name cannot be empty.".to_string()); }
+    if scheduled_start_time >= scheduled_end_time { return Err("SubEvent start time must be before end time.".to_string()); }
+    if scheduled_start_time < event.start_time || scheduled_end_time > event.end_time {
+        warn!("SubEvent times fall outside parent event times.");
+    }
+
+    let (validated_hub_icao, validated_gf_dep_icao, validated_gf_arr_icao);
+    match sub_event_type {
+        SubEventType::FlyIn | SubEventType::FlyOut => {
+            let hub = hub_icao.ok_or("hub_icao is required for FlyIn/FlyOut SubEvents.".to_string())?;
+            if hub.len() != 4 { return Err("hub_icao must be 4 letters.".to_string()); }
+            validated_hub_icao = Some(hub); validated_gf_dep_icao = None; validated_gf_arr_icao = None;
+        }
+        SubEventType::GroupFlight => {
+            let dep = group_flight_departure_icao.ok_or("group_flight_departure_icao is required.".to_string())?;
+            let arr = group_flight_arrival_icao.ok_or("group_flight_arrival_icao is required.".to_string())?;
+            if dep.len() != 4 || arr.len() != 4 { return Err("ICAO codes must be 4 letters.".to_string()); }
+            validated_hub_icao = None; validated_gf_dep_icao = Some(dep); validated_gf_arr_icao = Some(arr);
+        }
+    }
+
+    sub_event.name = name;
+    sub_event.description = description;
+    sub_event.sub_event_type = sub_event_type;
+    sub_event.scheduled_start_time = scheduled_start_time;
+    sub_event.scheduled_end_time = scheduled_end_time;
+    sub_event.event_lead = event_lead;
+    sub_event.hub_icao = validated_hub_icao.map(|s| s.to_uppercase());
+    sub_event.group_flight_departure_icao = validated_gf_dep_icao.map(|s| s.to_uppercase());
+    sub_event.group_flight_arrival_icao = validated_gf_arr_icao.map(|s| s.to_uppercase());
+    sub_event.group_flight_route = group_flight_route;
+    sub_event.notes = notes;
+
+    ctx.db.sub_event().sub_event_id().update(sub_event);
+    info!("SubEvent {} updated by user {:?}", sub_event_id, ctx.sender);
     Ok(())
 }
 

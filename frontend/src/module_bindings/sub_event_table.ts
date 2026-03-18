@@ -29,4 +29,5 @@ export default __t.row({
   groupFlightArrivalIcao: __t.option(__t.string()).name("group_flight_arrival_icao"),
   groupFlightRoute: __t.option(__t.string()).name("group_flight_route"),
   notes: __t.option(__t.string()),
+  eventLead: __t.option(__t.identity()).name("event_lead"),
 });

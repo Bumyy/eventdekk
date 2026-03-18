@@ -32,7 +32,7 @@ fn populate_initial_discovery(ctx: &ReducerContext) {
     let now = ctx.timestamp;
     let min_start_time = now + TimeDuration::from_micros(ELIGIBILITY_LOOKAHEAD_MICROS);
     let mut candidates: Vec<Event> = ctx.db.event().iter()
-        .filter(|e| e.status == EventStatus::Published && e.start_time > min_start_time)
+        .filter(|e| e.status == EventStatus::Published && !e.is_internal && e.start_time > min_start_time)  
         .collect();
     candidates.sort_by_key(|e| e.start_time);
 
@@ -74,7 +74,7 @@ pub fn rotate_discovery_event(
     for event_id in discovery_item_ids {
         if let Some(item) = ctx.db.discovery_event().event_id().find(event_id) {
             let event_is_valid = match ctx.db.event().event_id().find(item.event_id) {
-                 Some(event) => event.status == EventStatus::Published && event.start_time >= now,
+                Some(event) => event.status == EventStatus::Published && !event.is_internal && event.start_time >= now,
                 None => false,
             };
 
@@ -131,6 +131,7 @@ pub fn rotate_discovery_event(
         let mut potential_candidates: Vec<Event> = ctx.db.event().iter()
             .filter(|e|
                 e.status == EventStatus::Published &&
+                !e.is_internal &&
                 e.start_time > min_start_time &&
                 !current_discovery_ids.contains(&e.event_id) // Exclude already present
             )
@@ -205,7 +206,7 @@ pub fn rotate_discovery_event(
     let min_start_time_for_candidate = now + TimeDuration::from_micros(ELIGIBILITY_LOOKAHEAD_MICROS);
 
     let all_eligible_events: Vec<Event> = ctx.db.event().iter()
-        .filter(|e| e.status == EventStatus::Published && e.start_time > min_start_time_for_candidate)
+        .filter(|e| e.status == EventStatus::Published && !e.is_internal && e.start_time > min_start_time_for_candidate)
         .collect();
 
     let current_discovery_ids: HashSet<u64> = current_discovery_events.iter().map(|de| de.event_id).collect();

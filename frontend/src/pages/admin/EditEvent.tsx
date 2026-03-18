@@ -5,6 +5,7 @@ import {
   useSubEvents,
   useGroups,
   useFlightSignups,
+  useGroupMembersForGroup,
 } from "@/hooks/spacetimeHooks";
 import { Button } from "@/components/ui/button";
 import {
@@ -61,6 +62,7 @@ import {
   CheckCircle2,
   Calendar as CalendarIcon2,
   Send,
+  Pencil,
 } from "lucide-react";
 import { SenderError, Timestamp } from "spacetimedb";
 import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
@@ -83,12 +85,15 @@ export default function EditEvent() {
   const { getConnection } = useSpacetimeDB();
   const connection = getConnection();
   const userTimezone = useUserTimezone();
+  const members = useGroupMembersForGroup(groupId ? BigInt(groupId) : null);
+  console.log(members);
 
   // Event data states
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [endTime, setEndTime] = useState<Date | null>(null);
+  const [isInternal, setIsInternal] = useState(false);
   const [ifcEventLink, setIfcEventLink] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [eventStatus, setEventStatus] = useState<EventStatus | null>(null);
@@ -118,6 +123,26 @@ export default function EditEvent() {
     arrivalIcao: "",
     route: "",
     notes: "",
+    eventLeadHex: "none",
+  });
+
+  // Put this right below where you define `const [subEventForm, setSubEventForm] = useState({...})`
+  const [showEditSubEventDialog, setShowEditSubEventDialog] = useState(false);
+  const [editingSubEventId, setEditingSubEventId] = useState<bigint | null>(
+    null
+  );
+  const [editSubEventForm, setEditSubEventForm] = useState({
+    name: "",
+    description: "",
+    type: "GroupFlight" as "GroupFlight" | "FlyIn" | "FlyOut",
+    startTime: new Date(),
+    endTime: new Date(),
+    hubIcao: "",
+    departureIcao: "",
+    arrivalIcao: "",
+    route: "",
+    notes: "",
+    eventLeadHex: "none",
   });
 
   // New state for managing own flights dialog
@@ -187,6 +212,7 @@ export default function EditEvent() {
     setDescription(event.description);
     setStartTime(event.startTime.toDate());
     setEndTime(event.endTime.toDate());
+    setIsInternal(event.isInternal);
     setIfcEventLink(event.ifcEventLink || "");
     setBannerUrl(event.bannerUrl || "");
     setEventStatus(event.status);
@@ -508,6 +534,7 @@ export default function EditEvent() {
         ifcEventLink: ifcEventLink || null,
         bannerUrl: finalBannerUrl || null,
         status: newStatus,
+        isInternal: isInternal,
       });
 
       // Update local state with the new banner URL and status
@@ -550,6 +577,10 @@ export default function EditEvent() {
     }
 
     try {
+      const leadMember = members.find(
+        (m) => m.user?.identity.toHexString() === subEventForm.eventLeadHex
+      );
+
       await connection.reducers.addSubEvent({
         eventId: BigInt(eventId),
         name: subEventForm.name,
@@ -572,6 +603,7 @@ export default function EditEvent() {
         groupFlightRoute:
           subEventForm.type === "GroupFlight" ? subEventForm.route : undefined,
         notes: subEventForm.notes || undefined,
+        eventLead: leadMember?.user?.identity || undefined,
       });
 
       setShowAddSubEventDialog(false);
@@ -586,6 +618,7 @@ export default function EditEvent() {
         arrivalIcao: "",
         route: "",
         notes: "",
+        eventLeadHex: "none",
       });
 
       toast.success("Sub-event added", {
@@ -624,6 +657,90 @@ export default function EditEvent() {
           });
         }
         console.error("Error deleting sub-event:", error);
+      }
+    }
+  };
+
+  const handleEditSubEventClick = (subEvent: any) => {
+    const typeStr = subEvent.subEventType.tag;
+    setEditSubEventForm({
+      name: subEvent.name,
+      description: subEvent.description || "",
+      type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
+      startTime: subEvent.scheduledStartTime.toDate(),
+      endTime: subEvent.scheduledEndTime.toDate(),
+      hubIcao: subEvent.hubIcao || "",
+      departureIcao: subEvent.groupFlightDepartureIcao || "",
+      arrivalIcao: subEvent.groupFlightArrivalIcao || "",
+      route: subEvent.groupFlightRoute || "",
+      notes: subEvent.notes || "",
+      eventLeadHex: subEvent.eventLead
+        ? subEvent.eventLead.toHexString()
+        : "none",
+    });
+    setEditingSubEventId(subEvent.subEventId);
+    setShowEditSubEventDialog(true);
+  };
+
+  const handleUpdateSubEvent = async () => {
+    if (!connection || !editingSubEventId) return;
+
+    let subEventType: SubEventType;
+    switch (editSubEventForm.type) {
+      case "GroupFlight":
+        subEventType = { tag: "GroupFlight" };
+        break;
+      case "FlyIn":
+        subEventType = { tag: "FlyIn" };
+        break;
+      case "FlyOut":
+        subEventType = { tag: "FlyOut" };
+        break;
+    }
+
+    const leadMember = members.find(
+      (m) => m.user?.identity.toHexString() === editSubEventForm.eventLeadHex
+    );
+
+    try {
+      await connection.reducers.updateSubEvent({
+        subEventId: editingSubEventId,
+        name: editSubEventForm.name,
+        description: editSubEventForm.description || undefined,
+        subEventType: subEventType,
+        scheduledStartTime: Timestamp.fromDate(editSubEventForm.startTime),
+        scheduledEndTime: Timestamp.fromDate(editSubEventForm.endTime),
+        hubIcao:
+          editSubEventForm.type === "FlyIn" ||
+          editSubEventForm.type === "FlyOut"
+            ? editSubEventForm.hubIcao
+            : undefined,
+        groupFlightDepartureIcao:
+          editSubEventForm.type === "GroupFlight"
+            ? editSubEventForm.departureIcao
+            : undefined,
+        groupFlightArrivalIcao:
+          editSubEventForm.type === "GroupFlight"
+            ? editSubEventForm.arrivalIcao
+            : undefined,
+        groupFlightRoute:
+          editSubEventForm.type === "GroupFlight"
+            ? editSubEventForm.route
+            : undefined,
+        notes: editSubEventForm.notes || undefined,
+        eventLead: leadMember?.user?.identity || undefined,
+      });
+
+      setShowEditSubEventDialog(false);
+      setEditingSubEventId(null);
+      toast.success("Sub-event updated successfully!");
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error updating sub-event", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error updating sub-event");
       }
     }
   };
@@ -810,6 +927,20 @@ export default function EditEvent() {
               onChange={(e) => setIfcEventLink(e.target.value)}
               placeholder="https://..."
             />
+          </div>
+
+          <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+            <Checkbox
+              id="isInternal"
+              checked={isInternal}
+              onCheckedChange={(checked) => setIsInternal(!!checked)}
+            />
+            <div className="space-y-1 leading-none">
+              <Label htmlFor="isInternal">Internal Event</Label>
+              <p className="text-sm text-muted-foreground">
+                Internal events are only visible to members of your group.
+              </p>
+            </div>
           </div>
 
           {/* Banner Image Section */}
@@ -1079,6 +1210,40 @@ export default function EditEvent() {
                       rows={2}
                     />
                   </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="eventLead">Event Lead (Optional)</Label>
+                    <Select
+                      value={subEventForm.eventLeadHex}
+                      onValueChange={(value) =>
+                        setSubEventForm({
+                          ...subEventForm,
+                          eventLeadHex: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select event lead" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {members.map((m) => {
+                          if (!m.user) return null;
+                          const hex = m.user.identity.toHexString();
+                          const displayName =
+                            m.user.displayName || "Unknown User";
+                          const callsign = m.user.ifcCallsignPrefix
+                            ? `[${m.user.ifcCallsignPrefix}] `
+                            : "";
+                          return (
+                            <SelectItem key={hex} value={hex}>
+                              {callsign}
+                              {displayName}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               </ScrollArea>
               <DialogFooter>
@@ -1089,6 +1254,236 @@ export default function EditEvent() {
                   Cancel
                 </Button>
                 <Button onClick={handleAddSubEvent}>Add Sub-Event</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+          <Dialog
+            open={showEditSubEventDialog}
+            onOpenChange={setShowEditSubEventDialog}
+          >
+            <DialogContent className="sm:max-w-[550px]">
+              <DialogHeader>
+                <DialogTitle>Edit Sub-Event</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[70vh]">
+                <div className="space-y-4 p-1">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-subEventName">Name</Label>
+                    <Input
+                      id="edit-subEventName"
+                      value={editSubEventForm.name}
+                      onChange={(e) =>
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          name: e.target.value,
+                        })
+                      }
+                      placeholder="Enter sub-event name"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-subEventType">Type</Label>
+                    <Select
+                      value={editSubEventForm.type}
+                      onValueChange={(
+                        value: "GroupFlight" | "FlyIn" | "FlyOut"
+                      ) =>
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          type: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          <SelectItem value="GroupFlight">
+                            Group Flight
+                          </SelectItem>
+                          <SelectItem value="FlyIn">Fly-In</SelectItem>
+                          <SelectItem value="FlyOut">Fly-Out</SelectItem>
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-subEventDescription">
+                      Description
+                    </Label>
+                    <Textarea
+                      id="edit-subEventDescription"
+                      value={editSubEventForm.description}
+                      onChange={(e) =>
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          description: e.target.value,
+                        })
+                      }
+                      placeholder="Enter sub-event description"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <DateTimePicker
+                      label="Start Time"
+                      value={editSubEventForm.startTime}
+                      onChange={(date) =>
+                        date &&
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          startTime: date,
+                        })
+                      }
+                    />
+                    <DateTimePicker
+                      label="End Time"
+                      value={editSubEventForm.endTime}
+                      onChange={(date) =>
+                        date &&
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          endTime: date,
+                        })
+                      }
+                    />
+                  </div>
+
+                  {editSubEventForm.type === "FlyIn" ||
+                  editSubEventForm.type === "FlyOut" ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-hubIcao">Hub ICAO</Label>
+                      <Input
+                        id="edit-hubIcao"
+                        value={editSubEventForm.hubIcao}
+                        onChange={(e) =>
+                          setEditSubEventForm({
+                            ...editSubEventForm,
+                            hubIcao: e.target.value,
+                          })
+                        }
+                        placeholder="KJFK"
+                      />
+                    </div>
+                  ) : editSubEventForm.type === "GroupFlight" ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-departureIcao">
+                            Departure ICAO
+                          </Label>
+                          <Input
+                            id="edit-departureIcao"
+                            value={editSubEventForm.departureIcao}
+                            onChange={(e) =>
+                              setEditSubEventForm({
+                                ...editSubEventForm,
+                                departureIcao: e.target.value,
+                              })
+                            }
+                            placeholder="KJFK"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="edit-arrivalIcao">Arrival ICAO</Label>
+                          <Input
+                            id="edit-arrivalIcao"
+                            value={editSubEventForm.arrivalIcao}
+                            onChange={(e) =>
+                              setEditSubEventForm({
+                                ...editSubEventForm,
+                                arrivalIcao: e.target.value,
+                              })
+                            }
+                            placeholder="KLAX"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-route">
+                          Flight Route (Optional)
+                        </Label>
+                        <Input
+                          id="edit-route"
+                          value={editSubEventForm.route}
+                          onChange={(e) =>
+                            setEditSubEventForm({
+                              ...editSubEventForm,
+                              route: e.target.value,
+                            })
+                          }
+                          placeholder="KJFK DCT KBOS DCT KLAX"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-notes">Notes (Optional)</Label>
+                    <Textarea
+                      id="edit-notes"
+                      value={editSubEventForm.notes}
+                      onChange={(e) =>
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          notes: e.target.value,
+                        })
+                      }
+                      placeholder="Any additional information"
+                      rows={2}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-eventLead">
+                      Event Lead (Optional)
+                    </Label>
+                    <Select
+                      value={editSubEventForm.eventLeadHex}
+                      onValueChange={(value) =>
+                        setEditSubEventForm({
+                          ...editSubEventForm,
+                          eventLeadHex: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select event lead" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">None</SelectItem>
+                        {members.map((m) => {
+                          if (!m.user) return null;
+                          const hex = m.user.identity.toHexString();
+                          const displayName =
+                            m.user.displayName || "Unknown User";
+                          const callsign = m.user.ifcCallsignPrefix
+                            ? `[${m.user.ifcCallsignPrefix}] `
+                            : "";
+                          return (
+                            <SelectItem key={hex} value={hex}>
+                              {callsign}
+                              {displayName}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </ScrollArea>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEditSubEventDialog(false)}
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateSubEvent}>Save Changes</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
@@ -1107,6 +1502,18 @@ export default function EditEvent() {
                 const isFlyIn = subEvent.subEventType.tag === "FlyIn";
                 const isFlyOut = subEvent.subEventType.tag === "FlyOut";
 
+                const leadHex = subEvent.eventLead
+                  ? subEvent.eventLead.toHexString()
+                  : null;
+                const leadUser = leadHex
+                  ? members.find(
+                      (m) => m.user?.identity.toHexString() === leadHex
+                    )?.user
+                  : null;
+                const leadDisplayName = leadUser
+                  ? leadUser.displayName || "Unknown User"
+                  : null;
+
                 return (
                   <Card key={subEvent.subEventId} className="p-4">
                     <div className="mb-2 flex items-center justify-between">
@@ -1123,6 +1530,14 @@ export default function EditEvent() {
                           variant="ghost"
                           size="icon"
                           className="h-6 w-6"
+                          onClick={() => handleEditSubEventClick(subEvent)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
                           onClick={() =>
                             handleDeleteSubEvent(subEvent.subEventId)
                           }
@@ -1170,6 +1585,12 @@ export default function EditEvent() {
                         <>
                           <span>•</span>
                           <span>From: {subEvent.hubIcao}</span>
+                        </>
+                      )}
+                      {leadDisplayName && (
+                        <>
+                          <span>•</span>
+                          <span>Lead: {leadDisplayName}</span>
                         </>
                       )}
                     </div>

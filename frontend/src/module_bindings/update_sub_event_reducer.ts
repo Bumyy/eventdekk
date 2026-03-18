@@ -15,7 +15,7 @@ import {
 } from "./types";
 
 export default {
-  eventId: __t.u64(),
+  subEventId: __t.u64(),
   name: __t.string(),
   description: __t.option(__t.string()),
   get subEventType() {

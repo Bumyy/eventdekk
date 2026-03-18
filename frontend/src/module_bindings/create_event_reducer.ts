@@ -29,4 +29,5 @@ export default {
   get status() {
     return __t.option(EventStatus);
   },
+  isInternal: __t.bool(),
 };

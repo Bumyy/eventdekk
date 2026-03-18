@@ -40,6 +40,8 @@ const Home = () => {
     };
   }, []);
 
+  console.log(discoveryEvents, events);
+
   // Get events that are in discovery and their display priorities
   const discoveryEventMap = useMemo(() => {
     return new Map(

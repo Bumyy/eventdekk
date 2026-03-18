@@ -12,6 +12,8 @@ import {
   usePastHostedEvents,
   usePendingEventInvitations,
   useSubEvents,
+  useCurrentUser,
+  useUsers,
 } from "@/hooks/spacetimeHooks";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
@@ -41,7 +43,10 @@ export default function AdminEvents() {
   // Use filtered hooks for better performance
   const subEvents = useSubEventsForGroup(groupIdBigInt);
   const flightSignups = useFlightSignupsForGroup(groupIdBigInt);
+  // TODO: make this more efficient
   const groups = useGroups();
+  const currentUser = useCurrentUser();
+  const users = useUsers();
 
   // Use the new filtered hooks
   const upcomingEvents = useUpcomingHostedEvents(groupIdBigInt);
@@ -91,6 +96,7 @@ export default function AdminEvents() {
     description: string;
     startTime: Date;
     endTime: Date;
+    isInternal: boolean;
     ifcEventLink?: string;
     bannerUrl?: string;
     subEvents: {
@@ -104,6 +110,7 @@ export default function AdminEvents() {
       groupFlightArrivalIcao?: string;
       groupFlightRoute?: string;
       notes?: string;
+      eventLead?: any;
     }[];
   }) => {
     if (!connection) {
@@ -124,6 +131,7 @@ export default function AdminEvents() {
         groupFlightArrivalIcao: subEvent.groupFlightArrivalIcao,
         groupFlightRoute: subEvent.groupFlightRoute,
         notes: subEvent.notes,
+        eventLead: subEvent.eventLead,
       }));
 
       // Create event with sub-events as Draft
@@ -133,6 +141,7 @@ export default function AdminEvents() {
         description: eventData.description,
         startTime: Timestamp.fromDate(eventData.startTime),
         endTime: Timestamp.fromDate(eventData.endTime),
+        isInternal: eventData.isInternal,
         ifcEventLink: eventData.ifcEventLink,
         bannerUrl: eventData.bannerUrl,
         subEventsData: subEventsData,
@@ -246,6 +255,7 @@ export default function AdminEvents() {
       description: currentEvent.description,
       startTime: currentEvent.startTime,
       endTime: currentEvent.endTime,
+      isInternal: currentEvent.isInternal,
       ifcEventLink: currentEvent.ifcEventLink || null,
       bannerUrl: currentEvent.bannerUrl || null,
       status: { tag: "Published" } as EventStatus,
@@ -638,6 +648,8 @@ export default function AdminEvents() {
             onDeleteEvent={handleDeleteEvent}
             onManageParticipation={handleManageParticipation}
             onPublishEvent={handlePublishEvent}
+            currentUser={currentUser}
+            users={users || []}
           />
         </TabsContent>
 
@@ -663,6 +675,7 @@ export default function AdminEvents() {
         open={showCreateDialog}
         onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateEvent}
+        groupId={groupIdBigInt}
       />
 
       {/* Event invitation dialog for new invitations */}

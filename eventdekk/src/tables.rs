@@ -54,6 +54,7 @@ pub struct Event {
     pub banner_url: Option<String>,
     pub status: EventStatus,
     pub created_at: Timestamp,
+    pub is_internal: bool,
 }
 
 #[table(name = event_participant, public,
@@ -87,6 +88,7 @@ pub struct SubEvent {
     pub group_flight_arrival_icao: Option<String>,
     pub group_flight_route: Option<String>,
     pub notes: Option<String>,
+    pub event_lead: Option<Identity>,
 }
 
 #[derive(SpacetimeType, Clone, Debug)]
@@ -101,6 +103,7 @@ pub struct SubEventData {
     pub group_flight_arrival_icao: Option<String>,
     pub group_flight_route: Option<String>,
     pub notes: Option<String>,
+    pub event_lead: Option<Identity>,
 }
 
 #[table(name = flight_signup, public,

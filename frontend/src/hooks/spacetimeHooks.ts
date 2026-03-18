@@ -321,3 +321,29 @@ export const usePendingEventInvitations = (groupId: bigint | null) => {
     );
   }, [events, eventParticipants]);
 };
+
+export const useGroupMembersForGroup = (groupId: bigint | null) => {
+  const query = useMemo(() => {
+    return groupId
+      ? tables.group_membership.where((r) => r.groupId.eq(groupId))
+      : tables.group_membership.where((r) => r.groupId.eq(0n));
+  }, [groupId]);
+
+  const [memberships] = useTable(query);
+  const [users] = useTable(tables.user);
+  const [allMemberships] = useTable(tables.group_membership);
+
+  return useMemo(() => {
+    if (!memberships || !users) return [];
+
+    return [...memberships].map((m) => {
+      const user = users.find(
+        (u) => u.identity.toHexString() === m.userIdentity.toHexString()
+      );
+      return {
+        membership: m,
+        user: user,
+      };
+    });
+  }, [memberships, users]);
+};

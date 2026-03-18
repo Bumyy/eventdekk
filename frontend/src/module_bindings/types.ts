@@ -36,6 +36,7 @@ export const Event = __t.object("Event", {
     return EventStatus;
   },
   createdAt: __t.timestamp(),
+  isInternal: __t.bool(),
 });
 export type Event = __Infer<typeof Event>;
 
@@ -183,6 +184,7 @@ export const SubEvent = __t.object("SubEvent", {
   groupFlightArrivalIcao: __t.option(__t.string()),
   groupFlightRoute: __t.option(__t.string()),
   notes: __t.option(__t.string()),
+  eventLead: __t.option(__t.identity()),
 });
 export type SubEvent = __Infer<typeof SubEvent>;
 
@@ -199,6 +201,7 @@ export const SubEventData = __t.object("SubEventData", {
   groupFlightArrivalIcao: __t.option(__t.string()),
   groupFlightRoute: __t.option(__t.string()),
   notes: __t.option(__t.string()),
+  eventLead: __t.option(__t.identity()),
 });
 export type SubEventData = __Infer<typeof SubEventData>;
 

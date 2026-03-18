@@ -27,4 +27,5 @@ export default __t.row({
     return EventStatus;
   },
   createdAt: __t.timestamp().name("created_at"),
+  isInternal: __t.bool().name("is_internal"),
 });

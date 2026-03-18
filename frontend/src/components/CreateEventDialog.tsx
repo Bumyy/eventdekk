@@ -7,6 +7,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,6 +27,9 @@ import { MapPin, Plane } from "lucide-react";
 import { SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Identity } from "spacetimedb";
+import { useGroupMembersForGroup } from "@/hooks/spacetimeHooks";
 
 interface SubEventFormData {
   subEventType: SubEventType;
@@ -32,6 +42,7 @@ interface SubEventFormData {
   groupFlightArrivalIcao?: string;
   groupFlightRoute?: string;
   notes?: string;
+  eventLeadHex?: string;
 }
 
 interface EventFormData {
@@ -39,6 +50,7 @@ interface EventFormData {
   description: string;
   startTime: Date;
   endTime: Date;
+  isInternal: boolean;
   ifcEventLink?: string;
   bannerUrl?: string;
   subEvents: SubEventFormData[];
@@ -48,21 +60,26 @@ interface CreateEventDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (eventData: EventFormData) => void;
+  groupId: bigint | null;
 }
 
 export function CreateEventDialog({
   open,
   onOpenChange,
   onSubmit,
+  groupId,
 }: CreateEventDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [startDateTime, setStartDateTime] = useState<Date | undefined>();
   const [endDateTime, setEndDateTime] = useState<Date | undefined>();
+  const [isInternal, setIsInternal] = useState(false);
   const [ifcEventLink, setIfcEventLink] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [subEvents, setSubEvents] = useState<SubEventFormData[]>([]);
   const [expandedSubEvents, setExpandedSubEvents] = useState<number[]>([]);
+
+  const members = useGroupMembersForGroup(groupId);
 
   // Image upload related state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -125,6 +142,7 @@ export function CreateEventDialog({
         description: "",
         scheduledStartTime: defaultStartTime,
         scheduledEndTime: defaultEndTime,
+        eventLeadHex: "none",
       },
     ]);
     setExpandedSubEvents((prev) => [...prev, newIndex]);
@@ -176,13 +194,20 @@ export function CreateEventDialog({
       description,
       startTime: startDateTime,
       endTime: endDateTime,
+      isInternal,
       ifcEventLink: ifcEventLink || undefined,
       bannerUrl: finalBannerUrl || undefined,
-      subEvents: subEvents.map((event) => ({
-        ...event,
-        scheduledStartTime: event.scheduledStartTime,
-        scheduledEndTime: event.scheduledEndTime,
-      })),
+      subEvents: subEvents.map((event) => {
+        const leadMember = members.find(
+          (m) => m.user?.identity.toHexString() === event.eventLeadHex
+        );
+        return {
+          ...event,
+          scheduledStartTime: event.scheduledStartTime,
+          scheduledEndTime: event.scheduledEndTime,
+          eventLead: leadMember?.user?.identity,
+        };
+      }),
     });
 
     // Reset form fields
@@ -190,6 +215,7 @@ export function CreateEventDialog({
     setDescription("");
     setStartDateTime(undefined);
     setEndDateTime(undefined);
+    setIsInternal(false);
     setIfcEventLink("");
     setBannerUrl("");
     setSubEvents([]);
@@ -234,8 +260,6 @@ export function CreateEventDialog({
 
   return (
     <>
-      {" "}
-      {/* Add a backdrop div that animates blur and covers the header */}
       <div
         className={`fixed inset-0 backdrop-blur-sm transition-all duration-200 z-[60] ${
           open ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -299,6 +323,20 @@ export function CreateEventDialog({
                   onChange={(e) => setIfcEventLink(e.target.value)}
                   placeholder="Enter IFC event link"
                 />
+              </div>
+
+              <div className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                <Checkbox
+                  id="isInternal"
+                  checked={isInternal}
+                  onCheckedChange={(checked) => setIsInternal(!!checked)}
+                />
+                <div className="space-y-1 leading-none">
+                  <Label htmlFor="isInternal">Internal Event</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Internal events are only visible to members of your group.
+                  </p>
+                </div>
               </div>
 
               {/* Banner Image Upload Section */}
@@ -623,6 +661,41 @@ export function CreateEventDialog({
                             }
                             placeholder="Enter notes"
                           />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor={`lead-${index}`}>
+                            Event Lead (Optional)
+                          </Label>
+                          <Select
+                            value={subEvent.eventLeadHex || "none"}
+                            onValueChange={(value) =>
+                              handleUpdateSubEvent(index, {
+                                eventLeadHex: value,
+                              })
+                            }
+                          >
+                            <SelectTrigger id={`lead-${index}`}>
+                              <SelectValue placeholder="Select an event lead" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">None</SelectItem>
+                              {members.map((m) => {
+                                if (!m.user) return null;
+                                const hex = m.user.identity.toHexString();
+                                const displayName =
+                                  m.user.displayName || "Unknown User";
+                                const callsign = m.user.ifcCallsignPrefix
+                                  ? `[${m.user.ifcCallsignPrefix}] `
+                                  : "";
+                                return (
+                                  <SelectItem key={hex} value={hex}>
+                                    {callsign}
+                                    {displayName}
+                                  </SelectItem>
+                                );
+                              })}
+                            </SelectContent>
+                          </Select>
                         </div>
                       </div>
                     )}

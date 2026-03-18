@@ -25,6 +25,7 @@ import UpdateEventReducer from "../update_event_reducer";
 import UpdateFlightSignupReducer from "../update_flight_signup_reducer";
 import UpdateGroupReducer from "../update_group_reducer";
 import UpdateLiveFlightsReducer from "../update_live_flights_reducer";
+import UpdateSubEventReducer from "../update_sub_event_reducer";
 
 export type AddGroupMemberParams = __Infer<typeof AddGroupMemberReducer>;
 export type AddLiveChatMessageParams = __Infer<typeof AddLiveChatMessageReducer>;
@@ -45,4 +46,5 @@ export type UpdateEventParams = __Infer<typeof UpdateEventReducer>;
 export type UpdateFlightSignupParams = __Infer<typeof UpdateFlightSignupReducer>;
 export type UpdateGroupParams = __Infer<typeof UpdateGroupReducer>;
 export type UpdateLiveFlightsParams = __Infer<typeof UpdateLiveFlightsReducer>;
+export type UpdateSubEventParams = __Infer<typeof UpdateSubEventReducer>;
 

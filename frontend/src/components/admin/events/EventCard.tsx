@@ -8,6 +8,8 @@ import {
   Plane,
   Users,
   Send,
+  AlertTriangle,
+  UserCircle,
 } from "lucide-react";
 import {
   SubEventType,
@@ -40,12 +42,14 @@ interface EventCardProps {
     tag: string;
   };
   expanded?: boolean;
+  flightSignups?: FlightSignupInfo[];
+  currentUser?: any;
+  users?: any[];
   onToggleExpand?: () => void;
   onManage?: () => void;
   onDelete?: () => void;
   onManageParticipation?: () => void;
   onPublish?: () => void;
-  flightSignups?: FlightSignupInfo[];
 }
 
 function getEventTypeBadge(type: SubEventType) {
@@ -83,22 +87,54 @@ export function EventCard({
   participatingCount,
   creatorGroupInfo,
   expanded = false,
+  flightSignups = [],
+  users = [],
+  currentUser,
   onToggleExpand,
   onManage,
   onDelete,
   onManageParticipation,
   onPublish,
-  flightSignups = [],
 }: EventCardProps) {
   const isDraft = event.status?.tag === "Draft";
 
+  const missingLeadsCount = isHosting
+    ? subEvents.filter((se) => !se.eventLead).length
+    : 0;
+
+  const isUserLeadForThisEvent =
+    currentUser &&
+    subEvents.some(
+      (se) =>
+        se.eventLead &&
+        se.eventLead.toHexString() === currentUser.identity.toHexString()
+    );
+
   return (
-    <Card className="p-4">
+    <Card
+      className={`p-4 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}`}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-semibold">{event.name}</h2>
             {isDraft && <Badge variant="outline">Draft</Badge>}
+            {isHosting && missingLeadsCount > 0 && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3" />
+                {missingLeadsCount} Missing Lead
+                {missingLeadsCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {isUserLeadForThisEvent && (
+              <Badge
+                variant="default"
+                className="bg-blue-600 text-white flex items-center gap-1"
+              >
+                <UserCircle className="h-3 w-3" />
+                You are Lead
+              </Badge>
+            )}
             {isHosting && (
               <Badge variant="outline">{subEvents.length} Sub-events</Badge>
             )}
@@ -186,12 +222,31 @@ export function EventCard({
               const isParticipating = flightSignups.some(
                 (signup) => signup.subEventId === subEvent.subEventId
               );
+              const isThisSubEventMine =
+                currentUser &&
+                subEvent.eventLead &&
+                subEvent.eventLead.toHexString() ===
+                  currentUser.identity.toHexString();
+              const hasNoLead = !subEvent.eventLead;
+              const leadUser = subEvent.eventLead
+                ? users.find(
+                    (u) =>
+                      u.identity.toHexString() ===
+                      subEvent.eventLead.toHexString()
+                  )
+                : null;
 
               return (
                 <Card
                   key={subEvent.subEventId}
-                  className={`p-4 ${
-                    isParticipating ? "border-2 border-primary" : ""
+                  className={`p-4 transition-all ${
+                    isThisSubEventMine
+                      ? "border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
+                      : hasNoLead && isHosting
+                        ? "border-2 border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
+                        : isParticipating
+                          ? "border-2 border-primary"
+                          : ""
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -201,6 +256,24 @@ export function EventCard({
                     )}
                   </div>
                   <h4 className="font-medium">{subEvent.name}</h4>
+
+                  <div className="mt-1 mb-2 text-xs">
+                    {hasNoLead ? (
+                      <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
+                        <AlertTriangle className="h-3 w-3" /> No Lead Assigned
+                      </span>
+                    ) : (
+                      <span
+                        className={`flex items-center gap-1 ${isThisSubEventMine ? "text-blue-600 dark:text-blue-400 font-bold" : "text-muted-foreground"}`}
+                      >
+                        <UserCircle className="h-3 w-3" />
+                        {isThisSubEventMine
+                          ? "You are Leading"
+                          : `Lead: ${leadUser?.displayName || "Unknown"}`}
+                      </span>
+                    )}
+                  </div>
+
                   <p className="text-sm text-muted-foreground">
                     {subEvent.description}
                   </p>

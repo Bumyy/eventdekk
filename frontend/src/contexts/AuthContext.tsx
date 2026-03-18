@@ -13,7 +13,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   sdbToken: string | null;
-  logout: () => void;
+  logout: (silent?: boolean) => void; // <-- Updated signature
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -31,18 +31,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const navigate = useNavigate();
   const location = useLocation();
 
-  // 1. Init: Check LocalStorage
   useEffect(() => {
     const storedToken = localStorage.getItem(SDB_AUTH_TOKEN_KEY);
     if (storedToken) {
       setSdbToken(storedToken);
       setIsAuthenticated(true);
     }
-    // Note: If no token, sdbToken stays null, SpacetimeProvider will treat as Anonymous
     setIsLoading(false);
   }, []);
 
-  // 2. Handle Login (Success from OAuth)
   const handleAuthSuccess = useCallback(
     (token: string) => {
       localStorage.setItem(SDB_AUTH_TOKEN_KEY, token);
@@ -50,7 +47,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsAuthenticated(true);
       toast.success("Login successful!");
 
-      // Navigate away from callback
       const from = location.state?.from?.pathname || "/";
       navigate(from, { replace: true });
     },
@@ -62,7 +58,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     logout();
   }, []);
 
-  // 3. Handle OAuth Callback via URL params (Optional: can be done in a specific Page component too)
   useEffect(() => {
     if (window.location.pathname === "/auth/callback") {
       const params = new URLSearchParams(window.location.search);
@@ -77,10 +72,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [handleAuthSuccess, handleAuthFailure]);
 
-  // 4. Logout
-  const logout = async () => {
+  // <-- Updated logout function with 'silent' parameter
+  const logout = async (silent = false) => {
     try {
-      // Optional: Notify backend to kill cookie
       await fetch(`${API_URL}/auth/logout`, { method: "POST" });
     } catch (e) {
       console.error("Logout backend error", e);
@@ -89,7 +83,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       localStorage.removeItem("eventdekk_identity");
       setSdbToken(null);
       setIsAuthenticated(false);
-      toast.info("Logged out");
+
+      if (!silent) {
+        toast.info("Logged out");
+      }
       navigate("/login");
     }
   };
