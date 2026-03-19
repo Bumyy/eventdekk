@@ -6,8 +6,10 @@ import {
   ChevronUp,
   MapPin,
   Plane,
+  Settings,
   Users,
   Send,
+  Trash2,
   AlertTriangle,
   UserCircle,
 } from "lucide-react";
@@ -114,7 +116,7 @@ export function EventCard({
     <Card
       className={`p-4 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}`}
     >
-      <div className="flex items-start justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-semibold">{event.name}</h2>
@@ -150,7 +152,9 @@ export function EventCard({
               </>
             )}
           </div>
-          <p className="text-muted-foreground">{event.description}</p>
+          <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+            {event.description}
+          </p>
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{formatDateInTimezone(event.startTime, userTimezone)}</span>
             <span>•</span>
@@ -176,7 +180,7 @@ export function EventCard({
             )}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
           {onToggleExpand && (
             <Button variant="ghost" size="icon" onClick={onToggleExpand}>
               {expanded ? (
@@ -195,20 +199,35 @@ export function EventCard({
                 </Button>
               )}
               {onManage && (
-                <Button variant="outline" onClick={onManage}>
-                  Manage
+                <Button
+                  variant="outline"
+                  onClick={onManage}
+                  aria-label="Manage event"
+                >
+                  <Settings className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">Manage</span>
                 </Button>
               )}
               {onDelete && (
-                <Button variant="destructive" onClick={onDelete}>
-                  Delete
+                <Button
+                  variant="destructive"
+                  onClick={onDelete}
+                  aria-label="Delete event"
+                >
+                  <Trash2 className="h-4 w-4 sm:hidden" />
+                  <span className="hidden sm:inline">Delete</span>
                 </Button>
               )}
             </>
           )}
           {isAttending && onManageParticipation && (
-            <Button variant="outline" onClick={onManageParticipation}>
-              Manage Participation
+            <Button
+              variant="outline"
+              onClick={onManageParticipation}
+              aria-label="Manage participation"
+            >
+              <Settings className="h-4 w-4 sm:hidden" />
+              <span className="hidden sm:inline">Manage Participation</span>
             </Button>
           )}
         </div>

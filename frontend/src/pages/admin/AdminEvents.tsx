@@ -39,6 +39,33 @@ export default function AdminEvents() {
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const userTimezone = useUserTimezone();
   const navigate = useNavigate();
+  const [prefillStartTime, setPrefillStartTime] = useState<Date | undefined>();
+  const [prefillEndTime, setPrefillEndTime] = useState<Date | undefined>();
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const prefillStart = params.get("prefillStart");
+    const prefillEnd = params.get("prefillEnd");
+
+    if (!prefillStart || !prefillEnd) return;
+
+    const parsedStart = new Date(prefillStart);
+    const parsedEnd = new Date(prefillEnd);
+
+    if (Number.isNaN(parsedStart.getTime()) || Number.isNaN(parsedEnd.getTime())) {
+      return;
+    }
+
+    setPrefillStartTime(parsedStart);
+    setPrefillEndTime(parsedEnd);
+    setShowCreateDialog(true);
+
+    params.delete("prefillStart");
+    params.delete("prefillEnd");
+    const nextQuery = params.toString();
+    const nextUrl = `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`;
+    window.history.replaceState({}, "", nextUrl);
+  }, []);
 
   // Use filtered hooks for better performance
   const subEvents = useSubEventsForGroup(groupIdBigInt);
@@ -53,6 +80,8 @@ export default function AdminEvents() {
   const upcomingAttendingEvents = useUpcomingAttendingEvents(groupIdBigInt);
   const pastEvents = usePastHostedEvents(groupIdBigInt);
   const pendingInvitations = usePendingEventInvitations(groupIdBigInt);
+
+  console.log(upcomingAttendingEvents, upcomingEvents, groupIdBigInt);
 
   // Get sub-events for pending invitation events (not hosted by this group)
   const invitationEventIds = useMemo(() => {
@@ -620,18 +649,24 @@ export default function AdminEvents() {
       </div>
 
       <Tabs defaultValue="upcoming" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="upcoming">Upcoming Events</TabsTrigger>
-          <TabsTrigger value="invitations">
-            Event Invitations{" "}
-            {pendingInvitations?.length > 0 && (
-              <Badge className="ml-2" variant="destructive">
-                {pendingInvitations.length}
-              </Badge>
-            )}
-          </TabsTrigger>
-          <TabsTrigger value="past">Past Events</TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-1 sm:overflow-visible sm:pb-0">
+          <TabsList className="w-max min-w-full sm:w-fit sm:min-w-0">
+            <TabsTrigger value="upcoming" className="px-2 sm:px-3">
+              Upcoming Events
+            </TabsTrigger>
+            <TabsTrigger value="invitations" className="px-2 sm:px-3">
+              Event Invitations{" "}
+              {pendingInvitations?.length > 0 && (
+                <Badge className="ml-1 sm:ml-2" variant="destructive">
+                  {pendingInvitations.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="past" className="px-2 sm:px-3">
+              Past Events
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="upcoming">
           <UpcomingEventsSection
@@ -676,6 +711,8 @@ export default function AdminEvents() {
         onOpenChange={setShowCreateDialog}
         onSubmit={handleCreateEvent}
         groupId={groupIdBigInt}
+        prefillStartTime={prefillStartTime}
+        prefillEndTime={prefillEndTime}
       />
 
       {/* Event invitation dialog for new invitations */}

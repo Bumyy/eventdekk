@@ -1,50 +1,83 @@
 import { Card } from "@/components/ui/card";
 import { useParams } from "react-router-dom";
-import { Calendar } from "@/components/ui/calendar";
-import { addDays, format } from "date-fns";
+import { format } from "date-fns";
 import {
-  useEvents,
   useGroups,
   useGroupMemberships,
   useSubEvents,
   useFlightSignups,
+  useUpcomingHostedEvents,
+  useUpcomingAttendingEvents,
+  useAllActiveEvents,
 } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 import { Building2 } from "lucide-react";
+import {
+  AdminWeeklyCalendar,
+  type AdminWeeklyCalendarEvent,
+} from "@/components/admin/dashboard/AdminWeeklyCalendar";
+import { useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminDashboard() {
   const { groupId } = useParams();
-  const events = useEvents();
+  const navigate = useNavigate();
+  const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const groups = useGroups();
   const memberships = useGroupMemberships();
   const subEvents = useSubEvents();
   const signups = useFlightSignups();
-  const today = new Date();
-  const nextWeek = addDays(today, 7);
+  const upcomingHostedEvents = useUpcomingHostedEvents(groupIdBigInt);
+  const upcomingAttendingEvents = useUpcomingAttendingEvents(groupIdBigInt);
+  const allActiveEvents = useAllActiveEvents();
+
+  // Find the current group
+  const currentGroup = groups.find((g) => g.groupId.toString() === groupId);
+
+  const allUpcomingEvents = useMemo(
+    () => [...upcomingHostedEvents, ...upcomingAttendingEvents],
+    [upcomingHostedEvents, upcomingAttendingEvents]
+  );
+
+  const nextEvent = useMemo(() => {
+    return [...allUpcomingEvents].sort(
+      (a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
+    )[0];
+  }, [allUpcomingEvents]);
+
+  const weeklyCalendarEvents = useMemo<AdminWeeklyCalendarEvent[]>(
+    () =>
+      allUpcomingEvents.map((event) => ({
+        id: event.eventId.toString(),
+        name: event.name,
+        start: event.startTime.toDate(),
+        end: event.endTime.toDate(),
+        category: event.isInternal
+          ? "internal"
+          : event.creatorGroupId === groupIdBigInt
+            ? "hostingExternal"
+            : "attendingExternal",
+      })),
+    [allUpcomingEvents, groupIdBigInt]
+  );
+
+  const allEventsForInsights = useMemo(
+    () =>
+      allActiveEvents.map((event) => ({
+        start: event.startTime.toDate(),
+        end: event.endTime.toDate(),
+      })),
+    [allActiveEvents]
+  );
 
   // Handle case where groupId is not provided
-  if (!groupId) {
+  if (!groupId || !groupIdBigInt) {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">No group selected</p>
       </div>
     );
   }
-
-  // Find the current group
-  const currentGroup = groups.find((g) => g.groupId.toString() === groupId);
-
-  // Filter events for this group and sort by date
-  const groupEvents = events
-    .filter((event) => event.creatorGroupId === BigInt(groupId))
-    .sort(
-      (a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
-    );
-
-  // Get the next upcoming event
-  const nextEvent = groupEvents.find(
-    (event) => event.startTime.toDate() > today
-  );
 
   // Calculate attendee counts for an event from its sub-events and signups
   const getEventAttendees = (eventId: bigint) => {
@@ -101,6 +134,18 @@ export default function AdminDashboard() {
                 {format(nextEvent.startTime.toDate(), "MMMM d, yyyy")} at{" "}
                 {format(nextEvent.startTime.toDate(), "h:mm a")}
               </p>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge variant="outline">
+                  {nextEvent.isInternal
+                    ? "Internal"
+                    : nextEvent.creatorGroupId === groupIdBigInt
+                      ? "Hosting"
+                      : "Attending"}
+                </Badge>
+                {!nextEvent.isInternal && (
+                  <Badge variant="secondary">External</Badge>
+                )}
+              </div>
               <div className="mt-4">
                 <div className="flex items-center gap-2">
                   <span className="text-sm text-muted-foreground">
@@ -113,18 +158,18 @@ export default function AdminDashboard() {
         </Card>
       )}
 
-      {/* Weekly Calendar */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Weekly Calendar</h2>
-        <Calendar
-          mode="range"
-          selected={{
-            from: today,
-            to: nextWeek,
-          }}
-          className="rounded-md border"
-        />
-      </Card>
+      <AdminWeeklyCalendar
+        events={weeklyCalendarEvents}
+        allEventsForInsights={allEventsForInsights}
+        onScheduleSuggestion={(start, end) => {
+          if (!groupId) return;
+          const params = new URLSearchParams({
+            prefillStart: start.toISOString(),
+            prefillEnd: end.toISOString(),
+          });
+          navigate(`/admin/events/${groupId}?${params.toString()}`);
+        }}
+      />
     </div>
   );
 }

@@ -61,6 +61,8 @@ interface CreateEventDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (eventData: EventFormData) => void;
   groupId: bigint | null;
+  prefillStartTime?: Date;
+  prefillEndTime?: Date;
 }
 
 export function CreateEventDialog({
@@ -68,6 +70,8 @@ export function CreateEventDialog({
   onOpenChange,
   onSubmit,
   groupId,
+  prefillStartTime,
+  prefillEndTime,
 }: CreateEventDialogProps) {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -125,6 +129,12 @@ export function CreateEventDialog({
       setSelectedFile(null);
     }
   };
+
+  useEffect(() => {
+    if (!open) return;
+    if (prefillStartTime) setStartDateTime(prefillStartTime);
+    if (prefillEndTime) setEndDateTime(prefillEndTime);
+  }, [open, prefillStartTime, prefillEndTime]);
 
   const handleAddSubEvent = () => {
     const newIndex = subEvents.length;

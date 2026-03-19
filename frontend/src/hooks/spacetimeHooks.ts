@@ -198,6 +198,76 @@ export const useLiveChatMessages = () => {
 // ============ Filtered Hooks for Admin Events ============
 
 /**
+ * All non-cancelled events across all groups.
+ * Useful for global scheduling suggestions.
+ */
+export const useAllActiveEvents = () => {
+  const [events] = useTable(tables.event);
+
+  return useMemo(() => {
+    if (!events) return [];
+    return [...events]
+      .filter((event) => event.status.tag !== "Cancelled")
+      .sort(
+        (a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
+      );
+  }, [events]);
+};
+
+/**
+ * All non-cancelled events relevant to a specific group.
+ * Includes:
+ * - Events hosted by the group
+ * - Events where the group is an accepted participant
+ */
+export const useGroupRelatedEvents = (groupId: bigint | null) => {
+  const hostedEventsQuery = useMemo(
+    () =>
+      groupId
+        ? tables.event.where((e) => e.creatorGroupId.eq(groupId))
+        : tables.event.where((e) => e.eventId.eq(0n)),
+    [groupId]
+  );
+
+  const participantQuery = useMemo(
+    () =>
+      groupId
+        ? tables.event_participant.where((ep) => ep.groupId.eq(groupId))
+        : tables.event_participant.where((ep) => ep.groupId.eq(0n)),
+    [groupId]
+  );
+
+  const [hostedEvents] = useTable(hostedEventsQuery);
+  const [eventParticipants] = useTable(participantQuery);
+  const [allEvents] = useTable(tables.event);
+  const [allEventParticipant] = useTable(tables.event_participant);
+
+  return useMemo(() => {
+    if (!groupId || !allEvents || !eventParticipants || !hostedEvents)
+      return [];
+
+    const hostedEventIds = new Set(hostedEvents.map((event) => event.eventId));
+    const acceptedEventIds = new Set(
+      eventParticipants
+        .filter((participant) => participant.status.tag === "Accepted")
+        .map((participant) => participant.eventId)
+    );
+
+    return [...allEvents]
+      .filter(
+        (event) =>
+          (hostedEventIds.has(event.eventId) ||
+            acceptedEventIds.has(event.eventId)) &&
+          event.status.tag !== "Cancelled"
+      )
+      .sort(
+        (a, b) =>
+          a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
+      );
+  }, [groupId, allEvents, eventParticipants, hostedEvents]);
+};
+
+/**
  * Upcoming events hosted by a specific group (where endTime > now)
  * Uses server-side subscription with .where() for efficient filtering
  */
@@ -212,6 +282,7 @@ export const useUpcomingHostedEvents = (groupId: bigint | null) => {
   }, [groupId]);
 
   const [events] = useTable(query);
+  const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
     if (!events) return [];

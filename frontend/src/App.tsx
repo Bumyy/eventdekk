@@ -18,6 +18,7 @@ import { AppBackground } from "@/components/AppBackground";
 import { AuthLoading } from "@/components/AuthLoading";
 import Home from "@/pages/Home";
 import CalendarView from "./pages/CalendarView";
+import EventPage from "./pages/EventPage";
 import LoginPage from "./pages/LoginPage";
 import AuthCallbackPage from "./pages/AuthCallbackPage";
 import ProtectedRoute from "./pages/ProtectedRoute";
@@ -163,6 +164,7 @@ function App() {
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
                   <Route path="/live-event/:eventId" element={<LiveEvent />} />
                   <Route path="/calendar" element={<CalendarView />} />
+                  <Route path="/event/:eventId" element={<EventPage />} />
 
                   <Route
                     path="/profile"
