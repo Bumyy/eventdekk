@@ -1,4 +1,4 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import {
@@ -37,10 +37,12 @@ import {
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSpacetimeDB } from "spacetimedb/react";
+import { SearchBar } from "./SearchBar";
 
 const Navigation = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { isAuthenticated, logout, isLoading: isAuthLoading } = useAuth();
   const { identity, isActive: isConnected } = useSpacetimeDB();
   const groups = useGroups();
@@ -48,11 +50,25 @@ const Navigation = () => {
   const currentUser = useCurrentUser();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get("search") || ""
+  );
+
+  const isHomePage = location.pathname === "/";
 
   const isLoading = isAuthLoading || (isAuthenticated && !isConnected);
 
   const handleNavClick = () => {
     setMobileMenuOpen(false);
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchQuery(value);
+    if (value) {
+      setSearchParams({ search: value });
+    } else {
+      setSearchParams({});
+    }
   };
 
   // --- Admin Context Logic ---
@@ -265,15 +281,34 @@ const Navigation = () => {
 
         {/* Mobile Center Logo */}
         <div className="lg:hidden absolute left-1/2 -translate-x-1/2">
-          <img
-            src={eventdekkLogo}
-            alt="EventDekk Logo"
-            className="h-8 w-auto"
-          />
+          {isHomePage ? (
+            <SearchBar
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search..."
+              className="w-44"
+            />
+          ) : (
+            <img
+              src={eventdekkLogo}
+              alt="EventDekk Logo"
+              className="h-8 w-auto"
+            />
+          )}
         </div>
 
         {/* --- Right Side (Theme, Back to App & Profile) --- */}
         <div className="flex items-center gap-3">
+          {isHomePage && (
+            <div className="hidden sm:block">
+              <SearchBar
+                value={searchQuery}
+                onChange={handleSearchChange}
+                placeholder="Search events..."
+                className="w-52 lg:w-64"
+              />
+            </div>
+          )}
           {isAdminArea && (
             <div className="hidden lg:flex items-center pr-2 mr-2 border-r border-border/50">
               <Button

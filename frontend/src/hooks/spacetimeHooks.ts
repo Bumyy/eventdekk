@@ -418,3 +418,21 @@ export const useGroupMembersForGroup = (groupId: bigint | null) => {
     });
   }, [memberships, users]);
 };
+
+export interface GroupAvailabilityData {
+  hostedEvents: ReturnType<typeof useUpcomingHostedEvents> extends Array<infer T> ? T[] : never;
+  attendingEvents: ReturnType<typeof useUpcomingAttendingEvents> extends Array<infer T> ? T[] : never;
+  hostedSubEvents: ReturnType<typeof useSubEventsForGroup> extends Array<infer T> ? T[] : never;
+}
+
+export const useGroupAvailabilityData = (groupId: bigint | null): GroupAvailabilityData => {
+  const hostedEvents = useUpcomingHostedEvents(groupId);
+  const attendingEvents = useUpcomingAttendingEvents(groupId);
+  const hostedSubEvents = useSubEventsForGroup(groupId);
+
+  return useMemo(() => ({
+    hostedEvents: hostedEvents || [],
+    attendingEvents: attendingEvents || [],
+    hostedSubEvents: hostedSubEvents || [],
+  }), [hostedEvents, attendingEvents, hostedSubEvents]);
+};

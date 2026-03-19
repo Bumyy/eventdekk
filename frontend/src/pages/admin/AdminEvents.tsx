@@ -14,6 +14,7 @@ import {
   useSubEvents,
   useCurrentUser,
   useUsers,
+  useGroupAvailabilityData,
 } from "@/hooks/spacetimeHooks";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
@@ -80,6 +81,9 @@ export default function AdminEvents() {
   const upcomingAttendingEvents = useUpcomingAttendingEvents(groupIdBigInt);
   const pastEvents = usePastHostedEvents(groupIdBigInt);
   const pendingInvitations = usePendingEventInvitations(groupIdBigInt);
+
+  // Get group's availability data for conflict checking
+  const groupAvailabilityData = useGroupAvailabilityData(groupIdBigInt);
 
   console.log(upcomingAttendingEvents, upcomingEvents, groupIdBigInt);
 
@@ -693,6 +697,8 @@ export default function AdminEvents() {
             pendingInvitations={pendingInvitations || []}
             subEvents={invitationSubEvents || []}
             userTimezone={userTimezone}
+            groups={groups || []}
+            availabilityData={groupAvailabilityData}
             onRespond={handleOpenResponseDialog}
           />
         </TabsContent>
@@ -725,6 +731,7 @@ export default function AdminEvents() {
         groupId={groupIdBigInt || BigInt(0)}
         onAccept={handleAcceptInvitation}
         onDecline={handleDeclineInvitation}
+        availabilityData={groupAvailabilityData}
       />
 
       {/* Event management dialog for existing participations */}
@@ -739,6 +746,7 @@ export default function AdminEvents() {
         onDecline={async () => setShowManagementDialog(false)}
         preSelectedSubEvents={preSelectedSubEvents}
         preFilledFlightDetails={preFilledFlightDetails}
+        availabilityData={groupAvailabilityData}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   Dialog,
   DialogContent,
@@ -22,9 +22,107 @@ import {
   Loader2,
   MapPin,
   Plane,
+  AlertTriangle,
+  CalendarX,
 } from "lucide-react";
 import { SubEventType, Event, SubEvent } from "@/module_bindings/types";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+
+interface GroupAvailabilityData {
+  hostedEvents: Event[];
+  attendingEvents: Event[];
+  hostedSubEvents: SubEvent[];
+}
+
+interface ConflictInfo {
+  hasConflict: boolean;
+  sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[];
+  overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[];
+  isFree: boolean;
+}
+
+function checkSubEventConflicts(
+  subEvent: SubEvent,
+  availabilityData: GroupAvailabilityData
+): ConflictInfo {
+  const subEventStart = subEvent.scheduledStartTime.toDate();
+  const subEventEnd = subEvent.scheduledEndTime.toDate();
+  const subEventDay = new Date(subEventStart);
+  subEventDay.setHours(0, 0, 0, 0);
+
+  const allEvents = [
+    ...availabilityData.hostedEvents.map((e) => ({ ...e, isHosted: true })),
+    ...availabilityData.attendingEvents.map((e) => ({ ...e, isHosted: false })),
+  ];
+
+  const sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[] = [];
+  const overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[] = [];
+
+  const allSubEvents = availabilityData.hostedSubEvents;
+
+  for (const subEv of allSubEvents) {
+    const existingStart = subEv.scheduledStartTime.toDate();
+    const existingEnd = subEv.scheduledEndTime.toDate();
+    const existingDay = new Date(existingStart);
+    existingDay.setHours(0, 0, 0, 0);
+
+    if (existingDay.getTime() === subEventDay.getTime()) {
+      const parentEvent = allEvents.find((e) => e.eventId === subEv.eventId);
+      if (parentEvent && !sameDayEvents.some((e) => e.name === parentEvent.name)) {
+        sameDayEvents.push({ 
+          name: parentEvent.name, 
+          isHosted: parentEvent.isHosted, 
+          isInternal: parentEvent.isInternal 
+        });
+      }
+
+      const hasOverlap = subEventStart < existingEnd && subEventEnd > existingStart;
+      if (hasOverlap) {
+        overlappingEvents.push({
+          name: `${subEv.name} (${parentEvent?.name || "Unknown"})`,
+          start: existingStart,
+          end: existingEnd,
+          isHosted: parentEvent?.isHosted ?? true,
+          isInternal: parentEvent?.isInternal ?? false,
+        });
+      }
+    }
+  }
+
+  for (const event of allEvents) {
+    const eventStart = event.startTime.toDate();
+    const eventEnd = event.endTime.toDate();
+    const eventDay = new Date(eventStart);
+    eventDay.setHours(0, 0, 0, 0);
+
+    if (eventDay.getTime() === subEventDay.getTime()) {
+      if (!sameDayEvents.some((e) => e.name === event.name)) {
+        sameDayEvents.push({ name: event.name, isHosted: event.isHosted, isInternal: event.isInternal });
+      }
+
+      const hasOverlap = subEventStart < eventEnd && subEventEnd > eventStart;
+      if (hasOverlap) {
+        overlappingEvents.push({
+          name: event.name,
+          start: eventStart,
+          end: eventEnd,
+          isHosted: event.isHosted,
+          isInternal: event.isInternal,
+        });
+      }
+    }
+  }
+
+  const hasConflict = overlappingEvents.length > 0;
+  const isFree = sameDayEvents.length === 0;
+
+  return {
+    hasConflict,
+    sameDayEvents,
+    overlappingEvents,
+    isFree,
+  };
+}
 
 interface FlightDetails {
   callsign?: string;
@@ -51,6 +149,7 @@ interface EventInvitationDialogProps {
   onDecline: (invitation: any) => Promise<void>;
   preSelectedSubEvents?: bigint[];
   preFilledFlightDetails?: Record<string, FlightDetails>;
+  availabilityData?: GroupAvailabilityData;
 }
 
 const EMPTY_BIGINT_ARRAY: bigint[] = [];
@@ -64,9 +163,9 @@ export function EventInvitationDialog({
   subEvents,
   onAccept,
   onDecline,
-  // ✅ Use the stable references here
   preSelectedSubEvents = EMPTY_BIGINT_ARRAY,
   preFilledFlightDetails = EMPTY_FLIGHT_DETAILS,
+  availabilityData,
 }: EventInvitationDialogProps) {
   // State for selected sub-events and flight details
   const [selectedSubEvents, setSelectedSubEvents] = useState<bigint[]>([]);
@@ -197,6 +296,20 @@ export function EventInvitationDialog({
   const event = getEvent();
   const isManagingExisting = preSelectedSubEvents.length > 0;
 
+  const invitationSubEvents = useMemo(() => {
+    if (!invitation) return [];
+    return subEvents.filter((se) => se.eventId === invitation.eventId);
+  }, [invitation, subEvents]);
+
+  const subEventConflicts = useMemo(() => {
+    if (!availabilityData) return new Map<bigint, ConflictInfo>();
+    const conflicts = new Map<bigint, ConflictInfo>();
+    for (const subEvent of invitationSubEvents) {
+      conflicts.set(subEvent.subEventId, checkSubEventConflicts(subEvent, availabilityData));
+    }
+    return conflicts;
+  }, [availabilityData, invitationSubEvents]);
+
   return (
     <>
       {/* Animated backdrop to match CreateEventDialog */}
@@ -232,7 +345,7 @@ export function EventInvitationDialog({
                   </p>
                 </div>
 
-                {getEventSubEvents().map((subEvent) => {
+                {invitationSubEvents.map((subEvent) => {
                   const isSelected = selectedSubEvents.some(
                     (id) => id === subEvent.subEventId
                   );
@@ -296,6 +409,76 @@ export function EventInvitationDialog({
                               <span>Departure: {subEvent.hubIcao}</span>
                             )}
                           </div>
+
+                          {availabilityData && subEventConflicts && (() => {
+                            const conflict = subEventConflicts.get(subEvent.subEventId);
+                            if (!conflict) return null;
+                            
+                            if (conflict.isFree) {
+                              return (
+                                <div className="flex items-center gap-2 mb-2 p-2 bg-green-500/10 rounded-md border border-green-500/20">
+                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  <span className="text-sm text-green-700 dark:text-green-400">
+                                    Group is free on this day
+                                  </span>
+                                </div>
+                              );
+                            }
+                            
+                            if (conflict.hasConflict) {
+                              return (
+                                <div className="space-y-2 mb-2 p-2 bg-red-500/10 rounded-md border border-red-500/20">
+                                  <div className="flex items-center gap-2">
+                                    <AlertTriangle className="h-4 w-4 text-red-500" />
+                                    <span className="text-sm text-red-700 dark:text-red-400 font-medium">
+                                      Time conflict with another event
+                                    </span>
+                                  </div>
+                                  {conflict.overlappingEvents.length > 0 && (
+                                    <div className="text-xs text-red-600 dark:text-red-400 ml-6">
+                                      {conflict.overlappingEvents.map((e, i) => (
+                                        <div key={i} className="flex items-center gap-1">
+                                          <span>•</span>
+                                          <span>
+                                            {e.name} ({format(e.start, "p")} - {format(e.end, "p")})
+                                            {e.isHosted && " [hosted]"}
+                                            {e.isInternal && " [internal]"}
+                                          </span>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            }
+                            
+                            if (conflict.sameDayEvents.length > 0) {
+                              return (
+                                <div className="mb-2 p-2 bg-yellow-500/10 rounded-md border border-yellow-500/20">
+                                  <div className="flex items-center gap-2">
+                                    <CalendarX className="h-4 w-4 text-yellow-500" />
+                                    <span className="text-sm text-yellow-700 dark:text-yellow-400">
+                                      Group has {conflict.sameDayEvents.length} event(s) on this day
+                                    </span>
+                                  </div>
+                                  <div className="text-xs text-yellow-600 dark:text-yellow-400 ml-6 mt-1">
+                                    {conflict.sameDayEvents.map((e, i) => (
+                                      <div key={i} className="flex items-center gap-1">
+                                        <span>•</span>
+                                        <span>
+                                          {e.name}
+                                          {e.isHosted && " [hosted]"}
+                                          {e.isInternal && " [internal]"}
+                                        </span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              );
+                            }
+                            
+                            return null;
+                          })()}
 
                           {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
