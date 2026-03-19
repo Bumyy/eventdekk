@@ -14,6 +14,7 @@ import {
   Users,
   Settings,
   ArrowLeft,
+  CalendarSearch,
 } from "lucide-react";
 import { useState } from "react";
 import eventdekkLogo from "../assets/eventdekk_logo.png";
@@ -63,7 +64,9 @@ const Navigation = () => {
     if (pathParts[2] === "groups" && pathParts[4] === "events") {
       groupId = pathParts[3]; // Handles: /admin/groups/:groupId/events/:eventId/edit
     } else if (
-      ["dashboard", "events", "members", "settings"].includes(pathParts[2])
+      ["dashboard", "planner", "events", "members", "settings"].includes(
+        pathParts[2]
+      )
     ) {
       groupId = pathParts[3]; // Handles standard admin sub-pages
     }
@@ -84,6 +87,11 @@ const Navigation = () => {
           name: "Dashboard",
           path: `/admin/dashboard/${groupId}`,
           icon: LayoutDashboard,
+        },
+        {
+          name: "Planner",
+          path: `/admin/planner/${groupId}`,
+          icon: CalendarSearch,
         },
         { name: "Events", path: `/admin/events/${groupId}`, icon: Calendar },
         { name: "Members", path: `/admin/members/${groupId}`, icon: Users },

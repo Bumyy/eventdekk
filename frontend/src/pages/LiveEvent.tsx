@@ -26,6 +26,7 @@ import { format } from "date-fns";
 import { Pencil, Trash2, Crown } from "lucide-react";
 import EventMap from "@/components/map/EventMap";
 import "leaflet/dist/leaflet.css";
+import { useUserTimezone, formatInTimezone } from "@/utils/timezoneUtils";
 
 type LiveChatMessage = Infer<typeof LiveChatMessage>;
 type Group = Infer<typeof Group>;
@@ -55,6 +56,7 @@ const LiveEvent = () => {
   const groupMembers = useGroupMemberships();
   const allSubEvents = useSubEvents();
   const allFlightSignups = useFlightSignups();
+  const userTimezone = useUserTimezone();
 
   const [newMessage, setNewMessage] = useState("");
   const [editingMessage, setEditingMessage] = useState<LiveChatMessage | null>(
@@ -443,7 +445,11 @@ const LiveEvent = () => {
                     )}
 
                     <span className="text-xs text-muted-foreground">
-                      {format(firstMessage.timestamp.toDate(), "h:mm a")}
+                      {formatInTimezone(firstMessage.timestamp, userTimezone, {
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
                     </span>
                   </div>
 

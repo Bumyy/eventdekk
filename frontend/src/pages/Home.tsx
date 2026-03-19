@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/EventCard";
 import EventDialog from "@/components/EventDialog";
 import {
@@ -8,17 +8,16 @@ import {
   useGroups,
 } from "@/hooks/spacetimeHooks";
 import {
-  differenceInDays,
-  differenceInHours,
+  addDays,
   isAfter,
   isBefore,
-  addDays,
 } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { Event as SpacetimeEvent } from "../module_bindings";
 import { Infer } from "spacetimedb";
+import { toUserTimezoneDate } from "@/utils/timezoneUtils";
 
 type EventType = Infer<typeof SpacetimeEvent>;
 
@@ -31,14 +30,17 @@ const Home = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [now, setNow] = useState(() => new Date());
 
-  const { now, nextWeek } = useMemo(() => {
-    const currentDate = new Date();
-    return {
-      now: currentDate,
-      nextWeek: addDays(currentDate, 7),
-    };
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 60_000);
+
+    return () => clearInterval(timer);
   }, []);
+
+  const nextWeek = useMemo(() => addDays(now, 7), [now]);
 
   console.log(discoveryEvents, events);
 
@@ -53,17 +55,18 @@ const Home = () => {
   const { upcomingWeekEvents, otherEvents } = useMemo(() => {
     const upcoming = events
       .filter((event) => {
-        const eventDate = event.startTime.toDate();
+        const eventDate = toUserTimezoneDate(event.startTime);
         const yesterday = addDays(now, -1);
         return isAfter(eventDate, yesterday) && isBefore(eventDate, nextWeek);
       })
       .sort(
         (a, b) =>
-          a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
+          toUserTimezoneDate(a.startTime).getTime() -
+          toUserTimezoneDate(b.startTime).getTime()
       );
 
     const others = events.filter((event) => {
-      const eventDate = event.startTime.toDate();
+      const eventDate = toUserTimezoneDate(event.startTime);
       return isAfter(eventDate, nextWeek);
     });
 
@@ -119,10 +122,10 @@ const Home = () => {
   ]);
 
   const isLive = (event: EventType) => {
-    const now = new Date();
-    const eventDate = event.startTime.toDate();
-    const hoursSinceStart = differenceInHours(now, eventDate);
-    return hoursSinceStart >= -12 && hoursSinceStart < 24;
+    const startDate = toUserTimezoneDate(event.startTime);
+    const endDate = toUserTimezoneDate(event.endTime);
+
+    return now >= startDate && now < endDate;
   };
 
   const navigate = useNavigate();
@@ -137,17 +140,29 @@ const Home = () => {
   };
 
   const getEventCountdown = (event: EventType) => {
-    const eventDate = event.startTime.toDate();
-    const daysLeft = differenceInDays(eventDate, now);
-    const hoursLeft = differenceInHours(eventDate, now);
-    const hoursSinceStart = differenceInHours(eventDate, now);
+    const startDate = toUserTimezoneDate(event.startTime);
+    const endDate = toUserTimezoneDate(event.endTime);
 
-    if (hoursSinceStart < 0 && hoursSinceStart >= -24) return "LIVE";
-    if (daysLeft > 0)
-      return `${daysLeft === 1 ? "TOMORROW" : `${daysLeft} DAYS`}`;
-    if (hoursLeft > 0)
+    if (now >= endDate) return "ENDED";
+    if (now >= startDate) return "LIVE";
+
+    const remainingMs = startDate.getTime() - now.getTime();
+    const minuteMs = 60_000;
+    const hourMs = 60 * minuteMs;
+    const dayMs = 24 * hourMs;
+
+    if (remainingMs >= dayMs) {
+      const daysLeft = Math.ceil(remainingMs / dayMs);
+      return daysLeft === 1 ? "TOMORROW" : `${daysLeft} DAYS`;
+    }
+
+    if (remainingMs >= hourMs) {
+      const hoursLeft = Math.ceil(remainingMs / hourMs);
       return `${hoursLeft} ${hoursLeft === 1 ? "HOUR" : "HOURS"}`;
-    return "ENDED";
+    }
+
+    const minutesLeft = Math.max(1, Math.ceil(remainingMs / minuteMs));
+    return `${minutesLeft} ${minutesLeft === 1 ? "MIN" : "MINS"}`;
   };
 
   const availableTags = ["GroupFlight", "FlyIn", "FlyOut"];

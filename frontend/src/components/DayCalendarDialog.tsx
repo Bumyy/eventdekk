@@ -24,6 +24,7 @@ import { Group, Event, SubEvent } from "@/module_bindings";
 import { cn } from "@/lib/utils";
 import { areIntervalsOverlapping } from "date-fns";
 import { Infer } from "spacetimedb";
+import { useUserTimezone, formatInTimezone } from "@/utils/timezoneUtils";
 
 type Event = Infer<typeof Event>;
 type SubEvent = Infer<typeof SubEvent>;
@@ -50,6 +51,7 @@ export default function DayCalendarDialog({
   onEventClick,
   getAllEventsForDay,
 }: DayCalendarDialogProps) {
+  const userTimezone = useUserTimezone();
   // Update currentDate when initialDate changes to fix the day selection issue
   const [currentDate, setCurrentDate] = useState(initialDate);
   const [currentEvents, setCurrentEvents] = useState<Event[]>([
@@ -292,8 +294,6 @@ export default function DayCalendarDialog({
                       totalColumns
                     );
                     const multiDay = isMultiDayEvent(event);
-                    const startTime = event.startTime.toDate();
-                    const endTime = event.endTime.toDate();
                     const creatorGroup = getGroupInfo(event.creatorGroupId);
                     const startsToday = isEventStartingToday(event);
 
@@ -338,8 +338,17 @@ export default function DayCalendarDialog({
                         </div>
 
                         <div className="text-[9px] text-muted-foreground mt-0.5">
-                          {format(startTime, "h:mm a")} -{" "}
-                          {format(endTime, "h:mm a")}
+                          {formatInTimezone(event.startTime, userTimezone, {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}{" "}
+                          -{" "}
+                          {formatInTimezone(event.endTime, userTimezone, {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
                         </div>
                       </div>
                     );
@@ -363,8 +372,6 @@ export default function DayCalendarDialog({
 
                 <div className="space-y-2">
                   {currentEvents.map((event) => {
-                    const startTime = event.startTime.toDate();
-                    const endTime = event.endTime.toDate();
                     const creatorGroup = getGroupInfo(event.creatorGroupId);
                     const multiDay = isMultiDayEvent(event);
 
@@ -414,8 +421,17 @@ export default function DayCalendarDialog({
                               variant="outline"
                               className="whitespace-nowrap text-xs"
                             >
-                              {format(startTime, "h:mm a")} -{" "}
-                              {format(endTime, "h:mm a")}
+                              {formatInTimezone(event.startTime, userTimezone, {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}{" "}
+                              -{" "}
+                              {formatInTimezone(event.endTime, userTimezone, {
+                                hour: "numeric",
+                                minute: "2-digit",
+                                hour12: true,
+                              })}
                             </Badge>
 
                             {multiDay && (

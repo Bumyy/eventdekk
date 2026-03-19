@@ -30,6 +30,7 @@ import { useGroups } from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Infer } from "spacetimedb";
 import { Event, SubEvent } from "@/module_bindings";
+import { useUserTimezone, formatInTimezone } from "@/utils/timezoneUtils";
 
 type Event = Infer<typeof Event>;
 type SubEvent = Infer<typeof SubEvent>;
@@ -43,6 +44,7 @@ const Calendar = ({ events, subEvents = [] }: CalendarProps) => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showEventDialog, setShowEventDialog] = useState(false);
+  const userTimezone = useUserTimezone();
 
   // Day calendar dialog
   const [selectedDay, setSelectedDay] = useState<Date | null>(null);
@@ -323,7 +325,11 @@ const Calendar = ({ events, subEvents = [] }: CalendarProps) => {
                       >
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-medium">
-                            {format(event.startTime.toDate(), "HH:mm")}
+                            {formatInTimezone(event.startTime, userTimezone, {
+                              hour: "2-digit",
+                              minute: "2-digit",
+                              hour12: false,
+                            })}
                           </span>
                           <Avatar className="h-4 w-4">
                             <AvatarImage

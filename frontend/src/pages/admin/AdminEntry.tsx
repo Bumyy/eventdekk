@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2 } from "lucide-react";
+import { Building2, CalendarSearch } from "lucide-react";
 import { useGroups, useGroupMemberships } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
@@ -91,12 +91,24 @@ export default function AdminEntry() {
                   </p>
                 </div>
               </div>
-              <Button
-                onClick={() => navigate(`/admin/dashboard/${group.groupId}`)}
-                disabled={!canManageGroup(group.role)}
-              >
-                {canManageGroup(group.role) ? "Manage" : "View Only"}
-              </Button>
+              <div className="flex items-center gap-2">
+                {canManageGroup(group.role) && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate(`/admin/planner/${group.groupId}`)}
+                  >
+                    <CalendarSearch className="h-4 w-4 mr-1" />
+                    Planner
+                  </Button>
+                )}
+                <Button
+                  onClick={() => navigate(`/admin/dashboard/${group.groupId}`)}
+                  disabled={!canManageGroup(group.role)}
+                >
+                  {canManageGroup(group.role) ? "Manage" : "View Only"}
+                </Button>
+              </div>
             </div>
           </Card>
         ))}

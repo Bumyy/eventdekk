@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useRef } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Toaster, toast } from "sonner"; // <-- Added toast import
+import { Toaster, toast } from "sonner";
 
 // --- SpacetimeDB Imports ---
 import { SpacetimeDBProvider } from "spacetimedb/react";
@@ -35,6 +35,7 @@ import SiteAdmin from "@/pages/admin/SiteAdmin";
 import CreateGroup from "./pages/admin/CreateGroup";
 import EditEvent from "./pages/admin/EditEvent";
 import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
+import GroupPlanner from "@/pages/admin/GroupPlanner";
 
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   // <-- Extracted logout here
@@ -158,7 +159,6 @@ function App() {
 
               <main>
                 <Routes>
-                  {/* ... Keep the exact same routing rules here ... */}
                   <Route path="/" element={<Home />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="/auth/callback" element={<AuthCallbackPage />} />
@@ -182,23 +182,24 @@ function App() {
                       </ProtectedRoute>
                     }
                   >
-                    <Route index element={<AdminEntry />} />
-                    <Route path="site" element={<SiteAdmin />} />
-                    <Route path="site/group/create" element={<CreateGroup />} />
-                    <Route
-                      path="dashboard/:groupId"
-                      element={<AdminDashboard />}
-                    />
-                    <Route path="events/:groupId" element={<AdminEvents />} />
-                    <Route path="members/:groupId" element={<AdminMembers />} />
-                    <Route
-                      path="settings/:groupId"
-                      element={<AdminGroupSettings />}
-                    />
-                    <Route
-                      path="groups/:groupId/events/:eventId/edit"
-                      element={<EditEvent />}
-                    />
+<Route index element={<AdminEntry />} />
+                  <Route path="site" element={<SiteAdmin />} />
+                  <Route path="site/group/create" element={<CreateGroup />} />
+                  <Route
+                    path="dashboard/:groupId"
+                    element={<AdminDashboard />}
+                  />
+                  <Route path="planner/:groupId" element={<GroupPlanner />} />
+                  <Route path="events/:groupId" element={<AdminEvents />} />
+                  <Route path="members/:groupId" element={<AdminMembers />} />
+                  <Route
+                    path="settings/:groupId"
+                    element={<AdminGroupSettings />}
+                  />
+                  <Route
+                    path="groups/:groupId/events/:eventId/edit"
+                    element={<EditEvent />}
+                  />
                   </Route>
 
                   <Route
