@@ -65,10 +65,139 @@ const LiveEvent = () => {
   );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const sheetRef = useRef<HTMLDivElement>(null);
   const [flights, setFlights] = useState<Flight[]>([]);
   const [flightLoadingError, setFlightLoadingError] = useState<string | null>(
     null
   );
+  const [sheetHeight, setSheetHeight] = useState<number | null>(null);
+  const [mobileViewportHeight, setMobileViewportHeight] = useState<number>(() =>
+    typeof window !== "undefined"
+      ? (window.visualViewport?.height ?? window.innerHeight)
+      : 0
+  );
+  const [keyboardInset, setKeyboardInset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartY = useRef<number>(0);
+  const dragStartHeight = useRef<number>(0);
+
+  const isMobile = typeof window !== "undefined" && window.innerWidth < 768;
+  const NAV_HEIGHT = 56;
+  const SHEET_HEIGHTS = useMemo(() => {
+    const expanded = Math.max(320, mobileViewportHeight - NAV_HEIGHT);
+    const partial = Math.min(380, Math.max(220, Math.round(expanded * 0.6)));
+    return { collapsed: 60, partial, expanded };
+  }, [mobileViewportHeight]);
+
+  const handleSheetDragStart = useCallback(
+    (e: React.TouchEvent | React.MouseEvent) => {
+      e.preventDefault();
+      const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
+      dragStartY.current = clientY;
+      dragStartHeight.current = sheetHeight ?? SHEET_HEIGHTS.partial;
+      setIsDragging(true);
+    },
+    [sheetHeight, SHEET_HEIGHTS]
+  );
+
+  const handleSheetDragMove = useCallback(
+    (e: TouchEvent | MouseEvent) => {
+      if (!isDragging) return;
+      const clientY =
+        "touches" in e
+          ? (e as TouchEvent).touches[0].clientY
+          : (e as MouseEvent).clientY;
+      const delta = dragStartY.current - clientY;
+      const newHeight = Math.max(
+        SHEET_HEIGHTS.collapsed,
+        Math.min(SHEET_HEIGHTS.expanded, dragStartHeight.current + delta)
+      );
+      setSheetHeight(newHeight);
+    },
+    [isDragging, SHEET_HEIGHTS]
+  );
+
+  const handleSheetDragEnd = useCallback(() => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    if (sheetHeight !== null) {
+      const collapsedToPartial =
+        (SHEET_HEIGHTS.collapsed + SHEET_HEIGHTS.partial) / 2;
+      const partialToExpanded =
+        (SHEET_HEIGHTS.partial + SHEET_HEIGHTS.expanded) / 2;
+
+      if (sheetHeight < collapsedToPartial) {
+        setSheetHeight(SHEET_HEIGHTS.collapsed);
+      } else if (sheetHeight < partialToExpanded) {
+        setSheetHeight(SHEET_HEIGHTS.partial);
+      } else {
+        setSheetHeight(SHEET_HEIGHTS.expanded);
+      }
+    }
+  }, [isDragging, sheetHeight, SHEET_HEIGHTS]);
+
+  useEffect(() => {
+    if (!isDragging) return;
+    window.addEventListener("touchmove", handleSheetDragMove);
+    window.addEventListener("touchend", handleSheetDragEnd);
+    window.addEventListener("mousemove", handleSheetDragMove);
+    window.addEventListener("mouseup", handleSheetDragEnd);
+    return () => {
+      window.removeEventListener("touchmove", handleSheetDragMove);
+      window.removeEventListener("touchend", handleSheetDragEnd);
+      window.removeEventListener("mousemove", handleSheetDragMove);
+      window.removeEventListener("mouseup", handleSheetDragEnd);
+    };
+  }, [isDragging, handleSheetDragMove, handleSheetDragEnd]);
+
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const updateMobileViewportMetrics = () => {
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const viewportOffsetTop = window.visualViewport?.offsetTop ?? 0;
+      const nextKeyboardInset = Math.max(
+        0,
+        window.innerHeight - viewportHeight - viewportOffsetTop
+      );
+
+      setMobileViewportHeight(viewportHeight);
+      setKeyboardInset(nextKeyboardInset);
+    };
+
+    updateMobileViewportMetrics();
+
+    window.addEventListener("resize", updateMobileViewportMetrics);
+    window.addEventListener("orientationchange", updateMobileViewportMetrics);
+    window.visualViewport?.addEventListener("resize", updateMobileViewportMetrics);
+    window.visualViewport?.addEventListener("scroll", updateMobileViewportMetrics);
+
+    return () => {
+      window.removeEventListener("resize", updateMobileViewportMetrics);
+      window.removeEventListener("orientationchange", updateMobileViewportMetrics);
+      window.visualViewport?.removeEventListener(
+        "resize",
+        updateMobileViewportMetrics
+      );
+      window.visualViewport?.removeEventListener(
+        "scroll",
+        updateMobileViewportMetrics
+      );
+    };
+  }, [isMobile]);
+
+  useEffect(() => {
+    if (isMobile && sheetHeight === null) {
+      setSheetHeight(SHEET_HEIGHTS.partial);
+    }
+  }, [isMobile, sheetHeight, SHEET_HEIGHTS]);
+
+  useEffect(() => {
+    if (!isMobile || sheetHeight === null) return;
+    if (sheetHeight > SHEET_HEIGHTS.expanded) {
+      setSheetHeight(SHEET_HEIGHTS.expanded);
+    }
+  }, [isMobile, sheetHeight, SHEET_HEIGHTS]);
 
   // Find the current event
   const event = events.find((e) => e.eventId.toString() === eventId);
@@ -205,18 +334,30 @@ const LiveEvent = () => {
     [groupedMessages]
   );
 
+  const mobileChatContainerRef = useRef<HTMLDivElement>(null);
+
   // Virtualizer for chat messages
   const virtualizer = useVirtualizer({
     count: groupedMessages.length,
     getScrollElement: () => chatContainerRef.current,
     estimateSize,
-    overscan:5,
+    overscan: 5,
+  });
+
+  const mobileVirtualizer = useVirtualizer({
+    count: groupedMessages.length,
+    getScrollElement: () => mobileChatContainerRef.current,
+    estimateSize,
+    overscan: 5,
   });
 
   // Auto-scroll to bottom of chat when new messages arrive
   useEffect(() => {
     if (groupedMessages.length > 0) {
       virtualizer.scrollToIndex(groupedMessages.length - 1, { align: "end" });
+      mobileVirtualizer.scrollToIndex(groupedMessages.length - 1, {
+        align: "end",
+      });
     }
   }, [groupedMessages.length]);
 
@@ -323,101 +464,74 @@ const LiveEvent = () => {
     return <div className="p-4">Event not found</div>;
   }
 
-  return (
-    <div className="flex h-[calc(100vh-64px)]">
-      {/* Left side - Map Section */}
-      <div className="w-2/3 flex flex-col h-full border-r">
-        {/* Map Title Area */}
-        <div className="px-4 py-5 border-b flex justify-between items-center">
-          <h1 className="text-xl font-bold">{event.name}</h1>
-          {flightLoadingError && (
-            <div className="text-xs text-destructive">
-              Flight data error: {flightLoadingError}
-            </div>
-          )}
-        </div>
+  // Chat content renderer
+  const renderChatContent = (isMobileView = false) => (
+    <>
+      {/* Chat Title Area */}
+      <div
+        className={`p-4 border-b flex justify-between items-center ${isMobileView ? "flex-col gap-2" : ""}`}
+      >
+        <h2 className="text-xl font-bold">Live Chat</h2>
 
-        {/* Map Content Area */}
-        <div className="flex-1 bg-gray-50 dark:bg-background">
-          {" "}
-          {/* Adjusted background for dark theme */}
-          <EventMap
-            subEvents={subEvents}
-            flightSignups={flightSignups}
-            eventId={eventId}
-            creatorGroupId={event.creatorGroupId} // Pass creator group ID
-            groupMap={groupMap} // Pass the group map
-            flights={flights} // Pass flights data to the map
-            className="w-full h-full z-0"
-          />
-        </div>
+        {/* Group Selector */}
+        {userGroups.length > 1 ? (
+          <Select
+            value={selectedGroupId || undefined}
+            onValueChange={(value) => setSelectedGroupId(value)}
+          >
+            <SelectTrigger className={isMobileView ? "w-full" : "w-[180px]"}>
+              <SelectValue placeholder="Select a group" />
+            </SelectTrigger>
+            <SelectContent>
+              {userGroups.map((group) => (
+                <SelectItem
+                  key={group.groupId.toString()}
+                  value={group.groupId.toString()}
+                >
+                  <div className="flex items-center gap-2">
+                    {group.logoUrl && (
+                      <img
+                        src={group.logoUrl}
+                        alt=""
+                        className="w-4 h-4 rounded-full"
+                      />
+                    )}
+                    {group.name}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          selectedGroupInfo && (
+            <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md text-sm">
+              {selectedGroupInfo.logo && (
+                <img
+                  src={selectedGroupInfo.logo}
+                  alt=""
+                  className="w-4 h-4 rounded-full"
+                />
+              )}
+              <span>Chatting as {selectedGroupInfo.name}</span>
+            </div>
+          )
+        )}
       </div>
 
-      {/* Right side - Chat Section */}
-      <div className="w-1/3 flex flex-col h-full">
-        {/* Chat Title Area */}
-        <div className="p-4 border-b flex justify-between items-center">
-          <h2 className="text-xl font-bold">Live Chat</h2>
-
-          {/* Only show Group Selector if user is part of multiple groups */}
-          {userGroups.length > 1 ? (
-            <Select
-              value={selectedGroupId || undefined}
-              onValueChange={(value) => setSelectedGroupId(value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Select a group" />
-              </SelectTrigger>
-              <SelectContent>
-                {userGroups.map((group) => (
-                  <SelectItem
-                    key={group.groupId.toString()}
-                    value={group.groupId.toString()}
-                  >
-                    <div className="flex items-center gap-2">
-                      {group.logoUrl && (
-                        <img
-                          src={group.logoUrl}
-                          alt=""
-                          className="w-4 h-4 rounded-full"
-                        />
-                      )}
-                      {group.name}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            // If only one group, show a badge with the group name
-            selectedGroupInfo && (
-              <div className="flex items-center gap-2 px-2 py-1 bg-muted rounded-md text-sm">
-                {selectedGroupInfo.logo && (
-                  <img
-                    src={selectedGroupInfo.logo}
-                    alt=""
-                    className="w-4 h-4 rounded-full"
-                  />
-                )}
-                <span>Chatting as {selectedGroupInfo.name}</span>
-              </div>
-            )
-          )}
-        </div>
-
-        {/* Chat messages - Discord style */}
+      <div
+        ref={isMobileView ? mobileChatContainerRef : chatContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-4 touch-pan-y"
+      >
         <div
-          ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4"
+          style={{
+            height: `${(isMobileView ? mobileVirtualizer : virtualizer).getTotalSize()}px`,
+            width: "100%",
+            position: "relative",
+          }}
         >
-          <div
-            style={{
-              height: `${virtualizer.getTotalSize()}px`,
-              width: "100%",
-              position: "relative",
-            }}
-          >
-            {virtualizer.getVirtualItems().map((virtualItem) => {
+          {(isMobileView ? mobileVirtualizer : virtualizer)
+            .getVirtualItems()
+            .map((virtualItem) => {
               const group = groupedMessages[virtualItem.index];
               const firstMessage = group.messages[0];
               const {
@@ -438,7 +552,10 @@ const LiveEvent = () => {
                     transform: `translateY(${virtualItem.start}px)`,
                   }}
                   data-index={virtualItem.index}
-                  ref={virtualizer.measureElement}
+                  ref={
+                    (isMobileView ? mobileVirtualizer : virtualizer)
+                      .measureElement
+                  }
                   className="pb-6"
                 >
                   <div className="flex items-start space-x-2">
@@ -450,13 +567,11 @@ const LiveEvent = () => {
                     </Avatar>
 
                     <div className="flex-1 min-w-0">
-                      {/* Username, Group, and timestamp */}
                       <div className="flex items-center mb-1 flex-wrap">
                         <span className="font-semibold text-sm mr-2">
                           {user.name}
                         </span>
 
-                        {/* Group badge with logo */}
                         <span
                           className="text-xs rounded-full pl-0.5 pr-1 py-0.5 flex items-center mr-2"
                           style={{
@@ -474,7 +589,6 @@ const LiveEvent = () => {
                           {messageGroup.tag}
                         </span>
 
-                        {/* Host badge */}
                         {isHost && (
                           <span
                             className="text-xs text-amber-500 flex items-center mr-2"
@@ -486,15 +600,18 @@ const LiveEvent = () => {
                         )}
 
                         <span className="text-xs text-muted-foreground">
-                          {formatInTimezone(firstMessage.timestamp, userTimezone, {
-                            hour: "numeric",
-                            minute: "2-digit",
-                            hour12: true,
-                          })}
+                          {formatInTimezone(
+                            firstMessage.timestamp,
+                            userTimezone,
+                            {
+                              hour: "numeric",
+                              minute: "2-digit",
+                              hour12: true,
+                            }
+                          )}
                         </span>
                       </div>
 
-                      {/* Messages */}
                       <div className="space-y-1">
                         {group.messages.map((message) => (
                           <div
@@ -505,7 +622,6 @@ const LiveEvent = () => {
                               {message.message}
                             </p>
 
-                            {/* Edit/Delete controls with Lucide icons */}
                             {isCurrentUser && (
                               <div className="absolute -right-2 -top-1 hidden group-hover:flex bg-background/90 rounded px-1 py-0.5 shadow-sm items-center gap-1">
                                 <button
@@ -534,54 +650,139 @@ const LiveEvent = () => {
                 </div>
               );
             })}
+        </div>
+      </div>
+
+      {/* Message input */}
+      <div className="p-4 border-t pb-[max(1rem,env(safe-area-inset-bottom))]">
+        {editingMessage && (
+          <div className="bg-muted p-2 mb-2 rounded-md text-sm flex justify-between items-center">
+            <span>Editing message</span>
+            <button
+              onClick={handleCancelEdit}
+              className="text-destructive hover:text-destructive/90 text-xs"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        <div className="flex gap-2">
+          <Input
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder={
+              selectedGroupInfo
+                ? `Message as ${selectedGroupInfo.tag || selectedGroupInfo.name}`
+                : "Select a group to chat"
+            }
+            className="flex-1"
+            disabled={!selectedGroupId}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
+          />
+          <Button
+            onClick={handleSendMessage}
+            className="shrink-0"
+            disabled={!selectedGroupId}
+          >
+            {editingMessage ? "Update" : "Send"}
+          </Button>
+        </div>
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Desktop Layout */}
+      <div className="hidden md:flex h-[calc(100dvh-56px)] overflow-hidden">
+        {/* Left side - Map Section */}
+        <div className="w-2/3 flex flex-col h-full border-r">
+          <div className="px-4 py-5 border-b flex justify-between items-center">
+            <h1 className="text-xl font-bold">{event.name}</h1>
+            {flightLoadingError && (
+              <div className="text-xs text-destructive">
+                Flight data error: {flightLoadingError}
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 bg-gray-50 dark:bg-background">
+            <EventMap
+              subEvents={subEvents}
+              flightSignups={flightSignups}
+              eventId={eventId}
+              creatorGroupId={event.creatorGroupId}
+              groupMap={groupMap}
+              flights={flights}
+              className="w-full h-full z-0"
+            />
           </div>
         </div>
 
-        {/* Message input */}
-        <div className="p-4 border-t">
-          {editingMessage && (
-            <div className="bg-muted p-2 mb-2 rounded-md text-sm flex justify-between items-center">
-              <span>Editing message</span>
-              <button
-                onClick={handleCancelEdit}
-                className="text-destructive hover:text-destructive/90 text-xs"
-              >
-                Cancel
-              </button>
+        {/* Right side - Chat Section */}
+        <div className="w-1/3 flex flex-col h-full">
+          {renderChatContent()}
+        </div>
+      </div>
+
+      {/* Mobile Layout */}
+      <div className="md:hidden fixed left-0 right-0 top-14 bottom-0 overflow-hidden">
+        {/* Full-screen Map */}
+        <div className="absolute inset-0 bg-gray-50 dark:bg-background">
+          <EventMap
+            subEvents={subEvents}
+            flightSignups={flightSignups}
+            eventId={eventId}
+            creatorGroupId={event.creatorGroupId}
+            groupMap={groupMap}
+            flights={flights}
+            className="w-full h-full"
+          />
+        </div>
+
+        {/* Event name overlay */}
+        <div className="absolute top-3 left-3 z-10 max-w-[70%] rounded-md bg-background/70 backdrop-blur-sm px-3 py-2 pointer-events-none">
+          <h1 className="text-sm font-semibold truncate">{event.name}</h1>
+          {flightLoadingError && (
+            <div className="text-[10px] text-destructive mt-1 truncate">
+              {flightLoadingError}
             </div>
           )}
+        </div>
 
-          <div className="flex gap-2">
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder={
-                selectedGroupInfo
-                  ? `Message as ${
-                      selectedGroupInfo.tag || selectedGroupInfo.name
-                    }`
-                  : "Select a group to chat"
-              }
-              className="flex-1"
-              disabled={!selectedGroupId}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSendMessage();
-                }
-              }}
-            />
-            <Button
-              onClick={handleSendMessage}
-              className="shrink-0"
-              disabled={!selectedGroupId}
+        {/* Bottom Sheet for Chat */}
+        <div
+          ref={sheetRef}
+          className="absolute left-0 right-0 bottom-0 bg-background border-t rounded-t-2xl shadow-lg z-20 flex flex-col"
+          style={{
+            height: sheetHeight ?? SHEET_HEIGHTS.collapsed,
+            bottom: keyboardInset,
+            transition: isDragging ? "none" : "height 0.2s ease-out",
+          }}
+        >
+          {/* Drag handle */}
+          <div className="flex justify-center py-2">
+            <div
+              className="h-8 w-24 cursor-grab touch-none select-none flex items-center justify-center"
+              onMouseDown={handleSheetDragStart}
+              onTouchStart={handleSheetDragStart}
             >
-              {editingMessage ? "Update" : "Send"}
-            </Button>
+              <div className="w-14 h-1.5 bg-muted-foreground/40 rounded-full" />
+            </div>
+          </div>
+
+          <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+            {renderChatContent(true)}
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
