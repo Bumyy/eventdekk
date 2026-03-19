@@ -2,11 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import {
-  useGroups,
-  useGroupMemberships,
-  useUsers,
-} from "@/hooks/spacetimeHooks";
+import { useGroupMembersForGroup, useUsers, useGroupById } from "@/hooks/spacetimeHooks";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -37,8 +33,8 @@ export default function AdminMembers() {
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const { getConnection } = useSpacetimeDB();
   const connection = getConnection();
-  const groups = useGroups();
-  const memberships = useGroupMemberships();
+  const currentGroup = useGroupById(groupIdBigInt);
+  const memberships = useGroupMembersForGroup(groupIdBigInt);
   const users = useUsers();
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -48,36 +44,23 @@ export default function AdminMembers() {
       tag: "Member",
     });
 
-  console.log(memberships);
+  const regularMembers = memberships
+    ?.filter((m) => {
+      if (!currentGroup) return true;
+      return m.membership.userIdentity.toHexString() !==currentGroup.ceoIdentity.toHexString();
+    })
+    .map((m) => ({
+      membershipId: m.membership.membershipId,
+      groupId: m.membership.groupId,
+      userIdentity: m.membership.userIdentity,
+      permissionLevel: m.membership.permissionLevel,
+      user: m.user,
+      isCeo: false,
+    })) || [];
 
-  const currentGroup = groups?.find((group) => group.groupId === groupIdBigInt);
-
-  // Get regular members from memberships
-  const regularMembers =
-    memberships
-      ?.filter(
-        (membership) =>
-          membership.groupId === groupIdBigInt &&
-          (!currentGroup ||
-            membership.userIdentity.toHexString() !==
-              currentGroup.ceoIdentity.toHexString())
-      )
-      .map((membership) => {
-        const user = users?.find(
-          (u) =>
-            u.identity.toHexString() === membership.userIdentity.toHexString()
-        );
-        return {
-          ...membership,
-          user,
-          isCeo: false,
-        };
-      }) || [];
-
-  // Get CEO from group
   const ceoMember = currentGroup
     ? {
-        membershipId: BigInt(0), // Special ID for CEO
+        membershipId: BigInt(0),
         groupId: currentGroup.groupId,
         userIdentity: currentGroup.ceoIdentity,
         permissionLevel: { tag: "CEO" as const },
@@ -89,22 +72,16 @@ export default function AdminMembers() {
       }
     : null;
 
-  // Combine CEO and regular members
-  const groupMembers = ceoMember
-    ? [ceoMember, ...regularMembers]
-    : regularMembers;
+  const groupMembers = ceoMember ? [ceoMember, ...regularMembers] : regularMembers;
 
-  // Get all member identities (including CEO)
   const memberIdentities = new Set(
     groupMembers.map((member) => member.userIdentity.toHexString())
   );
 
-  // Filter available users (not members yet)
   const availableUsers = users?.filter(
     (user) => !memberIdentities.has(user.identity.toHexString())
   );
 
-  // Filter available users by search query
   const filteredUsers = availableUsers?.filter((user) =>
     user.displayName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -127,7 +104,7 @@ export default function AdminMembers() {
   };
 
   const handleRemoveMember = async (userIdentity: string, isCeo: boolean) => {
-    if (!connection || !groupIdBigInt || isCeo) return; // Prevent removing CEO
+    if (!connection || !groupIdBigInt || isCeo) return;
 
     try {
       connection.reducers.removeGroupMember({
@@ -192,6 +169,9 @@ export default function AdminMembers() {
                               </AvatarFallback>
                             </Avatar>
                             <span>{user.displayName || "Unknown User"}</span>
+                            {user.online && (
+                              <span className="w-2 h-2 bg-green-500 rounded-full" />
+                            )}
                           </div>
                         </SelectItem>
                       ))}
@@ -235,15 +215,20 @@ export default function AdminMembers() {
               className="flex items-center justify-between p-4 border rounded-lg"
             >
               <div className="flex items-center gap-4">
-                <Avatar>
-                  <AvatarImage src={member.user?.ifcProfileUrl} />
-                  <AvatarFallback>
-                    {member.user?.displayName
-                      ?.split(" ")
-                      .map((n) => n[0])
-                      .join("") || "U"}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative">
+                  <Avatar>
+                    <AvatarImage src={member.user?.ifcProfileUrl} />
+                    <AvatarFallback>
+                      {member.user?.displayName
+                        ?.split(" ")
+                        .map((n) => n[0])
+                        .join("") || "U"}
+                    </AvatarFallback>
+                  </Avatar>
+                  {member.user?.online && (
+                    <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                  )}
+                </div>
                 <div>
                   <div className="flex items-center gap-2">
                     <h3 className="font-medium">

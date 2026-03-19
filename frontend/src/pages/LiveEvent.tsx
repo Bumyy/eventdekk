@@ -450,6 +450,7 @@ const LiveEvent = () => {
       user: {
         name: user?.displayName || "Unknown User",
         profilePicture: user?.ifcProfileUrl || undefined,
+        online: user?.online || false,
       },
       group: {
         tag: group?.tag || "...",
@@ -559,12 +560,17 @@ const LiveEvent = () => {
                   className="pb-6"
                 >
                   <div className="flex items-start space-x-2">
-                    <Avatar className="h-10 w-10 mt-0.5 flex-shrink-0">
-                      <AvatarImage src={user.profilePicture} />
-                      <AvatarFallback>
-                        {user.name.substring(0, 2).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
+                    <div className="relative">
+                      <Avatar className="h-10 w-10 mt-0.5 flex-shrink-0">
+                        <AvatarImage src={user.profilePicture} />
+                        <AvatarFallback>
+                          {user.name.substring(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
+                      {user.online && (
+                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-background" />
+                      )}
+                    </div>
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center mb-1 flex-wrap">
