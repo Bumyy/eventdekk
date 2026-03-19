@@ -5,7 +5,7 @@ import React, {
   useRef,
   useCallback,
 } from "react";
-import Map, {
+import MapGL, {
   Marker,
   Popup,
   Source,
@@ -198,7 +198,6 @@ const EventMap: React.FC<EventMapProps> = ({
   });
 
   const icaos = useMemo(() => {
-    /* ... (unchanged) ... */
     const codeSet = new Set<string>();
     const flyInOutSubEventIds = new Set<bigint>();
     subEvents.forEach((se) => {
@@ -436,108 +435,130 @@ const EventMap: React.FC<EventMapProps> = ({
     aircraftMarkerStroke,
   ]);
 
-  // Flight Path Lines (GeoJSON for Source/Layer)
-  const flightPathGeoJson =
-    useMemo((): GeoJSON.FeatureCollection<GeoJSON.LineString> => {
-      const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
-      subEvents.forEach((subEvent) => {
-        const hostGroup = groupMap.get(creatorGroupId?.toString() || "");
-        const hostGroupColor = hostGroup?.color || defaultGroupFlightColor;
+  // Flight Path Lines (GeoJSON for Source/Layer) - Split into solid and dashed
+  const { groupFlightPaths, signupFlightPaths } = useMemo(() => {
+    const groupFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+    const signupFeatures: GeoJSON.Feature<GeoJSON.LineString>[] = [];
 
-        if (
-          subEvent.subEventType.tag === SubEventType.GroupFlight.tag &&
-          subEvent.groupFlightDepartureIcao &&
-          subEvent.groupFlightArrivalIcao
-        ) {
-          const depAirport = getAirport(subEvent.groupFlightDepartureIcao);
-          const arrAirport = getAirport(subEvent.groupFlightArrivalIcao);
-          if (depAirport && arrAirport) {
-            features.push({
-              type: "Feature",
-              geometry: {
-                type: "LineString",
-                coordinates: [
-                  [depAirport.longitude, depAirport.latitude],
-                  [arrAirport.longitude, arrAirport.latitude],
-                ],
-              },
-              properties: {
-                id: `gf-${subEvent.subEventId}`,
-                type: "group-flight",
-                color: hostGroupColor,
-                lineWidth: 3,
-                subEvent,
-                depAirport,
-                arrAirport,
-              },
-            });
-          }
-        } else if (
-          (subEvent.subEventType.tag === SubEventType.FlyIn.tag ||
-            subEvent.subEventType.tag === SubEventType.FlyOut.tag) &&
-          subEvent.hubIcao
-        ) {
-          const hubAirport = getAirport(subEvent.hubIcao);
-          if (hubAirport) {
-            flightSignups
-              .filter((fs) => fs.subEventId === subEvent.subEventId)
-              .forEach((signup) => {
-                const depIcao =
-                  subEvent.subEventType.tag === SubEventType.FlyIn.tag
-                    ? signup.departureIcao
-                    : subEvent.hubIcao;
-                const arrIcao =
-                  subEvent.subEventType.tag === SubEventType.FlyIn.tag
-                    ? subEvent.hubIcao
-                    : signup.arrivalIcao;
-                const depAirport = getAirport(depIcao);
-                const arrAirport = getAirport(arrIcao);
-                const group = groupMap.get(signup.groupId.toString());
-                if (depAirport && arrAirport) {
-                  features.push({
-                    type: "Feature",
-                    geometry: {
-                      type: "LineString",
-                      coordinates: [
-                        [depAirport.longitude, depAirport.latitude],
-                        [arrAirport.longitude, arrAirport.latitude],
-                      ],
-                    },
-                    properties: {
-                      id: `su-${signup.signupId}`,
-                      type: "signup-flight",
-                      color: group?.color || defaultSignupFlightColor,
-                      lineWidth: 2.5,
-                      lineDash: [4, 2],
-                      subEvent,
-                      signup,
-                      depAirport,
-                      arrAirport,
-                    },
-                  });
-                }
-              });
-          }
+    subEvents.forEach((subEvent) => {
+      const hostGroup = groupMap.get(creatorGroupId?.toString() || "");
+      const hostGroupColor = hostGroup?.color || defaultGroupFlightColor;
+
+      if (
+        subEvent.subEventType.tag === SubEventType.GroupFlight.tag &&
+        subEvent.groupFlightDepartureIcao &&
+        subEvent.groupFlightArrivalIcao
+      ) {
+        const depAirport = getAirport(subEvent.groupFlightDepartureIcao);
+        const arrAirport = getAirport(subEvent.groupFlightArrivalIcao);
+        if (depAirport && arrAirport) {
+          groupFeatures.push({
+            type: "Feature",
+            geometry: {
+              type: "LineString",
+              coordinates: [
+                [depAirport.longitude, depAirport.latitude],
+                [arrAirport.longitude, arrAirport.latitude],
+              ],
+            },
+            properties: {
+              id: `gf-${subEvent.subEventId.toString()}`,
+              color: hostGroupColor,
+              lineWidth: 3,
+              subEventId: subEvent.subEventId.toString(),
+              depIcao: subEvent.groupFlightDepartureIcao,
+              arrIcao: subEvent.groupFlightArrivalIcao,
+            },
+          });
         }
-      });
-      return { type: "FeatureCollection", features };
-    }, [
-      subEvents,
-      flightSignups,
-      airportData,
-      groupMap,
-      creatorGroupId,
-      defaultGroupFlightColor,
-      defaultSignupFlightColor,
-    ]);
+      } else if (
+        (subEvent.subEventType.tag === SubEventType.FlyIn.tag ||
+          subEvent.subEventType.tag === SubEventType.FlyOut.tag) &&
+        subEvent.hubIcao
+      ) {
+        const hubAirport = getAirport(subEvent.hubIcao);
+        if (hubAirport) {
+          flightSignups
+            .filter((fs) => fs.subEventId === subEvent.subEventId)
+            .forEach((signup) => {
+              const depIcao =
+                subEvent.subEventType.tag === SubEventType.FlyIn.tag
+                  ? signup.departureIcao
+                  : subEvent.hubIcao;
+              const arrIcao =
+                subEvent.subEventType.tag === SubEventType.FlyIn.tag
+                  ? subEvent.hubIcao
+                  : signup.arrivalIcao;
+              const depAirport = getAirport(depIcao);
+              const arrAirport = getAirport(arrIcao);
+              const group = groupMap.get(signup.groupId.toString());
+              if (depAirport && arrAirport) {
+                signupFeatures.push({
+                  type: "Feature",
+                  geometry: {
+                    type: "LineString",
+                    coordinates: [
+                      [depAirport.longitude, depAirport.latitude],
+                      [arrAirport.longitude, arrAirport.latitude],
+                    ],
+                  },
+                  properties: {
+                    id: `su-${signup.signupId.toString()}`,
+                    color: group?.color || defaultSignupFlightColor,
+                    lineWidth: 2.5,
+                    subEventId: subEvent.subEventId.toString(),
+                    signupId: signup.signupId.toString(),
+                    depIcao,
+                    arrIcao,
+                    groupId: signup.groupId.toString(),
+                  },
+                });
+              }
+            });
+        }
+      }
+    });
 
-  const lineLayerStyle: LayerProps = {
-    id: "flight-paths",
+    return {
+      groupFlightPaths: {
+        type: "FeatureCollection" as const,
+        features: groupFeatures,
+      },
+      signupFlightPaths: {
+        type: "FeatureCollection" as const,
+        features: signupFeatures,
+      },
+    };
+  }, [
+    subEvents,
+    flightSignups,
+    airportData,
+    groupMap,
+    creatorGroupId,
+    defaultGroupFlightColor,
+    defaultSignupFlightColor,
+  ]);
+
+  const groupFlightLayerStyle: LayerProps = {
+    id: "group-flight-paths",
     type: "line",
     paint: {
       "line-color": ["get", "color"],
       "line-width": ["get", "lineWidth"],
-      "line-dasharray": ["coalesce", ["get", "lineDash"], [1, 0]], // Default to solid if no dash
+    },
+    layout: {
+      "line-join": "round",
+      "line-cap": "round",
+    },
+  };
+
+  const signupFlightLayerStyle: LayerProps = {
+    id: "signup-flight-paths",
+    type: "line",
+    paint: {
+      "line-color": ["get", "color"],
+      "line-width": ["get", "lineWidth"],
+      "line-dasharray": [4, 2],
     },
     layout: {
       "line-join": "round",
@@ -548,7 +569,12 @@ const EventMap: React.FC<EventMapProps> = ({
   const handleMapClick = useCallback((event: mapboxgl.MapLayerMouseEvent) => {
     if (event.features && event.features.length > 0) {
       const feature = event.features[0];
-      if (feature.layer.id === "flight-paths" && feature.properties) {
+      const layerId = feature.layer?.id;
+      if (
+        (layerId === "group-flight-paths" ||
+          layerId === "signup-flight-paths") &&
+        feature.properties
+      ) {
         setActivePopupInfo({
           type: "route",
           data: feature.properties, // Contains subEvent, depAirport, arrAirport, etc.
@@ -638,23 +664,35 @@ const EventMap: React.FC<EventMapProps> = ({
         );
         break;
       case "route":
-        const {
-          subEvent: routeSubEvent,
-          depAirport,
-          arrAirport,
-          signup,
-        } = data;
-        const routeTitle = signup
-          ? `${
-              groupMap.get(signup.groupId.toString())?.name || "Signup"
-            } Flight`
+        const routeSubEventId = data.subEventId as string;
+        const depIcao = data.depIcao as string;
+        const arrIcao = data.arrIcao as string;
+        const signupId = data.signupId as string | undefined;
+        const groupId = data.groupId as string | undefined;
+
+        const routeSubEvent = subEvents.find(
+          (se) => se.subEventId.toString() === routeSubEventId
+        );
+        const routeDepAirport = getAirport(depIcao);
+        const routeArrAirport = getAirport(arrIcao);
+        const routeSignup = signupId
+          ? flightSignups.find((fs) => fs.signupId.toString() === signupId)
+          : null;
+        const routeGroup = groupId ? groupMap.get(groupId) : null;
+
+        if (!routeSubEvent || !routeDepAirport || !routeArrAirport) {
+          return null;
+        }
+
+        const routeTitle = routeSignup
+          ? `${routeGroup?.name || "Signup"} Flight`
           : `${routeSubEvent.name} (Group Flight)`;
         content = (
           <PopupContainer title={routeTitle}>
             <p>
-              Route: {depAirport.icao} → {arrAirport.icao}
+              Route: {routeDepAirport.icao} → {routeArrAirport.icao}
             </p>
-            {signup?.callsign && <p>Callsign: {signup.callsign}</p>}
+            {routeSignup?.callsign && <p>Callsign: {routeSignup.callsign}</p>}
             <p>
               Time:{" "}
               {formatTimeRange(
@@ -681,7 +719,7 @@ const EventMap: React.FC<EventMapProps> = ({
     );
   };
 
-  if (!MAPTILER_API_KEY || MAPTILER_API_KEY === "YOUR_FALLBACK_MAPTILER_KEY") {
+  if (!MAPTILER_API_KEY || MAPTILER_API_KEY === "FALLBACK_MAPTILER_KEY") {
     return (
       <div
         className={className}
@@ -733,14 +771,14 @@ const EventMap: React.FC<EventMapProps> = ({
       className={className || "w-full h-full"}
       style={{ position: "relative", background: "hsl(var(--background))" }}
     >
-      <Map
+      <MapGL
         ref={mapRef}
         initialViewState={initialViewState}
         mapLib={import("maplibre-gl")}
         style={{ width: "100%", height: "100%" }}
         mapStyle={mapStyleUrl}
         onClick={handleMapClick}
-        interactiveLayerIds={["flight-paths"]} // Make line layer clickable
+        interactiveLayerIds={["group-flight-paths", "signup-flight-paths"]} // Make line layers clickable
       >
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />
@@ -749,15 +787,23 @@ const EventMap: React.FC<EventMapProps> = ({
         {flightMarkers}
 
         <Source
-          id="flight-paths-source"
+          id="group-flight-paths-source"
           type="geojson"
-          data={flightPathGeoJson}
+          data={groupFlightPaths}
         >
-          <Layer {...lineLayerStyle} />
+          <Layer {...groupFlightLayerStyle} />
+        </Source>
+
+        <Source
+          id="signup-flight-paths-source"
+          type="geojson"
+          data={signupFlightPaths}
+        >
+          <Layer {...signupFlightLayerStyle} />
         </Source>
 
         {renderPopup()}
-      </Map>
+      </MapGL>
     </div>
   );
 };

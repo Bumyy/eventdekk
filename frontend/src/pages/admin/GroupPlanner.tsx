@@ -93,7 +93,7 @@ export default function GroupPlanner() {
         });
       });
 
-    manageableGroups.forEach((group) => {
+    groups.forEach((group) => {
       const ceoHex = group.ceoIdentity.toHexString();
       if (selectedGroupSet.has(group.groupId.toString())) {
         const user = users.find((u) => u.identity.toHexString() === ceoHex);

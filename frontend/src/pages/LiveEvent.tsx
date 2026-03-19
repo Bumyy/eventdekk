@@ -1,4 +1,5 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef, useMemo, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { useParams } from "react-router-dom";
 import { Infer } from "spacetimedb";
 import { LiveChatMessage, Group } from "@/module_bindings";
@@ -192,13 +193,32 @@ const LiveEvent = () => {
     return groups;
   }, [eventMessages]);
 
+  // Estimate size for each message group (base height + height per message)
+  const estimateSize = useCallback(
+    (index: number) => {
+      const group = groupedMessages[index];
+      if (!group) return 80;
+      const baseHeight = 60;
+      const messageHeight = 22;
+      return baseHeight + group.messages.length * messageHeight;
+    },
+    [groupedMessages]
+  );
+
+  // Virtualizer for chat messages
+  const virtualizer = useVirtualizer({
+    count: groupedMessages.length,
+    getScrollElement: () => chatContainerRef.current,
+    estimateSize,
+    overscan:5,
+  });
+
   // Auto-scroll to bottom of chat when new messages arrive
   useEffect(() => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+    if (groupedMessages.length > 0) {
+      virtualizer.scrollToIndex(groupedMessages.length - 1, { align: "end" });
     }
-  }, [eventMessages.length]);
+  }, [groupedMessages.length]);
 
   // Fetch flight data from API
   const fetchFlightData = async () => {
@@ -251,9 +271,9 @@ const LiveEvent = () => {
     } else {
       // Create new message using the selected group
       connection?.reducers.addLiveChatMessage({
-        selectedGroupId: BigInt(selectedGroupId),
+        groupId: BigInt(selectedGroupId),
         eventId: BigInt(eventId!),
-        newMessage,
+        message: newMessage,
       });
     }
 
@@ -388,110 +408,133 @@ const LiveEvent = () => {
         {/* Chat messages - Discord style */}
         <div
           ref={chatContainerRef}
-          className="flex-1 overflow-y-auto p-4 space-y-6"
+          className="flex-1 overflow-y-auto p-4"
         >
-          {groupedMessages.map((group, groupIndex) => {
-            const firstMessage = group.messages[0];
-            const {
-              user,
-              group: messageGroup,
-              isHost,
-            } = getUserAndGroupInfo(firstMessage);
-            const isCurrentUser = group.sender === identity?.toHexString();
+          <div
+            style={{
+              height: `${virtualizer.getTotalSize()}px`,
+              width: "100%",
+              position: "relative",
+            }}
+          >
+            {virtualizer.getVirtualItems().map((virtualItem) => {
+              const group = groupedMessages[virtualItem.index];
+              const firstMessage = group.messages[0];
+              const {
+                user,
+                group: messageGroup,
+                isHost,
+              } = getUserAndGroupInfo(firstMessage);
+              const isCurrentUser = group.sender === identity?.toHexString();
 
-            return (
-              <div key={groupIndex} className="flex items-start space-x-2">
-                <Avatar className="h-10 w-10 mt-0.5 flex-shrink-0">
-                  <AvatarImage src={user.profilePicture} />
-                  <AvatarFallback>
-                    {user.name.substring(0, 2).toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
+              return (
+                <div
+                  key={virtualItem.key}
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  className="pb-6"
+                >
+                  <div className="flex items-start space-x-2">
+                    <Avatar className="h-10 w-10 mt-0.5 flex-shrink-0">
+                      <AvatarImage src={user.profilePicture} />
+                      <AvatarFallback>
+                        {user.name.substring(0, 2).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
 
-                <div className="flex-1 min-w-0">
-                  {/* Username, Group, and timestamp */}
-                  <div className="flex items-center mb-1 flex-wrap">
-                    <span className="font-semibold text-sm mr-2">
-                      {user.name}
-                    </span>
+                    <div className="flex-1 min-w-0">
+                      {/* Username, Group, and timestamp */}
+                      <div className="flex items-center mb-1 flex-wrap">
+                        <span className="font-semibold text-sm mr-2">
+                          {user.name}
+                        </span>
 
-                    {/* Group badge with logo */}
-                    <span
-                      className="text-xs rounded-full pl-0.5 pr-1 py-0.5 flex items-center mr-2"
-                      style={{
-                        backgroundColor: `${messageGroup.color}20`, // Adding transparency
-                        color: messageGroup.color,
-                      }}
-                    >
-                      {messageGroup.logo && (
-                        <img
-                          src={messageGroup.logo}
-                          alt=""
-                          className="w-4 h-4 rounded-full mr-0.5"
-                        />
-                      )}
-                      {messageGroup.tag}
-                    </span>
+                        {/* Group badge with logo */}
+                        <span
+                          className="text-xs rounded-full pl-0.5 pr-1 py-0.5 flex items-center mr-2"
+                          style={{
+                            backgroundColor: `${messageGroup.color}20`,
+                            color: messageGroup.color,
+                          }}
+                        >
+                          {messageGroup.logo && (
+                            <img
+                              src={messageGroup.logo}
+                              alt=""
+                              className="w-4 h-4 rounded-full mr-0.5"
+                            />
+                          )}
+                          {messageGroup.tag}
+                        </span>
 
-                    {/* Host badge */}
-                    {isHost && (
-                      <span
-                        className="text-xs text-amber-500 flex items-center mr-2"
-                        title="Event Host"
-                      >
-                        <Crown size={12} className="mr-0.5" />
-                        Host
-                      </span>
-                    )}
-
-                    <span className="text-xs text-muted-foreground">
-                      {formatInTimezone(firstMessage.timestamp, userTimezone, {
-                        hour: "numeric",
-                        minute: "2-digit",
-                        hour12: true,
-                      })}
-                    </span>
-                  </div>
-
-                  {/* Messages */}
-                  <div className="space-y-1">
-                    {group.messages.map((message) => (
-                      <div
-                        key={message.messageId.toString()}
-                        className="group relative"
-                      >
-                        <p className="text-sm break-words whitespace-pre-wrap">
-                          {message.message}
-                        </p>
-
-                        {/* Edit/Delete controls with Lucide icons */}
-                        {isCurrentUser && (
-                          <div className="absolute -right-2 -top-1 hidden group-hover:flex bg-background/90 rounded px-1 py-0.5 shadow-sm items-center gap-1">
-                            <button
-                              onClick={() => handleEditMessage(message)}
-                              className="text-blue-500 hover:text-blue-600 p-0.5 rounded-sm hover:bg-blue-100/30"
-                              title="Edit message"
-                            >
-                              <Pencil size={14} />
-                            </button>
-                            <button
-                              onClick={() =>
-                                handleDeleteMessage(message.messageId)
-                              }
-                              className="text-destructive hover:text-destructive/90 p-0.5 rounded-sm hover:bg-red-100/30"
-                              title="Delete message"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
+                        {/* Host badge */}
+                        {isHost && (
+                          <span
+                            className="text-xs text-amber-500 flex items-center mr-2"
+                            title="Event Host"
+                          >
+                            <Crown size={12} className="mr-0.5" />
+                            Host
+                          </span>
                         )}
+
+                        <span className="text-xs text-muted-foreground">
+                          {formatInTimezone(firstMessage.timestamp, userTimezone, {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          })}
+                        </span>
                       </div>
-                    ))}
+
+                      {/* Messages */}
+                      <div className="space-y-1">
+                        {group.messages.map((message) => (
+                          <div
+                            key={message.messageId.toString()}
+                            className="group relative"
+                          >
+                            <p className="text-sm break-words whitespace-pre-wrap">
+                              {message.message}
+                            </p>
+
+                            {/* Edit/Delete controls with Lucide icons */}
+                            {isCurrentUser && (
+                              <div className="absolute -right-2 -top-1 hidden group-hover:flex bg-background/90 rounded px-1 py-0.5 shadow-sm items-center gap-1">
+                                <button
+                                  onClick={() => handleEditMessage(message)}
+                                  className="text-blue-500 hover:text-blue-600 p-0.5 rounded-sm hover:bg-blue-100/30"
+                                  title="Edit message"
+                                >
+                                  <Pencil size={14} />
+                                </button>
+                                <button
+                                  onClick={() =>
+                                    handleDeleteMessage(message.messageId)
+                                  }
+                                  className="text-destructive hover:text-destructive/90 p-0.5 rounded-sm hover:bg-red-100/30"
+                                  title="Delete message"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
 
         {/* Message input */}
