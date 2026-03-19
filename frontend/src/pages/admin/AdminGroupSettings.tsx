@@ -124,33 +124,15 @@ export default function AdminGroupSettings() {
       // Update the toast message
       toast.loading("Updating group settings...", { id: toastId });
 
-      // Create a promise wrapper for the callback
-      await new Promise<void>((resolve, reject) => {
-        const callback = (ctx: any) => {
-          // Clean up the callback after we get a response
-          connection.reducers.removeOnUpdateGroup(callback);
-
-          if (ctx.event.status.tag === "Failed") {
-            reject(
-              new Error(`Failed to update group: ${ctx.event.status.value}`)
-            );
-          } else {
-            resolve();
-          }
-        };
-
-        connection.reducers.onUpdateGroup(callback);
-
-        // Call the reducer
-        connection.reducers.updateGroup({
-          groupId: groupIdBigInt,
-          name: name,
-          tag: tag,
-          description: description,
-          websiteUrl: websiteUrl,
-          logoUrl: finalLogoUrl,
-          color: color,
-        });
+      // Call the reducer
+      connection.reducers.updateGroup({
+        groupId: groupIdBigInt,
+        name: name,
+        tag: tag,
+        description: description,
+        websiteUrl: websiteUrl,
+        logoUrl: finalLogoUrl,
+        color: color,
       });
 
       // Update success toast
