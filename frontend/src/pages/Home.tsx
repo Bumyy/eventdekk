@@ -7,11 +7,7 @@ import {
   useDiscoveryEvents,
   useGroups,
 } from "@/hooks/spacetimeHooks";
-import {
-  addDays,
-  isAfter,
-  isBefore,
-} from "date-fns";
+import { addDays, isAfter, isBefore } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -185,7 +181,7 @@ const Home = () => {
                   <Badge
                     variant={
                       getEventCountdown(event) === "LIVE"
-                        ? "destructive"
+                        ? "default"
                         : "secondary"
                     }
                   >
