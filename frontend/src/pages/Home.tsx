@@ -3,29 +3,27 @@ import { EventCard } from "@/components/EventCard";
 import EventDialog from "@/components/EventDialog";
 import {
   useEvents,
-  useSubEvents,
   useDiscoveryEvents,
   useGroups,
 } from "@/hooks/spacetimeHooks";
 import { addDays, isAfter, isBefore } from "date-fns";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Event as SpacetimeEvent } from "../module_bindings";
 import { Infer } from "spacetimedb";
 import { toUserTimezoneDate } from "@/utils/timezoneUtils";
+import { Badge } from "@/components/ui/badge";
 
 type EventType = Infer<typeof SpacetimeEvent>;
 
 const Home = () => {
   const events = useEvents();
-  const subEvents = useSubEvents();
   const discoveryEvents = useDiscoveryEvents();
   const groups = useGroups();
+  const [searchParams] = useSearchParams();
   const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
+
+  const searchQuery = searchParams.get("search") || "";
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
@@ -78,17 +76,9 @@ const Home = () => {
     return map;
   }, [groups]);
 
-  // Filter other events by selected tag and search query, then sort by display priority
+  // Filter other events by search query, then sort by display priority
   const filteredOtherEvents = useMemo(() => {
     let filtered = otherEvents;
-    if (selectedTag) {
-      filtered = filtered.filter((event) => {
-        const eventSubEvents = subEvents.filter(
-          (se) => se.eventId === event.eventId
-        );
-        return eventSubEvents.some((se) => se.subEventType.tag === selectedTag);
-      });
-    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter((event) => {
@@ -108,14 +98,7 @@ const Home = () => {
         const priorityB = discoveryEventMap.get(b.eventId)!;
         return Number(priorityA - priorityB);
       });
-  }, [
-    otherEvents,
-    selectedTag,
-    searchQuery,
-    subEvents,
-    discoveryEventMap,
-    groupMap,
-  ]);
+  }, [otherEvents, searchQuery, discoveryEventMap, groupMap]);
 
   const isLive = (event: EventType) => {
     const startDate = toUserTimezoneDate(event.startTime);
@@ -161,8 +144,6 @@ const Home = () => {
     return `${minutesLeft} ${minutesLeft === 1 ? "MIN" : "MINS"}`;
   };
 
-  const availableTags = ["GroupFlight", "FlyIn", "FlyOut"];
-
   return (
     <div className="space-y-4 mx-4 my-2">
       {/* Upcoming Week Events */}
@@ -196,32 +177,7 @@ const Home = () => {
 
       {/* Other Events */}
       <section>
-        <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center">
-            <h2 className="text-2xl font-bold mr-4">Discover</h2>
-            <div className="flex mt-1 gap-2">
-              {availableTags.map((tag) => (
-                <Badge
-                  key={tag}
-                  variant={selectedTag === tag ? "default" : "outline"}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    setSelectedTag(selectedTag === tag ? null : tag)
-                  }
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          </div>
-          <Input
-            type="search"
-            placeholder="Search events..."
-            className="w-64"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
+        <h2 className="text-2xl font-bold mb-3">Discover</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filteredOtherEvents.map((event) => (
             <div key={event.eventId} onClick={() => handleEventClick(event)}>

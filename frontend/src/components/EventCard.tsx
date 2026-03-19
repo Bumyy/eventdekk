@@ -28,11 +28,8 @@ export const EventCard = ({ event }: EventCardProps) => {
   });
 
   return (
-    <Card
-      className="group overflow-hidden hover:shadow-lg transition-all duration-300 p-0 border-l-4"
-      style={{ borderLeftColor: groupColor }}
-    >
-      <div className="relative w-full overflow-hidden aspect-video">
+    <Card className="group overflow-hidden hover:shadow-lg transition-all duration-300 p-0 border-0 rounded-lg">
+      <div className="relative w-full overflow-hidden aspect-video rounded-t-lg">
         <img
           src={event.bannerUrl || "/placeholder-event.jpg"}
           alt={event.name}
@@ -41,7 +38,7 @@ export const EventCard = ({ event }: EventCardProps) => {
 
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/35 to-transparent pointer-events-none transition-all duration-300" />
 
-        <div className="absolute bottom-0 left-0 right-0 z-10 text-white flex flex-col p-2">
+        <div className="absolute bottom-0 left-0 right-0 z-10 text-white flex flex-col p-2 pb-3">
           {/* Title */}
           <h3 className="font-semibold text-sm line-clamp-1 mb-0.5">
             {event.name}
@@ -60,10 +57,7 @@ export const EventCard = ({ event }: EventCardProps) => {
                   src={hostGroup?.logoUrl}
                   alt={hostGroup?.name || "Host"}
                 />
-                <AvatarFallback
-                  className="text-[6px]"
-                  style={{ backgroundColor: groupColor }}
-                >
+                <AvatarFallback className="text-[6px]">
                   {hostGroup?.tag || hostGroup?.name?.substring(0, 2) || "H"}
                 </AvatarFallback>
               </Avatar>
@@ -73,6 +67,10 @@ export const EventCard = ({ event }: EventCardProps) => {
             </div>
           </div>
         </div>
+        <div
+          className="absolute bottom-0 left-0 right-0 h-1 group-hover:h-14 transition-all duration-300"
+          style={{ backgroundColor: groupColor }}
+        />
       </div>
     </Card>
   );
