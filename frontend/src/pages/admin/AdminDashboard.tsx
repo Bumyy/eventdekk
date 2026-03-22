@@ -1,6 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { useParams } from "react-router-dom";
-import { format } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
+import {
+  useUserTimezone,
+  formatDateInTimezone,
+  formatTimeInTimezone,
+} from "@/utils/timezoneUtils";
 import {
   useGroups,
   useGroupMemberships,
@@ -11,7 +16,6 @@ import {
   useAllActiveEvents,
 } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
-import { Building2 } from "lucide-react";
 import {
   AdminWeeklyCalendar,
   type AdminWeeklyCalendarEvent,
@@ -30,6 +34,7 @@ export default function AdminDashboard() {
   const upcomingHostedEvents = useUpcomingHostedEvents(groupIdBigInt);
   const upcomingAttendingEvents = useUpcomingAttendingEvents(groupIdBigInt);
   const allActiveEvents = useAllActiveEvents();
+  const timezone = useUserTimezone();
 
   // Find the current group
   const currentGroup = groups.find((g) => g.groupId.toString() === groupId);
@@ -97,42 +102,72 @@ export default function AdminDashboard() {
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">{currentGroup?.name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <Badge variant="secondary">{currentGroup?.tag}</Badge>
-            <span className="text-sm text-muted-foreground">
-              {
-                memberships.filter((m) => m.groupId.toString() === groupId)
-                  .length
-              }{" "}
-              members
-            </span>
+        <div className="flex items-center gap-3">
+          {currentGroup?.logoUrl && (
+            <img
+              src={currentGroup.logoUrl}
+              alt={currentGroup.name}
+              className="w-16 h-16 rounded-full object-cover shrink-0"
+            />
+          )}
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold">
+              {currentGroup?.name}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge
+                variant="secondary"
+                style={
+                  currentGroup?.color
+                    ? { backgroundColor: currentGroup.color }
+                    : undefined
+                }
+              >
+                {currentGroup?.tag}
+              </Badge>
+              <span className="text-sm text-muted-foreground">
+                {
+                  memberships.filter((m) => m.groupId.toString() === groupId)
+                    .length
+                }{" "}
+                members
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
       {/* Next Event Card */}
       {nextEvent && (
-        <Card className="p-6">
-          <h2 className="text-xl font-semibold mb-4">Next Event</h2>
-          <div className="flex gap-6">
-            <div className="w-48 h-32 bg-muted rounded-lg flex items-center justify-center">
-              {nextEvent.bannerUrl ? (
-                <img
-                  src={nextEvent.bannerUrl}
-                  alt={nextEvent.name}
-                  className="w-full h-full object-cover rounded-lg"
-                />
-              ) : (
-                <Building2 className="w-12 h-12 text-muted-foreground" />
-              )}
-            </div>
+        <Card
+          className="p-6 cursor-pointer bg-muted/50 hover:bg-muted/60 transition-colors"
+          onClick={() =>
+            navigate(
+              `/admin/groups/${groupId}/events/${nextEvent.eventId.toString()}/edit`
+            )
+          }
+        >
+          <div className="flex justify-between items-start mb-4">
+            <h2 className="text-xl font-semibold">Next Event</h2>
+            <span className="text-lg md:text-2xl font-bold text-primary">
+              {formatDistanceToNow(nextEvent.startTime.toDate(), {
+                addSuffix: true,
+              })}
+            </span>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {nextEvent.bannerUrl && (
+              <img
+                src={nextEvent.bannerUrl}
+                alt={nextEvent.name}
+                className="w-full sm:w-48 h-32 object-cover rounded-lg shrink-0"
+              />
+            )}
             <div className="flex-1">
               <h3 className="text-lg font-medium">{nextEvent.name}</h3>
               <p className="text-muted-foreground">
-                {format(nextEvent.startTime.toDate(), "MMMM d, yyyy")} at{" "}
-                {format(nextEvent.startTime.toDate(), "h:mm a")}
+                {formatDateInTimezone(nextEvent.startTime, timezone)} at{" "}
+                {formatTimeInTimezone(nextEvent.startTime, timezone)}
               </p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Badge variant="outline">
@@ -145,13 +180,9 @@ export default function AdminDashboard() {
                 {!nextEvent.isInternal && (
                   <Badge variant="secondary">External</Badge>
                 )}
-              </div>
-              <div className="mt-4">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-muted-foreground">
-                    {attendeeCount} registered participants
-                  </span>
-                </div>
+                <span className="text-sm text-muted-foreground">
+                  {attendeeCount} registered
+                </span>
               </div>
             </div>
           </div>

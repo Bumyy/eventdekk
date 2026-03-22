@@ -43,7 +43,8 @@ interface ConflictInfo {
 
 function checkSubEventConflicts(
   subEvent: SubEvent,
-  availabilityData: GroupAvailabilityData
+  availabilityData: GroupAvailabilityData,
+  excludeEventId?: bigint
 ): ConflictInfo {
   const subEventStart = subEvent.scheduledStartTime.toDate();
   const subEventEnd = subEvent.scheduledEndTime.toDate();
@@ -53,12 +54,14 @@ function checkSubEventConflicts(
   const allEvents = [
     ...availabilityData.hostedEvents.map((e) => ({ ...e, isHosted: true })),
     ...availabilityData.attendingEvents.map((e) => ({ ...e, isHosted: false })),
-  ];
+  ].filter((e) => !excludeEventId || e.eventId !== excludeEventId);
 
   const sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[] = [];
   const overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[] = [];
 
-  const allSubEvents = availabilityData.hostedSubEvents;
+  const allSubEvents = availabilityData.hostedSubEvents.filter(
+    (se) => !excludeEventId || se.eventId !== excludeEventId
+  );
 
   for (const subEv of allSubEvents) {
     const existingStart = subEv.scheduledStartTime.toDate();
@@ -150,6 +153,7 @@ interface EventInvitationDialogProps {
   preSelectedSubEvents?: bigint[];
   preFilledFlightDetails?: Record<string, FlightDetails>;
   availabilityData?: GroupAvailabilityData;
+  currentEventId?: bigint;
 }
 
 const EMPTY_BIGINT_ARRAY: bigint[] = [];
@@ -166,6 +170,7 @@ export function EventInvitationDialog({
   preSelectedSubEvents = EMPTY_BIGINT_ARRAY,
   preFilledFlightDetails = EMPTY_FLIGHT_DETAILS,
   availabilityData,
+  currentEventId,
 }: EventInvitationDialogProps) {
   // State for selected sub-events and flight details
   const [selectedSubEvents, setSelectedSubEvents] = useState<bigint[]>([]);
@@ -304,11 +309,12 @@ export function EventInvitationDialog({
   const subEventConflicts = useMemo(() => {
     if (!availabilityData) return new Map<bigint, ConflictInfo>();
     const conflicts = new Map<bigint, ConflictInfo>();
+    const eventIdToExclude = currentEventId || (isManagingExisting ? invitation?.eventId : undefined);
     for (const subEvent of invitationSubEvents) {
-      conflicts.set(subEvent.subEventId, checkSubEventConflicts(subEvent, availabilityData));
+      conflicts.set(subEvent.subEventId, checkSubEventConflicts(subEvent, availabilityData, eventIdToExclude));
     }
     return conflicts;
-  }, [availabilityData, invitationSubEvents]);
+  }, [availabilityData, invitationSubEvents, currentEventId, isManagingExisting, invitation?.eventId]);
 
   return (
     <>

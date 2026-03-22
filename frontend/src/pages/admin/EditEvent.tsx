@@ -63,6 +63,9 @@ import {
   Calendar as CalendarIcon2,
   Send,
   Pencil,
+  ArrowRight,
+  User,
+  Building2,
 } from "lucide-react";
 import { SenderError, Timestamp } from "spacetimedb";
 import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
@@ -905,6 +908,7 @@ export default function EditEvent() {
                   ? formatDateTimeInTimezone(startTime, userTimezone)
                   : "Select date and time"
               }
+              timezone={userTimezone}
             />
 
             <DateTimePicker
@@ -916,6 +920,7 @@ export default function EditEvent() {
                   ? formatDateTimeInTimezone(endTime, userTimezone)
                   : "Select date and time"
               }
+              timezone={userTimezone}
             />
           </div>
 
@@ -1111,6 +1116,7 @@ export default function EditEvent() {
                         subEventForm.startTime,
                         userTimezone
                       )}
+                      timezone={userTimezone}
                     />
 
                     <DateTimePicker
@@ -1127,6 +1133,7 @@ export default function EditEvent() {
                         subEventForm.endTime,
                         userTimezone
                       )}
+                      timezone={userTimezone}
                     />
                   </div>
 
@@ -1339,6 +1346,11 @@ export default function EditEvent() {
                           startTime: date,
                         })
                       }
+                      placeholder={formatDateTimeInTimezone(
+                        editSubEventForm.startTime,
+                        userTimezone
+                      )}
+                      timezone={userTimezone}
                     />
                     <DateTimePicker
                       label="End Time"
@@ -1350,6 +1362,11 @@ export default function EditEvent() {
                           endTime: date,
                         })
                       }
+                      placeholder={formatDateTimeInTimezone(
+                        editSubEventForm.endTime,
+                        userTimezone
+                      )}
+                      timezone={userTimezone}
                     />
                   </div>
 
@@ -1490,17 +1507,34 @@ export default function EditEvent() {
         </CardHeader>
         <CardContent>
           {eventSubEvents.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-6">
               {eventSubEvents.map((subEvent) => {
                 const subEventSignups =
                   signupsBySubEvent[subEvent.subEventId.toString()] || [];
-                const acceptedSignups = subEventSignups.filter(
-                  (signup) => !!signup.desiredDepartureTime
-                );
                 const isGroupFlight =
                   subEvent.subEventType.tag === "GroupFlight";
                 const isFlyIn = subEvent.subEventType.tag === "FlyIn";
                 const isFlyOut = subEvent.subEventType.tag === "FlyOut";
+
+                const completeSignups = subEventSignups.filter((signup) => {
+                  if (isGroupFlight) {
+                    return !!signup.desiredDepartureTime;
+                  }
+                  if (isFlyIn) {
+                    return (
+                      !!signup.departureIcao && !!signup.desiredArrivalTime
+                    );
+                  }
+                  if (isFlyOut) {
+                    return (
+                      !!signup.arrivalIcao && !!signup.desiredDepartureTime
+                    );
+                  }
+                  return false;
+                });
+
+                const pendingSignups =
+                  subEventSignups.length - completeSignups.length;
 
                 const leadHex = subEvent.eventLead
                   ? subEvent.eventLead.toHexString()
@@ -1515,107 +1549,196 @@ export default function EditEvent() {
                   : null;
 
                 return (
-                  <Card key={subEvent.subEventId} className="p-4">
-                    <div className="mb-2 flex items-center justify-between">
-                      {getSubEventTypeBadge(subEvent.subEventType)}
-                      <div className="flex items-center gap-1">
-                        <Badge
-                          variant="outline"
-                          className="flex items-center gap-1"
-                        >
-                          <Users className="h-3 w-3" />
-                          {acceptedSignups.length} / {subEventSignups.length}
-                        </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6"
-                          onClick={() => handleEditSubEventClick(subEvent)}
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() =>
-                            handleDeleteSubEvent(subEvent.subEventId)
-                          }
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                  <Card
+                    key={subEvent.subEventId}
+                    className="gap-0 overflow-hidden"
+                  >
+                    <div className="bg-card border-b px-5 py-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getSubEventTypeBadge(subEvent.subEventType)}
+                            {leadDisplayName && (
+                              <Badge variant="outline" className="text-xs">
+                                <User className="h-3 w-3 mr-1" />
+                                {leadDisplayName}
+                              </Badge>
+                            )}
+                          </div>
+                          <h3 className="font-semibold text-lg truncate">
+                            {subEvent.name}
+                          </h3>
+                          {subEvent.description && (
+                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                              {subEvent.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                            onClick={() => handleEditSubEventClick(subEvent)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={() =>
+                              handleDeleteSubEvent(subEvent.subEventId)
+                            }
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
-                    <h4 className="font-medium">{subEvent.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {subEvent.description}
-                    </p>
-                    <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                      <span>
-                        {formatDateInTimezone(
-                          subEvent.scheduledStartTime.toDate(),
-                          userTimezone
-                        )}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {formatTimeInTimezone(
-                          subEvent.scheduledStartTime.toDate(),
-                          userTimezone
-                        )}
-                      </span>
-                      {isGroupFlight &&
-                        subEvent.groupFlightDepartureIcao &&
-                        subEvent.groupFlightArrivalIcao && (
-                          <>
-                            <span>•</span>
-                            <span>
-                              {subEvent.groupFlightDepartureIcao} →{" "}
-                              {subEvent.groupFlightArrivalIcao}
-                            </span>
-                          </>
-                        )}
-                      {isFlyIn && subEvent.hubIcao && (
-                        <>
-                          <span>•</span>
-                          <span>To: {subEvent.hubIcao}</span>
-                        </>
-                      )}
-                      {isFlyOut && subEvent.hubIcao && (
-                        <>
-                          <span>•</span>
-                          <span>From: {subEvent.hubIcao}</span>
-                        </>
-                      )}
-                      {leadDisplayName && (
-                        <>
-                          <span>•</span>
-                          <span>Lead: {leadDisplayName}</span>
-                        </>
-                      )}
+
+                    <div className="px-5 py-4 border-b bg-muted/30">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-secondary/40 dark:bg-secondary/20">
+                            <CalendarIcon2 className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Date
+                            </div>
+                            <div className="font-medium text-sm">
+                              {formatDateInTimezone(
+                                subEvent.scheduledStartTime.toDate(),
+                                userTimezone
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-secondary/40 dark:bg-secondary/20">
+                            <Clock className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Time
+                            </div>
+                            <div className="font-medium text-sm">
+                              {formatTimeInTimezone(
+                                subEvent.scheduledStartTime.toDate(),
+                                userTimezone
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-secondary/40 dark:bg-secondary/20">
+                            {isGroupFlight ? (
+                              <Plane className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                            ) : isFlyIn ? (
+                              <MapPin className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                            ) : (
+                              <Plane className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              {isGroupFlight
+                                ? "Route"
+                                : isFlyIn
+                                  ? "Hub"
+                                  : "Hub"}
+                            </div>
+                            <div className="font-medium text-sm">
+                              {isGroupFlight &&
+                                subEvent.groupFlightDepartureIcao &&
+                                subEvent.groupFlightArrivalIcao && (
+                                  <span className="flex items-center gap-1">
+                                    {subEvent.groupFlightDepartureIcao}
+                                    <ArrowRight className="h-3 w-3" />
+                                    {subEvent.groupFlightArrivalIcao}
+                                  </span>
+                                )}
+                              {isFlyIn && subEvent.hubIcao && (
+                                <span>{subEvent.hubIcao}</span>
+                              )}
+                              {isFlyOut && subEvent.hubIcao && (
+                                <span>{subEvent.hubIcao}</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="p-2 rounded-lg bg-secondary/40 dark:bg-secondary/20">
+                            <Users className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
+                          </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Signups
+                            </div>
+                            <div className="font-medium text-sm">
+                              {subEventSignups.length} total
+                            </div>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
                     {subEventSignups.length > 0 && (
-                      <div className="mt-4 border-t pt-4">
-                        <h5 className="text-sm font-medium mb-2">Signups</h5>
-                        <div className="space-y-3">
+                      <div className="px-5 py-4">
+                        <div className="flex items-center justify-between mb-3">
+                          <h5 className="text-sm font-semibold">
+                            Flight Signups
+                          </h5>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1.5">
+                              <div className="h-2 w-2 rounded-full bg-[#f94a1b]" />
+                              <span className="text-xs text-muted-foreground">
+                                {completeSignups.length} complete
+                              </span>
+                            </div>
+                            {pendingSignups > 0 && (
+                              <div className="flex items-center gap-1.5">
+                                <div className="h-2 w-2 rounded-full bg-[#a2aeec]" />
+                                <span className="text-xs text-muted-foreground">
+                                  {pendingSignups} pending
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
                           {subEventSignups.map((signup) => {
                             const group = groups.find(
                               (g) => g.groupId === signup.groupId
                             );
                             const groupTag = group?.tag || "N/A";
                             const groupLogo = group?.logoUrl;
-                            const isAccepted = !!signup.desiredDepartureTime;
 
-                            // Format departure/arrival times if available
+                            let isComplete = false;
+                            if (isGroupFlight) {
+                              isComplete = !!signup.desiredDepartureTime;
+                            } else if (isFlyIn) {
+                              isComplete =
+                                !!signup.departureIcao &&
+                                !!signup.desiredArrivalTime;
+                            } else if (isFlyOut) {
+                              isComplete =
+                                !!signup.arrivalIcao &&
+                                !!signup.desiredDepartureTime;
+                            }
+
                             const departureTime = signup.desiredDepartureTime
-                              ? formatDateTimeInTimezone(
+                              ? formatTimeInTimezone(
                                   signup.desiredDepartureTime.toDate(),
                                   userTimezone
                                 )
                               : null;
                             const arrivalTime = signup.desiredArrivalTime
-                              ? formatDateTimeInTimezone(
+                              ? formatTimeInTimezone(
                                   signup.desiredArrivalTime.toDate(),
                                   userTimezone
                                 )
@@ -1624,69 +1747,123 @@ export default function EditEvent() {
                             return (
                               <div
                                 key={signup.signupId.toString()}
-                                className="border border-border rounded-md p-3"
+                                className={`border rounded-lg p-3 ${
+                                  isComplete
+                                    ? "border-[#f94a1b]/30 dark:border-[#f94a1b]/20 bg-[#f94a1b]/5 dark:bg-[#f94a1b]/10"
+                                    : "border-[#a2aeec]/50 dark:border-[#a2aeec]/30 bg-[#a2aeec]/10 dark:bg-[#a2aeec]/10"
+                                }`}
                               >
-                                <div className="flex items-center justify-between mb-1">
+                                <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center gap-2">
                                     {groupLogo ? (
                                       <img
                                         src={groupLogo}
                                         alt={groupTag}
-                                        className="h-6 w-6 rounded-full object-cover"
+                                        className="h-7 w-7 rounded-full object-cover border border-border"
                                       />
                                     ) : (
-                                      <div className="h-6 w-6 bg-muted rounded-sm flex items-center justify-center text-xs">
-                                        {groupTag.slice(0, 2)}
+                                      <div className="h-7 w-7 bg-background border border-border rounded-full flex items-center justify-center text-xs font-medium">
+                                        {groupTag.slice(0, 2).toUpperCase()}
                                       </div>
                                     )}
-                                    <span className="font-medium">
-                                      {groupTag}
-                                    </span>
+                                    <div>
+                                      <div className="font-medium text-sm">
+                                        {groupTag}
+                                      </div>
+                                      {signup.callsign && (
+                                        <div className="text-xs text-muted-foreground">
+                                          {signup.callsign}
+                                          {signup.aircraftType &&
+                                            ` • ${signup.aircraftType}`}
+                                        </div>
+                                      )}
+                                    </div>
                                   </div>
                                   <Badge
-                                    variant={isAccepted ? "default" : "outline"}
+                                    variant={
+                                      isComplete ? "default" : "secondary"
+                                    }
+                                    className={
+                                      isComplete
+                                        ? "bg-[#f94a1b] hover:bg-[#f94a1b]/90 dark:bg-[#f94a1b] dark:hover:bg-[#f94a1b]/90"
+                                        : ""
+                                    }
                                   >
-                                    <>
-                                      <Check className="h-3 w-3" /> Accepted
-                                    </>
+                                    {isComplete ? (
+                                      <>
+                                        <Check className="h-3 w-3 mr-1" /> Ready
+                                      </>
+                                    ) : (
+                                      "Pending"
+                                    )}
                                   </Badge>
                                 </div>
 
-                                <div className="space-y-1 text-xs text-muted-foreground">
-                                  {/* Show different information based on sub-event type */}
-                                  {isGroupFlight && (
-                                    <>
-                                      {departureTime && (
-                                        <div>Departure: {departureTime}</div>
-                                      )}
-                                    </>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                                  {isGroupFlight && departureTime && (
+                                    <div className="flex items-center gap-1.5 text-muted-foreground">
+                                      <Clock className="h-3.5 w-3.5" />
+                                      <span>Dep: {departureTime}</span>
+                                    </div>
                                   )}
 
                                   {isFlyIn && (
                                     <>
                                       {signup.departureIcao && (
-                                        <div>From: {signup.departureIcao}</div>
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                          <Plane className="h-3.5 w-3.5" />
+                                          <span>
+                                            From: {signup.departureIcao}
+                                          </span>
+                                        </div>
                                       )}
                                       {arrivalTime && (
-                                        <div>Arrival: {arrivalTime}</div>
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          <span>Arr: {arrivalTime}</span>
+                                        </div>
                                       )}
                                     </>
                                   )}
 
                                   {isFlyOut && (
                                     <>
-                                      {signup.arrivalIcao && (
-                                        <div>To: {signup.arrivalIcao}</div>
+                                      {arrivalTime && (
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                          <Clock className="h-3.5 w-3.5" />
+                                          <span>Dep: {arrivalTime}</span>
+                                        </div>
                                       )}
-                                      {departureTime && (
-                                        <div>Departure: {departureTime}</div>
+                                      {signup.arrivalIcao && (
+                                        <div className="flex items-center gap-1.5 text-muted-foreground">
+                                          <MapPin className="h-3.5 w-3.5" />
+                                          <span>To: {signup.arrivalIcao}</span>
+                                        </div>
                                       )}
                                     </>
+                                  )}
+
+                                  {signup.routeDetails && (
+                                    <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
+                                      <ArrowRight className="h-3.5 w-3.5" />
+                                      <span className="truncate">
+                                        {signup.routeDetails}
+                                      </span>
+                                    </div>
                                   )}
                                 </div>
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {subEventSignups.length === 0 && (
+                      <div className="px-5 py-6 text-center">
+                        <div className="text-muted-foreground/60">
+                          <Users className="h-8 w-8 mx-auto mb-2 opacity-40" />
+                          <p className="text-sm">No signups yet</p>
                         </div>
                       </div>
                     )}

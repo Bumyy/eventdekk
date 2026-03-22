@@ -747,6 +747,7 @@ export default function AdminEvents() {
         preSelectedSubEvents={preSelectedSubEvents}
         preFilledFlightDetails={preFilledFlightDetails}
         availabilityData={groupAvailabilityData}
+        currentEventId={selectedEventForManagement?.eventId}
       />
     </div>
   );

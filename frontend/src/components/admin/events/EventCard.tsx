@@ -12,12 +12,13 @@ import {
   Trash2,
   AlertTriangle,
   UserCircle,
+  AlertCircle,
 } from "lucide-react";
 import {
   SubEventType,
   Event,
   SubEvent,
-  EventStatus,
+  FlightSignup,
 } from "@/module_bindings/types";
 import {
   formatDateInTimezone,
@@ -28,6 +29,22 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 interface FlightSignupInfo {
   groupId: bigint;
   subEventId: bigint;
+}
+
+interface SignupIssues {
+  hasIssues: boolean;
+  missingCallsign: boolean;
+  missingAircraftType: boolean;
+  missingDepartureTime: boolean;
+  missingArrivalTime: boolean;
+  missingDepartureIcao: boolean;
+  missingArrivalIcao: boolean;
+}
+
+interface SignupWithIssues {
+  signup: FlightSignup;
+  subEvent: SubEvent | undefined;
+  issues: SignupIssues | null;
 }
 
 interface EventCardProps {
@@ -52,6 +69,8 @@ interface EventCardProps {
   onDelete?: () => void;
   onManageParticipation?: () => void;
   onPublish?: () => void;
+  hasIncompleteInfo?: boolean;
+  signupsWithIssues?: SignupWithIssues[];
 }
 
 function getEventTypeBadge(type: SubEventType) {
@@ -97,6 +116,8 @@ export function EventCard({
   onDelete,
   onManageParticipation,
   onPublish,
+  hasIncompleteInfo = false,
+  signupsWithIssues = [],
 }: EventCardProps) {
   const isDraft = event.status?.tag === "Draft";
 
@@ -114,7 +135,7 @@ export function EventCard({
 
   return (
     <Card
-      className={`p-4 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}`}
+      className={`p-4 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}`}
     >
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-2">
@@ -126,6 +147,12 @@ export function EventCard({
                 <AlertTriangle className="h-3 w-3" />
                 {missingLeadsCount} Missing Lead
                 {missingLeadsCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {isAttending && hasIncompleteInfo && (
+              <Badge variant="destructive" className="flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" />
+                Incomplete Details
               </Badge>
             )}
             {isUserLeadForThisEvent && (
@@ -241,6 +268,11 @@ export function EventCard({
               const isParticipating = flightSignups.some(
                 (signup) => signup.subEventId === subEvent.subEventId
               );
+              const signupWithIssue = signupsWithIssues.find(
+                (s) => s.signup.subEventId === subEvent.subEventId
+              );
+              const signupIssues = signupWithIssue?.issues;
+              const hasSignupIssues = signupIssues?.hasIssues || false;
               const isThisSubEventMine =
                 currentUser &&
                 subEvent.eventLead &&
@@ -259,13 +291,15 @@ export function EventCard({
                 <Card
                   key={subEvent.subEventId}
                   className={`p-4 transition-all ${
-                    isThisSubEventMine
-                      ? "border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
-                      : hasNoLead && isHosting
-                        ? "border-2 border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
-                        : isParticipating
-                          ? "border-2 border-primary"
-                          : ""
+                    hasSignupIssues && isAttending
+                      ? "border-2 border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
+                      : isThisSubEventMine
+                        ? "border-2 border-blue-500 bg-blue-50/50 dark:bg-blue-950/20"
+                        : hasNoLead && isHosting
+                          ? "border-2 border-amber-500/50 bg-amber-50/30 dark:bg-amber-950/10"
+                          : isParticipating
+                            ? "border-2 border-primary"
+                            : ""
                   }`}
                 >
                   <div className="mb-2 flex items-center justify-between">
@@ -292,6 +326,47 @@ export function EventCard({
                       </span>
                     )}
                   </div>
+
+                  {hasSignupIssues && signupIssues && isParticipating && (
+                    <div className="mt-2 mb-2 p-2 bg-amber-500/10 rounded-md border border-amber-500/20">
+                      <div className="flex items-center gap-1 text-amber-600 dark:text-amber-400 font-medium text-xs">
+                        <AlertCircle className="h-3 w-3" />
+                        <span>Missing details:</span>
+                      </div>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {signupIssues.missingCallsign && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Callsign
+                          </Badge>
+                        )}
+                        {signupIssues.missingAircraftType && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Aircraft
+                          </Badge>
+                        )}
+                        {signupIssues.missingDepartureTime && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Dep. Time
+                          </Badge>
+                        )}
+                        {signupIssues.missingArrivalTime && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Arr. Time
+                          </Badge>
+                        )}
+                        {signupIssues.missingDepartureIcao && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Dep. Airport
+                          </Badge>
+                        )}
+                        {signupIssues.missingArrivalIcao && (
+                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                            Arr. Airport
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  )}
 
                   <p className="text-sm text-muted-foreground">
                     {subEvent.description}

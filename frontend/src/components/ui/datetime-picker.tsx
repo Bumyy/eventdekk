@@ -12,6 +12,10 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import {
+  formatDateTimeInTimezone,
+  getTimeInTimezone,
+} from "@/utils/timezoneUtils";
 
 interface DateTimePickerProps {
   value?: Date | null;
@@ -22,6 +26,7 @@ interface DateTimePickerProps {
   className?: string;
   presetTimes?: string[];
   showCustomTime?: boolean;
+  timezone?: string;
 }
 
 export function DateTimePicker({
@@ -33,6 +38,7 @@ export function DateTimePicker({
   className,
   presetTimes,
   showCustomTime = true,
+  timezone,
 }: DateTimePickerProps) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState<"date" | "time">("date");
@@ -57,12 +63,13 @@ export function DateTimePicker({
   ];
   const times = presetTimes || defaultPresetTimes;
 
-  // Sync internal states when value or popover state changes
   useEffect(() => {
     if (open) {
       setStep("date");
       setTempDate(value || undefined);
-      if (value) {
+      if (value && timezone) {
+        setCustomTimeInput(getTimeInTimezone(value, timezone));
+      } else if (value) {
         setCustomTimeInput(
           `${value.getHours().toString().padStart(2, "0")}:${value
             .getMinutes()
@@ -71,7 +78,7 @@ export function DateTimePicker({
         );
       }
     }
-  }, [open, value]);
+  }, [open, value, timezone]);
 
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
@@ -88,9 +95,14 @@ export function DateTimePicker({
     const [hours, minutes] = time.split(":").map(Number);
     if (tempDate && onChange) {
       const newDate = new Date(tempDate);
-      newDate.setHours(hours, minutes, 0, 0);
-      onChange(newDate);
-      setOpen(false); // Close popover after finishing phase 2
+      if (timezone) {
+        const adjustedDate = setTimeInTimezone(newDate, hours, minutes, timezone);
+        onChange(adjustedDate);
+      } else {
+        newDate.setHours(hours, minutes, 0, 0);
+        onChange(newDate);
+      }
+      setOpen(false);
     }
   };
 
@@ -102,16 +114,74 @@ export function DateTimePicker({
       const hours = parseInt(match[1]);
       const minutes = parseInt(match[2]);
       const newDate = new Date(tempDate);
-      newDate.setHours(hours, minutes, 0, 0);
-      onChange(newDate);
-      setOpen(false); // Close popover
+      if (timezone) {
+        const adjustedDate = setTimeInTimezone(newDate, hours, minutes, timezone);
+        onChange(adjustedDate);
+      } else {
+        newDate.setHours(hours, minutes, 0, 0);
+        onChange(newDate);
+      }
+      setOpen(false);
     }
   };
 
   const formatDisplayValue = () => {
     if (!value) return placeholder;
+    if (timezone) {
+      return formatDateTimeInTimezone(value, timezone);
+    }
     return format(value, "MMM d, yyyy - h:mm a");
   };
+
+  const getTimeInTimezoneLocal = (
+    date: Date,
+    tz: string
+  ): { hour: number; minute: number } => {
+    const hourStr = date.toLocaleString("en-US", {
+      timeZone: tz,
+      hour: "numeric",
+      hour12: false,
+    });
+    const minuteStr = date.toLocaleString("en-US", {
+      timeZone: tz,
+      minute: "2-digit",
+    });
+    return { hour: parseInt(hourStr), minute: parseInt(minuteStr) };
+  };
+
+  const setTimeInTimezone = (
+    date: Date,
+    hour: number,
+    minute: number,
+    tz: string
+  ): Date => {
+    const { hour: currentHour, minute: currentMinute } = getTimeInTimezoneLocal(
+      date,
+      tz
+    );
+
+    const hourDiff = hour - currentHour;
+    const minuteDiff = minute - currentMinute;
+
+    const newDate = new Date(date);
+    newDate.setHours(newDate.getHours() + hourDiff);
+    newDate.setMinutes(newDate.getMinutes() + minuteDiff);
+
+    return newDate;
+  };
+
+  const getCurrentHourInTimezone = (): number => {
+    if (!value || !timezone) return value?.getHours() ?? 0;
+    return getTimeInTimezoneLocal(value, timezone).hour;
+  };
+
+  const getCurrentMinuteInTimezone = (): number => {
+    if (!value || !timezone) return value?.getMinutes() ?? 0;
+    return getTimeInTimezoneLocal(value, timezone).minute;
+  };
+
+  const currentHour = getCurrentHourInTimezone();
+  const currentMinute = getCurrentMinuteInTimezone();
 
   return (
     <div className={cn("space-y-2", className)}>
@@ -179,7 +249,7 @@ export function DateTimePicker({
                 {times.map((time) => {
                   const [h, m] = time.split(":").map(Number);
                   const isSelected =
-                    value?.getHours() === h && value?.getMinutes() === m;
+                    currentHour === h && currentMinute === m;
 
                   return (
                     <Button

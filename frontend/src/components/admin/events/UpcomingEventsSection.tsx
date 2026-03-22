@@ -1,22 +1,86 @@
 import { EventCard } from "./EventCard";
-import { SubEvent, FlightSignup, Group, Event } from "@/module_bindings/types";
+import { SubEvent, FlightSignup } from "@/module_bindings/types";
 
-interface UpcomingEventsSectionProps {
-  upcomingEvents: Event[];
-  upcomingAttendingEvents: Event[];
-  subEvents: SubEvent[];
-  flightSignups: FlightSignup[];
-  groups: Group[];
-  userTimezone: string;
-  groupId: bigint;
-  expandedEvents: string[];
-  currentUser?: any;
-  users?: any[];
-  onToggleExpand: (eventId: string) => void;
-  onManageEvent: (eventId: bigint) => void;
-  onDeleteEvent: (eventId: bigint) => void;
-  onManageParticipation: (event: Event) => void;
-  onPublishEvent?: (eventId: bigint) => void;
+function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): boolean {
+  const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
+  const isFlyIn = subEvent.subEventType.tag === "FlyIn";
+  const isFlyOut = subEvent.subEventType.tag === "FlyOut";
+
+  if (!signup.callsign || signup.callsign.trim() === "") return true;
+  if (!signup.aircraftType || signup.aircraftType.trim() === "") return true;
+
+  if (!signup.desiredDepartureTime || !signup.desiredArrivalTime) return true;
+
+  if (isFlyIn && (!signup.departureIcao || signup.departureIcao.trim() === "")) return true;
+  if (isFlyOut && (!signup.arrivalIcao || signup.arrivalIcao.trim() === "")) return true;if (!isGroupFlight) {
+    if (!signup.departureIcao || signup.departureIcao.trim() === "") return true;
+    if (!signup.arrivalIcao || signup.arrivalIcao.trim() === "") return true;
+  }
+
+  return false;
+}
+
+interface SignupIssues {
+  hasIssues: boolean;
+  missingCallsign: boolean;
+  missingAircraftType: boolean;
+  missingDepartureTime: boolean;
+  missingArrivalTime: boolean;
+  missingDepartureIcao: boolean;
+  missingArrivalIcao: boolean;
+}
+
+function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues {
+  const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
+  const isFlyIn = subEvent.subEventType.tag === "FlyIn";
+  const isFlyOut = subEvent.subEventType.tag === "FlyOut";
+
+  const issues: SignupIssues = {
+    hasIssues: false,
+    missingCallsign: false,
+    missingAircraftType: false,
+    missingDepartureTime: false,
+    missingArrivalTime: false,
+    missingDepartureIcao: false,
+    missingArrivalIcao: false,
+  };
+
+  if (!signup.callsign || signup.callsign.trim() === "") {
+    issues.missingCallsign = true;
+    issues.hasIssues = true;
+  }
+  if (!signup.aircraftType || signup.aircraftType.trim() === "") {
+    issues.missingAircraftType = true;
+    issues.hasIssues = true;
+  }
+  if (!signup.desiredDepartureTime) {
+    issues.missingDepartureTime = true;
+    issues.hasIssues = true;
+  }
+  if (!signup.desiredArrivalTime) {
+    issues.missingArrivalTime = true;
+    issues.hasIssues = true;
+  }
+  if (isFlyIn && (!signup.departureIcao || signup.departureIcao.trim() === "")) {
+    issues.missingDepartureIcao = true;
+    issues.hasIssues = true;
+  }
+  if (isFlyOut && (!signup.arrivalIcao || signup.arrivalIcao.trim() === "")) {
+    issues.missingArrivalIcao = true;
+    issues.hasIssues = true;
+  }
+  if (!isGroupFlight && !isFlyIn &&!isFlyOut) {
+    if (!signup.departureIcao || signup.departureIcao.trim() === "") {
+      issues.missingDepartureIcao = true;
+      issues.hasIssues = true;
+    }
+    if (!signup.arrivalIcao || signup.arrivalIcao.trim() === "") {
+      issues.missingArrivalIcao = true;
+      issues.hasIssues = true;
+    }
+  }
+
+  return issues;
 }
 
 export function UpcomingEventsSection({
@@ -101,26 +165,42 @@ export function UpcomingEventsSection({
                 (se) => se.eventId === event.eventId
               );
 
-              // Find all sub-events this group is participating in by counting flight signups
-              const participatingSubEventIds =
-                flightSignups
-                  ?.filter(
-                    (signup) =>
-                      signup.groupId === groupId &&
-                      eventSubEvents.some(
-                        (se) => se.subEventId === signup.subEventId
-                      )
+              const groupSignupsForEvent = flightSignups?.filter(
+                (signup) =>
+                  signup.groupId === groupId &&
+                  eventSubEvents.some(
+                    (se) => se.subEventId === signup.subEventId
                   )
-                  .map((signup) => signup.subEventId) || [];
+              ) || [];
 
-              // Remove duplicates to get accurate count
+              const participatingSubEventIds = groupSignupsForEvent.map(
+                (signup) => signup.subEventId
+              );
+
               const uniqueParticipatingIds = [
                 ...new Set(participatingSubEventIds),
               ];
               const participatingCount = uniqueParticipatingIds.length;
 
-              // Get creator group info
+              const hasIncompleteInfo = groupSignupsForEvent.some((signup) => {
+                const subEvent = eventSubEvents.find(
+                  (se) => se.subEventId === signup.subEventId
+                );
+                return subEvent ? hasIncompleteFlightDetails(signup, subEvent) : false;
+              });
+
               const creatorGroupInfo = getGroupInfo(event.creatorGroupId);
+
+              const signupsWithIssues = groupSignupsForEvent.map((signup) => {
+                const subEvent = eventSubEvents.find(
+                  (se) => se.subEventId === signup.subEventId
+                );
+                return {
+                  signup,
+                  subEvent,
+                  issues: subEvent ? getSignupIssues(signup, subEvent) : null,
+                };
+              });
 
               return (
                 <EventCard
@@ -141,6 +221,8 @@ export function UpcomingEventsSection({
                   }
                   onManageParticipation={() => onManageParticipation(event)}
                   flightSignups={flightSignupsInfo}
+                  hasIncompleteInfo={hasIncompleteInfo}
+                  signupsWithIssues={signupsWithIssues}
                 />
               );
             })}
