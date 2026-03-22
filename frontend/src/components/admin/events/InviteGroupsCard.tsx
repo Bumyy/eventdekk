@@ -17,35 +17,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Group } from "@/module_bindings/types";
 import { ChevronDown, X } from "lucide-react";
+import { useEditEventContext } from "./EditEventContext";
 
-interface SelectedGroup {
-  id: bigint;
-  name: string;
-}
+export function InviteGroupsCard() {
+  const {
+    showInviteGroupsDialog,
+    setShowInviteGroupsDialog,
+    selectedGroups,
+    groups,
+    currentGroupId,
+    handleSelectGroup,
+    handleRemoveGroup,
+    handleInviteGroups,
+  } = useEditEventContext();
 
-interface InviteGroupsCardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  selectedGroups: SelectedGroup[];
-  allGroups: Group[];
-  currentGroupId: bigint | null;
-  onSelectGroup: (group: SelectedGroup) => void;
-  onRemoveGroup: (groupId: bigint) => void;
-  onInvite: () => void;
-}
-
-export function InviteGroupsCard({
-  open,
-  onOpenChange,
-  selectedGroups,
-  allGroups,
-  currentGroupId,
-  onSelectGroup,
-  onRemoveGroup,
-  onInvite,
-}: InviteGroupsCardProps) {
   return (
     <Card className="py-4">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -55,7 +41,7 @@ export function InviteGroupsCard({
             Invite other groups to participate in this event
           </CardDescription>
         </div>
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={showInviteGroupsDialog} onOpenChange={setShowInviteGroupsDialog}>
           <DialogTrigger asChild>
             <Button>Invite Groups</Button>
           </DialogTrigger>
@@ -74,7 +60,7 @@ export function InviteGroupsCard({
                         variant="ghost"
                         size="icon"
                         className="h-4 w-4 ml-1"
-                        onClick={() => onRemoveGroup(group.id)}
+                        onClick={() => handleRemoveGroup(group.id)}
                       >
                         <X className="h-3 w-3" />
                       </Button>
@@ -97,13 +83,13 @@ export function InviteGroupsCard({
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[300px]" align="start">
                     <ScrollArea className="h-[300px]">
-                      {allGroups
+                      {groups
                         .filter((group) => group.groupId !== currentGroupId)
                         .map((group) => (
                           <DropdownMenuItem
                             key={group.groupId.toString()}
                             onClick={() =>
-                              onSelectGroup({
+                              handleSelectGroup({
                                 id: group.groupId,
                                 name: group.name,
                               })
@@ -118,10 +104,10 @@ export function InviteGroupsCard({
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
+              <Button variant="outline" onClick={() => setShowInviteGroupsDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={onInvite} disabled={selectedGroups.length === 0}>
+              <Button onClick={handleInviteGroups} disabled={selectedGroups.length === 0}>
                 Send Invites
               </Button>
             </DialogFooter>

@@ -13,3 +13,14 @@ export interface SubEventFormState {
   notes: string;
   eventLeadHex: string;
 }
+
+export interface MemberOption {
+  identityHex: string;
+  displayName: string;
+  callsignPrefix?: string;
+}
+
+export interface SelectedGroup {
+  id: bigint;
+  name: string;
+}

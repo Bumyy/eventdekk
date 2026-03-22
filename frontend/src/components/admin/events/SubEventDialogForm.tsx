@@ -11,29 +11,29 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTimeInTimezone } from "@/utils/timezoneUtils";
-import { SubEventFormState, SubEventFormType } from "./types";
-
-interface MemberOption {
-  identityHex: string;
-  displayName: string;
-  callsignPrefix?: string;
-}
+import { useEditEventContext } from "./EditEventContext";
+import { SubEventFormType } from "./types";
 
 interface SubEventDialogFormProps {
-  form: SubEventFormState;
-  setForm: (form: SubEventFormState) => void;
-  userTimezone: string;
-  members: MemberOption[];
+  mode: "add" | "edit";
   idPrefix?: string;
 }
 
 export function SubEventDialogForm({
-  form,
-  setForm,
-  userTimezone,
-  members,
+  mode,
   idPrefix = "",
 }: SubEventDialogFormProps) {
+  const {
+    userTimezone,
+    memberOptions,
+    subEventForm,
+    setSubEventForm,
+    editSubEventForm,
+    setEditSubEventForm,
+  } = useEditEventContext();
+
+  const form = mode === "add" ? subEventForm : editSubEventForm;
+  const setForm = mode === "add" ? setSubEventForm : setEditSubEventForm;
   const withPrefix = (id: string) => `${idPrefix}${id}`;
 
   return (
@@ -165,7 +165,7 @@ export function SubEventDialogForm({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="none">None</SelectItem>
-            {members.map((member) => (
+            {memberOptions.map((member) => (
               <SelectItem key={member.identityHex} value={member.identityHex}>
                 {member.callsignPrefix ? `[${member.callsignPrefix}] ` : ""}
                 {member.displayName}

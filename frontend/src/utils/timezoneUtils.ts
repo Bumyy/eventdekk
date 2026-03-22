@@ -118,12 +118,20 @@ export const formatTimezoneName = (tz: string): string => {
 /**
  * Get the current time in a specific timezone
  */
-export const getTimeInTimezone = (timezone: string): string => {
-  return new Date().toLocaleTimeString(undefined, {
+export const getTimeInTimezone = (
+  dateOrTimezone: Date | string,
+  timezoneArg?: string
+): string => {
+  const date = dateOrTimezone instanceof Date ? dateOrTimezone : new Date();
+  const timezone =
+    dateOrTimezone instanceof Date ? timezoneArg : dateOrTimezone;
+
+  return new Intl.DateTimeFormat("en-GB", {
     timeZone: timezone,
     hour: "2-digit",
     minute: "2-digit",
-  });
+    hour12: false,
+  }).format(date);
 };
 
 /**

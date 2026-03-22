@@ -13,7 +13,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { SubEvent } from "@/module_bindings/types";
 import { formatDateInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
 import {
   Calendar as CalendarIcon2,
@@ -23,32 +22,22 @@ import {
   Plane,
 } from "lucide-react";
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
+import { useEditEventContext } from "./EditEventContext";
 
-interface ManageOwnFlightsCardProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  eventSubEvents: SubEvent[];
-  selectedOwnSubEvents: bigint[];
-  ownFlightDetails: Record<string, any>;
-  isSubmittingFlights: boolean;
-  userTimezone: string;
-  onToggleOwnSubEvent: (subEventId: bigint) => void;
-  onUpdateOwnFlightDetail: (subEventId: string, field: string, value: string) => void;
-  onSubmitOwnFlights: () => void;
-}
+export function ManageOwnFlightsCard() {
+  const {
+    showManageOwnFlightsDialog,
+    setShowManageOwnFlightsDialog,
+    eventSubEvents,
+    selectedOwnSubEvents,
+    ownFlightDetails,
+    isSubmittingFlights,
+    userTimezone,
+    handleToggleOwnSubEvent,
+    updateOwnFlightDetail,
+    handleSubmitOwnFlights,
+  } = useEditEventContext();
 
-export function ManageOwnFlightsCard({
-  open,
-  onOpenChange,
-  eventSubEvents,
-  selectedOwnSubEvents,
-  ownFlightDetails,
-  isSubmittingFlights,
-  userTimezone,
-  onToggleOwnSubEvent,
-  onUpdateOwnFlightDetail,
-  onSubmitOwnFlights,
-}: ManageOwnFlightsCardProps) {
   return (
     <Card className="py-4">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -58,7 +47,7 @@ export function ManageOwnFlightsCard({
             Sign up your own group for the event&apos;s sub-events
           </CardDescription>
         </div>
-        <Dialog open={open} onOpenChange={onOpenChange}>
+        <Dialog open={showManageOwnFlightsDialog} onOpenChange={setShowManageOwnFlightsDialog}>
           <DialogTrigger asChild>
             <Button className="flex items-center gap-1">
               <Plane className="h-4 w-4 mr-1" />
@@ -99,7 +88,7 @@ export function ManageOwnFlightsCard({
                         <Checkbox
                           id={`own-subevent-${subEvent.subEventId}`}
                           checked={isSelected}
-                          onCheckedChange={() => onToggleOwnSubEvent(subEvent.subEventId)}
+                          onCheckedChange={() => handleToggleOwnSubEvent(subEvent.subEventId)}
                           className="mt-1"
                         />
                         <div className="flex-1">
@@ -162,7 +151,7 @@ export function ManageOwnFlightsCard({
                                       ownFlightDetails[subEvent.subEventId.toString()]?.callsign || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "callsign",
                                         e.target.value
@@ -183,7 +172,7 @@ export function ManageOwnFlightsCard({
                                       ownFlightDetails[subEvent.subEventId.toString()]?.aircraftType || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "aircraftType",
                                         e.target.value
@@ -214,7 +203,7 @@ export function ManageOwnFlightsCard({
                                           : ownFlightDetails[subEvent.subEventId.toString()]?.customDepartureIcao || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "customDepartureIcao",
                                         e.target.value
@@ -257,7 +246,7 @@ export function ManageOwnFlightsCard({
                                           : ownFlightDetails[subEvent.subEventId.toString()]?.customArrivalIcao || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "customArrivalIcao",
                                         e.target.value
@@ -293,7 +282,7 @@ export function ManageOwnFlightsCard({
                                   id={`own-route-${subEvent.subEventId}`}
                                   value={ownFlightDetails[subEvent.subEventId.toString()]?.route || ""}
                                   onChange={(e) =>
-                                    onUpdateOwnFlightDetail(
+                                    updateOwnFlightDetail(
                                       subEvent.subEventId.toString(),
                                       "route",
                                       e.target.value
@@ -325,7 +314,7 @@ export function ManageOwnFlightsCard({
                                       ownFlightDetails[subEvent.subEventId.toString()]?.departureTime || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "departureTime",
                                         e.target.value
@@ -346,7 +335,7 @@ export function ManageOwnFlightsCard({
                                       ownFlightDetails[subEvent.subEventId.toString()]?.arrivalTime || ""
                                     }
                                     onChange={(e) =>
-                                      onUpdateOwnFlightDetail(
+                                      updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "arrivalTime",
                                         e.target.value
@@ -378,18 +367,18 @@ export function ManageOwnFlightsCard({
             </ScrollArea>
 
             <DialogFooter className="flex gap-2 justify-between sm:justify-end mt-4">
-              <Button
-                variant="outline"
-                onClick={() => onOpenChange(false)}
-                disabled={isSubmittingFlights}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="default"
-                onClick={onSubmitOwnFlights}
-                disabled={selectedOwnSubEvents.length === 0 || isSubmittingFlights}
-              >
+                <Button
+                  variant="outline"
+                  onClick={() => setShowManageOwnFlightsDialog(false)}
+                  disabled={isSubmittingFlights}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  onClick={handleSubmitOwnFlights}
+                  disabled={selectedOwnSubEvents.length === 0 || isSubmittingFlights}
+                >
                 {isSubmittingFlights ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

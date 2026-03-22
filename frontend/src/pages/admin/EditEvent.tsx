@@ -17,6 +17,7 @@ import { uploadImage } from "@/api/apiService";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import {
+  EditEventProvider,
   EventDetailsFormCard,
   InviteGroupsCard,
   ManageOwnFlightsCard,
@@ -590,7 +591,7 @@ export default function EditEvent() {
   };
 
   const handleEditSubEventClick = (subEvent: {
-    subEventType: { tag: "GroupFlight" | "FlyIn" | "FlyOut" };
+    subEventType: SubEventType;
     name: string;
     description?: string | null;
     scheduledStartTime: { toDate: () => Date };
@@ -743,12 +744,73 @@ export default function EditEvent() {
     ];
   });
 
+  const clearBanner = () => {
+    setSelectedFile(null);
+    if (!previewUrl) setBannerUrl("");
+  };
+
   if (!startTime || !endTime) {
     return <div>Loading...</div>;
   }
 
   return (
-    <div className="space-y-8">
+    <EditEventProvider
+      value={{
+        userTimezone,
+        name,
+        description,
+        startTime,
+        endTime,
+        ifcEventLink,
+        isInternal,
+        previewUrl,
+        bannerUrl,
+        selectedFile,
+        isUploading,
+        isLoading,
+        setName,
+        setDescription,
+        setStartTime,
+        setEndTime,
+        setIfcEventLink,
+        setIsInternal,
+        handleFileChange,
+        setBannerUrl,
+        clearBanner,
+        eventSubEvents,
+        signupsBySubEvent,
+        groups,
+        memberOptions,
+        showAddSubEventDialog,
+        setShowAddSubEventDialog,
+        showEditSubEventDialog,
+        setShowEditSubEventDialog,
+        subEventForm,
+        setSubEventForm,
+        editSubEventForm,
+        setEditSubEventForm,
+        handleAddSubEvent,
+        handleUpdateSubEvent,
+        handleEditSubEventClick,
+        handleDeleteSubEvent,
+        showInviteGroupsDialog,
+        setShowInviteGroupsDialog,
+        selectedGroups,
+        currentGroupId,
+        handleSelectGroup,
+        handleRemoveGroup,
+        handleInviteGroups,
+        showManageOwnFlightsDialog,
+        setShowManageOwnFlightsDialog,
+        selectedOwnSubEvents,
+        ownFlightDetails,
+        isSubmittingFlights,
+        handleToggleOwnSubEvent,
+        updateOwnFlightDetail,
+        handleSubmitOwnFlights,
+      }}
+    >
+      <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Edit Event</h1>
         <div className="flex items-center gap-2">
@@ -795,76 +857,14 @@ export default function EditEvent() {
         </div>
       </div>
 
-      <EventDetailsFormCard
-        name={name}
-        description={description}
-        startTime={startTime}
-        endTime={endTime}
-        ifcEventLink={ifcEventLink}
-        isInternal={isInternal}
-        previewUrl={previewUrl}
-        bannerUrl={bannerUrl}
-        selectedFile={selectedFile}
-        isUploading={isUploading}
-        isLoading={isLoading}
-        userTimezone={userTimezone}
-        onNameChange={setName}
-        onDescriptionChange={setDescription}
-        onStartTimeChange={setStartTime}
-        onEndTimeChange={setEndTime}
-        onIfcEventLinkChange={setIfcEventLink}
-        onIsInternalChange={setIsInternal}
-        onFileChange={handleFileChange}
-        onBannerUrlChange={setBannerUrl}
-        onClearBanner={() => {
-          setSelectedFile(null);
-          if (!previewUrl) setBannerUrl("");
-        }}
-      />
+        <EventDetailsFormCard />
 
-      <SubEventsManagementCard
-        eventSubEvents={eventSubEvents}
-        signupsBySubEvent={signupsBySubEvent}
-        groups={groups}
-        members={memberOptions}
-        userTimezone={userTimezone}
-        showAddSubEventDialog={showAddSubEventDialog}
-        setShowAddSubEventDialog={setShowAddSubEventDialog}
-        showEditSubEventDialog={showEditSubEventDialog}
-        setShowEditSubEventDialog={setShowEditSubEventDialog}
-        subEventForm={subEventForm}
-        setSubEventForm={setSubEventForm}
-        editSubEventForm={editSubEventForm}
-        setEditSubEventForm={setEditSubEventForm}
-        onAddSubEvent={handleAddSubEvent}
-        onUpdateSubEvent={handleUpdateSubEvent}
-        onEditSubEventClick={handleEditSubEventClick}
-        onDeleteSubEvent={handleDeleteSubEvent}
-      />
+        <SubEventsManagementCard />
 
-      <InviteGroupsCard
-        open={showInviteGroupsDialog}
-        onOpenChange={setShowInviteGroupsDialog}
-        selectedGroups={selectedGroups}
-        allGroups={groups}
-        currentGroupId={currentGroupId}
-        onSelectGroup={handleSelectGroup}
-        onRemoveGroup={handleRemoveGroup}
-        onInvite={handleInviteGroups}
-      />
+        <InviteGroupsCard />
 
-      <ManageOwnFlightsCard
-        open={showManageOwnFlightsDialog}
-        onOpenChange={setShowManageOwnFlightsDialog}
-        eventSubEvents={eventSubEvents}
-        selectedOwnSubEvents={selectedOwnSubEvents}
-        ownFlightDetails={ownFlightDetails}
-        isSubmittingFlights={isSubmittingFlights}
-        userTimezone={userTimezone}
-        onToggleOwnSubEvent={handleToggleOwnSubEvent}
-        onUpdateOwnFlightDetail={updateOwnFlightDetail}
-        onSubmitOwnFlights={handleSubmitOwnFlights}
-      />
-    </div>
+        <ManageOwnFlightsCard />
+      </div>
+    </EditEventProvider>
   );
 }

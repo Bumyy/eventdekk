@@ -24,56 +24,28 @@ import {
   Users,
 } from "lucide-react";
 import { formatDateInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
-import { Group, SubEvent, FlightSignup } from "@/module_bindings/types";
+import { SubEvent } from "@/module_bindings/types";
 import { SubEventDialogForm } from "./SubEventDialogForm";
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
-import { SubEventFormState } from "./types";
+import { useEditEventContext } from "./EditEventContext";
 
-interface MemberOption {
-  identityHex: string;
-  displayName: string;
-  callsignPrefix?: string;
-}
+export function SubEventsManagementCard() {
+  const {
+    eventSubEvents,
+    signupsBySubEvent,
+    groups,
+    memberOptions,
+    userTimezone,
+    showAddSubEventDialog,
+    setShowAddSubEventDialog,
+    showEditSubEventDialog,
+    setShowEditSubEventDialog,
+    handleAddSubEvent,
+    handleUpdateSubEvent,
+    handleEditSubEventClick,
+    handleDeleteSubEvent,
+  } = useEditEventContext();
 
-interface SubEventsManagementCardProps {
-  eventSubEvents: SubEvent[];
-  signupsBySubEvent: Record<string, FlightSignup[]>;
-  groups: Group[];
-  members: MemberOption[];
-  userTimezone: string;
-  showAddSubEventDialog: boolean;
-  setShowAddSubEventDialog: (open: boolean) => void;
-  showEditSubEventDialog: boolean;
-  setShowEditSubEventDialog: (open: boolean) => void;
-  subEventForm: SubEventFormState;
-  setSubEventForm: (form: SubEventFormState) => void;
-  editSubEventForm: SubEventFormState;
-  setEditSubEventForm: (form: SubEventFormState) => void;
-  onAddSubEvent: () => void;
-  onUpdateSubEvent: () => void;
-  onEditSubEventClick: (subEvent: SubEvent) => void;
-  onDeleteSubEvent: (subEventId: bigint) => void;
-}
-
-export function SubEventsManagementCard({
-  eventSubEvents,
-  signupsBySubEvent,
-  groups,
-  members,
-  userTimezone,
-  showAddSubEventDialog,
-  setShowAddSubEventDialog,
-  showEditSubEventDialog,
-  setShowEditSubEventDialog,
-  subEventForm,
-  setSubEventForm,
-  editSubEventForm,
-  setEditSubEventForm,
-  onAddSubEvent,
-  onUpdateSubEvent,
-  onEditSubEventClick,
-  onDeleteSubEvent,
-}: SubEventsManagementCardProps) {
   return (
     <Card className="py-4">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -95,17 +67,14 @@ export function SubEventsManagementCard({
             </DialogHeader>
             <ScrollArea className="max-h-[70vh]">
               <SubEventDialogForm
-                form={subEventForm}
-                setForm={setSubEventForm}
-                userTimezone={userTimezone}
-                members={members}
+                mode="add"
               />
             </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={() => setShowAddSubEventDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={onAddSubEvent}>Add Sub-Event</Button>
+              <Button onClick={handleAddSubEvent}>Add Sub-Event</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -117,10 +86,7 @@ export function SubEventsManagementCard({
             </DialogHeader>
             <ScrollArea className="max-h-[70vh]">
               <SubEventDialogForm
-                form={editSubEventForm}
-                setForm={setEditSubEventForm}
-                userTimezone={userTimezone}
-                members={members}
+                mode="edit"
                 idPrefix="edit-"
               />
             </ScrollArea>
@@ -128,7 +94,7 @@ export function SubEventsManagementCard({
               <Button variant="outline" onClick={() => setShowEditSubEventDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={onUpdateSubEvent}>Save Changes</Button>
+              <Button onClick={handleUpdateSubEvent}>Save Changes</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -154,7 +120,7 @@ export function SubEventsManagementCard({
 
               const leadHex = subEvent.eventLead ? subEvent.eventLead.toHexString() : null;
               const leadUser = leadHex
-                ? members.find((m) => m.identityHex === leadHex)
+                ? memberOptions.find((m) => m.identityHex === leadHex)
                 : null;
 
               return (
@@ -183,7 +149,7 @@ export function SubEventsManagementCard({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
-                          onClick={() => onEditSubEventClick(subEvent)}
+                          onClick={() => handleEditSubEventClick(subEvent)}
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
@@ -191,7 +157,7 @@ export function SubEventsManagementCard({
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          onClick={() => onDeleteSubEvent(subEvent.subEventId)}
+                          onClick={() => handleDeleteSubEvent(subEvent.subEventId)}
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

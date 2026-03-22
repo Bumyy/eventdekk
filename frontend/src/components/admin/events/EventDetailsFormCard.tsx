@@ -6,54 +6,25 @@ import { Textarea } from "@/components/ui/textarea";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { formatDateTimeInTimezone } from "@/utils/timezoneUtils";
 import { EventBannerField } from "./EventBannerField";
+import { useEditEventContext } from "./EditEventContext";
 
-interface EventDetailsFormCardProps {
-  name: string;
-  description: string;
-  startTime: Date | null;
-  endTime: Date | null;
-  ifcEventLink: string;
-  isInternal: boolean;
-  previewUrl: string | null;
-  bannerUrl: string;
-  selectedFile: File | null;
-  isUploading: boolean;
-  isLoading: boolean;
-  userTimezone: string;
-  onNameChange: (value: string) => void;
-  onDescriptionChange: (value: string) => void;
-  onStartTimeChange: (value: Date | null) => void;
-  onEndTimeChange: (value: Date | null) => void;
-  onIfcEventLinkChange: (value: string) => void;
-  onIsInternalChange: (value: boolean) => void;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
-  onBannerUrlChange: (value: string) => void;
-  onClearBanner: () => void;
-}
+export function EventDetailsFormCard() {
+  const {
+    name,
+    description,
+    startTime,
+    endTime,
+    ifcEventLink,
+    isInternal,
+    userTimezone,
+    setName,
+    setDescription,
+    setStartTime,
+    setEndTime,
+    setIfcEventLink,
+    setIsInternal,
+  } = useEditEventContext();
 
-export function EventDetailsFormCard({
-  name,
-  description,
-  startTime,
-  endTime,
-  ifcEventLink,
-  isInternal,
-  previewUrl,
-  bannerUrl,
-  selectedFile,
-  isUploading,
-  isLoading,
-  userTimezone,
-  onNameChange,
-  onDescriptionChange,
-  onStartTimeChange,
-  onEndTimeChange,
-  onIfcEventLinkChange,
-  onIsInternalChange,
-  onFileChange,
-  onBannerUrlChange,
-  onClearBanner,
-}: EventDetailsFormCardProps) {
   return (
     <Card className="py-4">
       <CardHeader>
@@ -66,7 +37,7 @@ export function EventDetailsFormCard({
           <Input
             id="name"
             value={name}
-            onChange={(e) => onNameChange(e.target.value)}
+            onChange={(e) => setName(e.target.value)}
             placeholder="Enter event name"
           />
         </div>
@@ -76,7 +47,7 @@ export function EventDetailsFormCard({
           <Textarea
             id="description"
             value={description}
-            onChange={(e) => onDescriptionChange(e.target.value)}
+            onChange={(e) => setDescription(e.target.value)}
             placeholder="Enter event description"
             rows={4}
           />
@@ -86,7 +57,7 @@ export function EventDetailsFormCard({
           <DateTimePicker
             label="Start Time"
             value={startTime}
-            onChange={(date) => onStartTimeChange(date || null)}
+            onChange={(date) => setStartTime(date || null)}
             placeholder={
               startTime
                 ? formatDateTimeInTimezone(startTime, userTimezone)
@@ -98,7 +69,7 @@ export function EventDetailsFormCard({
           <DateTimePicker
             label="End Time"
             value={endTime}
-            onChange={(date) => onEndTimeChange(date || null)}
+            onChange={(date) => setEndTime(date || null)}
             placeholder={
               endTime
                 ? formatDateTimeInTimezone(endTime, userTimezone)
@@ -113,7 +84,7 @@ export function EventDetailsFormCard({
           <Input
             id="ifcEventLink"
             value={ifcEventLink}
-            onChange={(e) => onIfcEventLinkChange(e.target.value)}
+            onChange={(e) => setIfcEventLink(e.target.value)}
             placeholder="https://..."
           />
         </div>
@@ -122,7 +93,7 @@ export function EventDetailsFormCard({
           <Checkbox
             id="isInternal"
             checked={isInternal}
-            onCheckedChange={(checked) => onIsInternalChange(!!checked)}
+            onCheckedChange={(checked) => setIsInternal(!!checked)}
           />
           <div className="space-y-1 leading-none">
             <Label htmlFor="isInternal">Internal Event</Label>
@@ -132,16 +103,7 @@ export function EventDetailsFormCard({
           </div>
         </div>
 
-        <EventBannerField
-          previewUrl={previewUrl}
-          bannerUrl={bannerUrl}
-          selectedFile={selectedFile}
-          isUploading={isUploading}
-          isLoading={isLoading}
-          onFileChange={onFileChange}
-          onBannerUrlChange={onBannerUrlChange}
-          onClear={onClearBanner}
-        />
+        <EventBannerField />
       </CardContent>
     </Card>
   );

@@ -8,4 +8,10 @@ export { InviteGroupsCard } from "./InviteGroupsCard";
 export { ManageOwnFlightsCard } from "./ManageOwnFlightsCard";
 export { SubEventDialogForm } from "./SubEventDialogForm";
 export { SubEventTypeBadge } from "./SubEventTypeBadge";
-export type { SubEventFormState, SubEventFormType } from "./types";
+export { EditEventProvider, useEditEventContext } from "./EditEventContext";
+export type {
+  SubEventFormState,
+  SubEventFormType,
+  MemberOption,
+  SelectedGroup,
+} from "./types";
