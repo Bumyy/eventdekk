@@ -2,19 +2,36 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Upload, X } from "lucide-react";
-import { useEditEventContext } from "./EditEventContext";
+import { useOptionalEditEventContext } from "./EditEventContext";
 
-export function EventBannerField() {
-  const {
-    previewUrl,
-    bannerUrl,
-    selectedFile,
-    isUploading,
-    isLoading,
-    handleFileChange,
-    setBannerUrl,
-    clearBanner,
-  } = useEditEventContext();
+interface EventBannerFieldProps {
+  previewUrl?: string | null;
+  bannerUrl?: string;
+  selectedFile?: File | null;
+  isUploading?: boolean;
+  isLoading?: boolean;
+  onFileChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBannerUrlChange?: (value: string) => void;
+  onClear?: () => void;
+}
+
+export function EventBannerField(props: EventBannerFieldProps = {}) {
+  const context = useOptionalEditEventContext();
+
+  const previewUrl = context ? context.previewUrl : (props.previewUrl ?? null);
+  const bannerUrl = context ? context.bannerUrl : (props.bannerUrl ?? "");
+  const selectedFile = context ? context.selectedFile : (props.selectedFile ?? null);
+  const isUploading = context ? context.isUploading : (props.isUploading ?? false);
+  const isLoading = context ? context.isLoading : (props.isLoading ?? false);
+  const handleFileChange = context ? context.handleFileChange : props.onFileChange;
+  const setBannerUrl = context ? context.setBannerUrl : props.onBannerUrlChange;
+  const clearBanner = context ? context.clearBanner : props.onClear;
+
+  if (!handleFileChange || !setBannerUrl || !clearBanner) {
+    throw new Error(
+      "EventBannerField requires either EditEventProvider context or explicit handler props"
+    );
+  }
 
   return (
     <div className="space-y-2">

@@ -11,29 +11,51 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { formatDateTimeInTimezone } from "@/utils/timezoneUtils";
-import { useEditEventContext } from "./EditEventContext";
-import { SubEventFormType } from "./types";
+import { useOptionalEditEventContext } from "./EditEventContext";
+import { MemberOption, SubEventFormState, SubEventFormType } from "./types";
 
 interface SubEventDialogFormProps {
-  mode: "add" | "edit";
+  mode?: "add" | "edit";
+  form?: SubEventFormState;
+  setForm?: (form: SubEventFormState) => void;
+  userTimezone?: string;
+  members?: MemberOption[];
+  showTypeField?: boolean;
   idPrefix?: string;
 }
 
 export function SubEventDialogForm({
-  mode,
+  mode = "add",
+  form,
+  setForm,
+  userTimezone,
+  members,
+  showTypeField = true,
   idPrefix = "",
 }: SubEventDialogFormProps) {
-  const {
-    userTimezone,
-    memberOptions,
-    subEventForm,
-    setSubEventForm,
-    editSubEventForm,
-    setEditSubEventForm,
-  } = useEditEventContext();
+  const context = useOptionalEditEventContext();
 
-  const form = mode === "add" ? subEventForm : editSubEventForm;
-  const setForm = mode === "add" ? setSubEventForm : setEditSubEventForm;
+  const contextTimezone = context?.userTimezone;
+  const contextMembers = context?.memberOptions;
+  const contextForm = mode === "add" ? context?.subEventForm : context?.editSubEventForm;
+  const contextSetForm = mode === "add" ? context?.setSubEventForm : context?.setEditSubEventForm;
+
+  const resolvedForm = contextForm ?? form;
+  const resolvedSetForm = contextSetForm ?? setForm;
+  const resolvedTimezone = contextTimezone ?? userTimezone;
+  const resolvedMembers = contextMembers ?? members;
+
+  if (!resolvedForm || !resolvedSetForm || !resolvedTimezone || !resolvedMembers) {
+    throw new Error(
+      "SubEventDialogForm requires context or explicit form, setForm, userTimezone, and members props"
+    );
+  }
+
+  const {
+    memberOptions,
+  } = { memberOptions: resolvedMembers };
+  const formState = resolvedForm;
+  const setFormState = resolvedSetForm;
   const withPrefix = (id: string) => `${idPrefix}${id}`;
 
   return (
@@ -42,39 +64,41 @@ export function SubEventDialogForm({
         <Label htmlFor={withPrefix("subEventName")}>Name</Label>
         <Input
           id={withPrefix("subEventName")}
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          value={formState.name}
+          onChange={(e) => setFormState({ ...formState, name: e.target.value })}
           placeholder="Enter sub-event name"
         />
       </div>
 
-      <div className="space-y-2">
-        <Label htmlFor={withPrefix("subEventType")}>Type</Label>
-        <Select
-          value={form.type}
-          onValueChange={(value: SubEventFormType) =>
-            setForm({ ...form, type: value })
-          }
-        >
-          <SelectTrigger id={withPrefix("subEventType")}>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectGroup>
-              <SelectItem value="GroupFlight">Group Flight</SelectItem>
-              <SelectItem value="FlyIn">Fly-In</SelectItem>
-              <SelectItem value="FlyOut">Fly-Out</SelectItem>
-            </SelectGroup>
-          </SelectContent>
-        </Select>
-      </div>
+      {showTypeField && (
+        <div className="space-y-2">
+          <Label htmlFor={withPrefix("subEventType")}>Type</Label>
+          <Select
+            value={formState.type}
+            onValueChange={(value: SubEventFormType) =>
+              setFormState({ ...formState, type: value })
+            }
+          >
+            <SelectTrigger id={withPrefix("subEventType")}>
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="GroupFlight">Group Flight</SelectItem>
+                <SelectItem value="FlyIn">Fly-In</SelectItem>
+                <SelectItem value="FlyOut">Fly-Out</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor={withPrefix("subEventDescription")}>Description</Label>
         <Textarea
           id={withPrefix("subEventDescription")}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
+          value={formState.description}
+          onChange={(e) => setFormState({ ...formState, description: e.target.value })}
           placeholder="Enter sub-event description"
           rows={3}
         />
@@ -83,27 +107,27 @@ export function SubEventDialogForm({
       <div className="grid grid-cols-2 gap-4">
         <DateTimePicker
           label="Start Time"
-          value={form.startTime}
-          onChange={(date) => date && setForm({ ...form, startTime: date })}
-          placeholder={formatDateTimeInTimezone(form.startTime, userTimezone)}
-          timezone={userTimezone}
+          value={formState.startTime}
+          onChange={(date) => date && setFormState({ ...formState, startTime: date })}
+          placeholder={formatDateTimeInTimezone(formState.startTime, resolvedTimezone)}
+          timezone={resolvedTimezone}
         />
         <DateTimePicker
           label="End Time"
-          value={form.endTime}
-          onChange={(date) => date && setForm({ ...form, endTime: date })}
-          placeholder={formatDateTimeInTimezone(form.endTime, userTimezone)}
-          timezone={userTimezone}
+          value={formState.endTime}
+          onChange={(date) => date && setFormState({ ...formState, endTime: date })}
+          placeholder={formatDateTimeInTimezone(formState.endTime, resolvedTimezone)}
+          timezone={resolvedTimezone}
         />
       </div>
 
-      {form.type === "FlyIn" || form.type === "FlyOut" ? (
+      {formState.type === "FlyIn" || formState.type === "FlyOut" ? (
         <div className="space-y-2">
           <Label htmlFor={withPrefix("hubIcao")}>Hub ICAO</Label>
           <Input
             id={withPrefix("hubIcao")}
-            value={form.hubIcao}
-            onChange={(e) => setForm({ ...form, hubIcao: e.target.value })}
+            value={formState.hubIcao}
+            onChange={(e) => setFormState({ ...formState, hubIcao: e.target.value })}
             placeholder="KJFK"
           />
         </div>
@@ -111,22 +135,22 @@ export function SubEventDialogForm({
         <>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor={withPrefix("departureIcao")}>Departure ICAO</Label>
-              <Input
-                id={withPrefix("departureIcao")}
-                value={form.departureIcao}
-                onChange={(e) =>
-                  setForm({ ...form, departureIcao: e.target.value })
-                }
-                placeholder="KJFK"
-              />
+                <Label htmlFor={withPrefix("departureIcao")}>Departure ICAO</Label>
+                <Input
+                  id={withPrefix("departureIcao")}
+                  value={formState.departureIcao}
+                  onChange={(e) =>
+                  setFormState({ ...formState, departureIcao: e.target.value })
+                  }
+                  placeholder="KJFK"
+                />
             </div>
             <div className="space-y-2">
               <Label htmlFor={withPrefix("arrivalIcao")}>Arrival ICAO</Label>
               <Input
                 id={withPrefix("arrivalIcao")}
-                value={form.arrivalIcao}
-                onChange={(e) => setForm({ ...form, arrivalIcao: e.target.value })}
+                value={formState.arrivalIcao}
+                onChange={(e) => setFormState({ ...formState, arrivalIcao: e.target.value })}
                 placeholder="KLAX"
               />
             </div>
@@ -135,8 +159,8 @@ export function SubEventDialogForm({
             <Label htmlFor={withPrefix("route")}>Flight Route (Optional)</Label>
             <Input
               id={withPrefix("route")}
-              value={form.route}
-              onChange={(e) => setForm({ ...form, route: e.target.value })}
+              value={formState.route}
+              onChange={(e) => setFormState({ ...formState, route: e.target.value })}
               placeholder="KJFK DCT KBOS DCT KLAX"
             />
           </div>
@@ -147,8 +171,8 @@ export function SubEventDialogForm({
         <Label htmlFor={withPrefix("notes")}>Notes (Optional)</Label>
         <Textarea
           id={withPrefix("notes")}
-          value={form.notes}
-          onChange={(e) => setForm({ ...form, notes: e.target.value })}
+          value={formState.notes}
+          onChange={(e) => setFormState({ ...formState, notes: e.target.value })}
           placeholder="Any additional information"
           rows={2}
         />
@@ -157,8 +181,8 @@ export function SubEventDialogForm({
       <div className="space-y-2">
         <Label htmlFor={withPrefix("eventLead")}>Event Lead (Optional)</Label>
         <Select
-          value={form.eventLeadHex}
-          onValueChange={(value) => setForm({ ...form, eventLeadHex: value })}
+          value={formState.eventLeadHex}
+          onValueChange={(value) => setFormState({ ...formState, eventLeadHex: value })}
         >
           <SelectTrigger id={withPrefix("eventLead")}>
             <SelectValue placeholder="Select event lead" />

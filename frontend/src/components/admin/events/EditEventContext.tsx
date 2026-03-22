@@ -85,3 +85,7 @@ export function useEditEventContext() {
 
   return context;
 }
+
+export function useOptionalEditEventContext() {
+  return useContext(EditEventContext);
+}

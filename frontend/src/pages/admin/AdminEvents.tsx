@@ -1,8 +1,9 @@
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
+  useEvents,
   useSubEventsForGroup,
   useSubEventsForEvents,
   useFlightSignupsForGroup,
@@ -70,6 +71,12 @@ export default function AdminEvents() {
 
   // Use filtered hooks for better performance
   const subEvents = useSubEventsForGroup(groupIdBigInt);
+  const events = useEvents();
+  const eventsRef = useRef(events);
+
+  useEffect(() => {
+    eventsRef.current = events;
+  }, [events]);
   const flightSignups = useFlightSignupsForGroup(groupIdBigInt);
   // TODO: make this more efficient
   const groups = useGroups();
@@ -152,6 +159,12 @@ export default function AdminEvents() {
     }
 
     try {
+      const beforeEventIds = new Set(
+        eventsRef.current
+          .filter((e) => e.creatorGroupId === groupIdBigInt)
+          .map((e) => e.eventId.toString())
+      );
+
       // Transform sub-events data
       const subEventsData = eventData.subEvents.map((subEvent) => ({
         name: subEvent.name,
@@ -168,7 +181,7 @@ export default function AdminEvents() {
       }));
 
       // Create event with sub-events as Draft
-      connection.reducers.createEvent({
+      await connection.reducers.createEvent({
         creatorGroupId: BigInt(groupId ?? "0"),
         name: eventData.name,
         description: eventData.description,
@@ -183,6 +196,31 @@ export default function AdminEvents() {
 
       setShowCreateDialog(false);
       toast.success("Event created successfully!");
+
+      const maxAttempts = 40;
+      const pollDelayMs = 150;
+
+      for (let attempt = 0; attempt < maxAttempts; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, pollDelayMs));
+
+        const createdEvent = eventsRef.current
+          .filter((e) => e.creatorGroupId === groupIdBigInt)
+          .find((e) => !beforeEventIds.has(e.eventId.toString()));
+
+        if (createdEvent) {
+          navigate(`/admin/groups/${groupId}/events/${createdEvent.eventId}/edit`);
+          return;
+        }
+      }
+
+      const fallbackEvent = eventsRef.current
+        .filter((e) => e.creatorGroupId === groupIdBigInt)
+        .sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime())
+        .find((e) => !beforeEventIds.has(e.eventId.toString()));
+
+      if (fallbackEvent) {
+        navigate(`/admin/groups/${groupId}/events/${fallbackEvent.eventId}/edit`);
+      }
     } catch (error) {
       console.error("Error creating event:", error);
       toast.error("Failed to create event. Please try again.");
