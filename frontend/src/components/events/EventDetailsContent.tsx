@@ -46,6 +46,11 @@ export function EventDetailsContent({
   const eventParticipants = useEventParticipants();
   const userTimezone = useUserTimezone();
 
+  const hostGroup = useMemo(
+    () => groups.find((g) => g.groupId === event.creatorGroupId) || null,
+    [groups, event.creatorGroupId]
+  );
+
   const eventSubEvents = useMemo(
     () => subEvents.filter((subEvent) => subEvent.eventId === event.eventId),
     [subEvents, event.eventId]
@@ -113,7 +118,7 @@ export function EventDetailsContent({
 
   return (
     <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
-      <EventBanner event={event} />
+      <EventBanner event={event} hostGroup={hostGroup} />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_280px]">
         <div className="min-h-0 border-r flex flex-col">
