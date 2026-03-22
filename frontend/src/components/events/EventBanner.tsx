@@ -1,0 +1,32 @@
+import { Infer } from "spacetimedb";
+import { Event } from "@/module_bindings/types";
+
+type EventType = Infer<typeof Event>;
+
+interface EventBannerProps {
+  event: EventType;
+}
+
+export function EventBanner({ event }: EventBannerProps) {
+  return (
+    <div className="relative border-b">
+      <div className="h-28 sm:h-36 w-full bg-gradient-to-r from-slate-100 via-sky-50 to-emerald-50" />
+      {event.bannerUrl && (
+        <img
+          src={event.bannerUrl}
+          alt={event.name}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-black/15" />
+      <div className="absolute bottom-3 left-3 right-3 z-10 sm:bottom-4 sm:left-4 sm:right-4">
+        <h1 className="text-white text-xl sm:text-3xl font-bold leading-tight">
+          {event.name}
+        </h1>
+        <p className="text-white/90 text-sm line-clamp-2">
+          {event.description}
+        </p>
+      </div>
+    </div>
+  );
+}
