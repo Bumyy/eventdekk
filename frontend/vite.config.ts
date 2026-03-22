@@ -24,6 +24,17 @@ export default defineConfig(({ command, mode }) => {
     define: {
       __APP_ENV__: JSON.stringify(env.APP_ENV || mode),
     },
+    test: {
+      environment: "jsdom",
+      setupFiles: "./src/test/setup.ts",
+      css: true,
+      include: ["src/**/*.{test,spec}.{ts,tsx}"],
+      coverage: {
+        provider: "v8",
+        reporter: ["text", "html", "json-summary"],
+        reportsDirectory: "./coverage",
+      },
+    },
     // Log to confirm which env file is being used
     build: {
       outDir: "dist",
