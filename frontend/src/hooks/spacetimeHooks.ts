@@ -3,6 +3,144 @@ import { Timestamp } from "spacetimedb";
 import { tables } from "../module_bindings";
 import { useMemo } from "react";
 
+type DateLike = { toDate: () => Date };
+
+const toMillis = (value: DateLike) => value.toDate().getTime();
+
+export const selectSubEventsForGroup = <
+  TEvent extends { eventId: bigint },
+  TSubEvent extends { eventId: bigint; scheduledStartTime: DateLike },
+>(
+  events: readonly TEvent[] | undefined,
+  allSubEvents: readonly TSubEvent[] | undefined
+): TSubEvent[] => {
+  if (!events || !allSubEvents) return [];
+
+  const groupEventIds = new Set(events.map((e) => e.eventId));
+
+  return [...allSubEvents]
+    .filter((se) => groupEventIds.has(se.eventId))
+    .sort((a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime));
+};
+
+export const selectSubEventsForEvents = <
+  TSubEvent extends { eventId: bigint; scheduledStartTime: DateLike },
+>(
+  eventIds: readonly bigint[],
+  singleEventRows: readonly TSubEvent[] | undefined,
+  allSubEvents: readonly TSubEvent[] | undefined
+): TSubEvent[] => {
+  if (!eventIds || eventIds.length === 0) return [];
+
+  if (eventIds.length === 1 && singleEventRows) {
+    return [...singleEventRows].sort(
+      (a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime)
+    );
+  }
+
+  if (!allSubEvents) return [];
+
+  const eventIdSet = new Set(eventIds);
+  return [...allSubEvents]
+    .filter((se) => eventIdSet.has(se.eventId))
+    .sort((a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime));
+};
+
+export const selectAllActiveEvents = <
+  TEvent extends { status: { tag: string }; startTime: DateLike },
+>(
+  events: readonly TEvent[] | undefined
+): TEvent[] => {
+  if (!events) return [];
+  return [...events]
+    .filter((event) => event.status.tag !== "Cancelled")
+    .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
+};
+
+export const selectGroupRelatedEvents = <
+  THostedEvent extends { eventId: bigint },
+  TParticipant extends { eventId: bigint; status: { tag: string } },
+  TEvent extends { eventId: bigint; status: { tag: string }; startTime: DateLike },
+>(
+  groupId: bigint | null,
+  hostedEvents: readonly THostedEvent[] | undefined,
+  eventParticipants: readonly TParticipant[] | undefined,
+  allEvents: readonly TEvent[] | undefined
+): TEvent[] => {
+  if (!groupId || !allEvents || !eventParticipants || !hostedEvents) return [];
+
+  const hostedEventIds = new Set(hostedEvents.map((event) => event.eventId));
+  const acceptedEventIds = new Set(
+    eventParticipants
+      .filter((participant) => participant.status.tag === "Accepted")
+      .map((participant) => participant.eventId)
+  );
+
+  return [...allEvents]
+    .filter(
+      (event) =>
+        (hostedEventIds.has(event.eventId) || acceptedEventIds.has(event.eventId)) &&
+        event.status.tag !== "Cancelled"
+    )
+    .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
+};
+
+export const selectUpcomingAttendingEvents = <
+  TParticipant extends { eventId: bigint; status: { tag: string } },
+  TEvent extends { eventId: bigint; startTime: DateLike },
+>(
+  events: readonly TEvent[] | undefined,
+  eventParticipants: readonly TParticipant[] | undefined
+): TEvent[] => {
+  if (!events || !eventParticipants) return [];
+  const acceptedEventIds = new Set(
+    eventParticipants
+      .filter((ep) => ep.status.tag === "Accepted")
+      .map((ep) => ep.eventId)
+  );
+  return [...events]
+    .filter((event) => acceptedEventIds.has(event.eventId))
+    .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
+};
+
+export const selectPendingEventInvitations = <
+  TParticipant extends { eventId: bigint; status: { tag: string } },
+  TEvent extends { eventId: bigint; startTime: DateLike },
+>(
+  events: readonly TEvent[] | undefined,
+  eventParticipants: readonly TParticipant[] | undefined
+): TEvent[] => {
+  if (!eventParticipants || !events) return [];
+  const pendingEventIds = new Set(
+    eventParticipants
+      .filter((p) => p.status.tag === "Pending")
+      .map((p) => p.eventId)
+  );
+  return [...events]
+    .filter((e) => pendingEventIds.has(e.eventId))
+    .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
+};
+
+export const selectGroupMembersForGroup = <
+  TMembership extends { userIdentity: { toHexString: () => string } },
+  TUser extends { identity: { toHexString: () => string } },
+>(
+  memberships: readonly TMembership[] | undefined,
+  users: readonly TUser[] | undefined
+): Array<{ membership: TMembership; user: TUser | undefined }> => {
+  if (!memberships || !users) return [];
+
+  return [...memberships].map((m) => {
+    const user = users.find(
+      (u) => u.identity.toHexString() === m.userIdentity.toHexString()
+    );
+    return {
+      membership: m,
+      user,
+    };
+  });
+};
+
 export const useCurrentUser = () => {
   const { identity } = useSpacetimeDB();
 
@@ -84,19 +222,7 @@ export const useSubEventsForGroup = (groupId: bigint | null) => {
   const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
-    if (!events || !allSubEvents) return [];
-
-    // Create a Set of eventIds hosted by this group for O(1) lookup
-    const groupEventIds = new Set(events.map((e) => e.eventId));
-
-    // Filter sub_events to only include those from events hosted by this group
-    return [...allSubEvents]
-      .filter((se) => groupEventIds.has(se.eventId))
-      .sort(
-        (a, b) =>
-          a.scheduledStartTime.toDate().getTime() -
-          b.scheduledStartTime.toDate().getTime()
-      );
+    return selectSubEventsForGroup(events, allSubEvents);
   }, [events, allSubEvents]);
 };
 
@@ -129,30 +255,7 @@ export const useSubEventsForEvents = (eventIds: bigint[]) => {
   const [allSubEventsDummy] = useTable(tables.sub_event);
 
   return useMemo(() => {
-    if (isEmpty) return [];
-
-    // For single event, return directly from the filtered query
-    if (eventIds.length === 1 && rows) {
-      return [...rows].sort(
-        (a, b) =>
-          a.scheduledStartTime.toDate().getTime() -
-          b.scheduledStartTime.toDate().getTime()
-      );
-    }
-
-    // For multiple events, filter client-side with Set for O(1) lookup
-    if (allSubEvents) {
-      const eventIdSet = new Set(eventIds);
-      return [...allSubEvents]
-        .filter((se) => eventIdSet.has(se.eventId))
-        .sort(
-          (a, b) =>
-            a.scheduledStartTime.toDate().getTime() -
-            b.scheduledStartTime.toDate().getTime()
-        );
-    }
-
-    return [];
+    return selectSubEventsForEvents(eventIds, rows, allSubEvents);
   }, [eventIds, rows, allSubEvents, isEmpty]);
 };
 
@@ -205,12 +308,7 @@ export const useAllActiveEvents = () => {
   const [events] = useTable(tables.event);
 
   return useMemo(() => {
-    if (!events) return [];
-    return [...events]
-      .filter((event) => event.status.tag !== "Cancelled")
-      .sort(
-        (a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
-      );
+    return selectAllActiveEvents(events);
   }, [events]);
 };
 
@@ -243,27 +341,12 @@ export const useGroupRelatedEvents = (groupId: bigint | null) => {
   const [allEventParticipant] = useTable(tables.event_participant);
 
   return useMemo(() => {
-    if (!groupId || !allEvents || !eventParticipants || !hostedEvents)
-      return [];
-
-    const hostedEventIds = new Set(hostedEvents.map((event) => event.eventId));
-    const acceptedEventIds = new Set(
-      eventParticipants
-        .filter((participant) => participant.status.tag === "Accepted")
-        .map((participant) => participant.eventId)
+    return selectGroupRelatedEvents(
+      groupId,
+      hostedEvents,
+      eventParticipants,
+      allEvents
     );
-
-    return [...allEvents]
-      .filter(
-        (event) =>
-          (hostedEventIds.has(event.eventId) ||
-            acceptedEventIds.has(event.eventId)) &&
-          event.status.tag !== "Cancelled"
-      )
-      .sort(
-        (a, b) =>
-          a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
-      );
   }, [groupId, allEvents, eventParticipants, hostedEvents]);
 };
 
@@ -318,18 +401,7 @@ export const useUpcomingAttendingEvents = (groupId: bigint | null) => {
   const [events] = useTable(eventsQuery);
 
   return useMemo(() => {
-    if (!events || !eventParticipants) return [];
-    const acceptedEventIds = new Set(
-      eventParticipants
-        .filter((ep) => ep.status.tag === "Accepted")
-        .map((ep) => ep.eventId)
-    );
-    return events
-      .filter((event) => acceptedEventIds.has(event.eventId))
-      .sort(
-        (a, b) =>
-          a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
-      );
+    return selectUpcomingAttendingEvents(events, eventParticipants);
   }, [events, eventParticipants]);
 };
 
@@ -379,17 +451,7 @@ export const usePendingEventInvitations = (groupId: bigint | null) => {
   const [allEventParticipant] = useTable(tables.event_participant);
 
   return useMemo(() => {
-    if (!eventParticipants) return [];
-    const pendingEventIds = new Set(
-      eventParticipants
-        .filter((p) => p.status.tag === "Pending")
-        .map((p) => p.eventId)
-    );
-    if (!events) return [];
-    const pendingEvents = events.filter((e) => pendingEventIds.has(e.eventId));
-    return pendingEvents.sort(
-      (a, b) => a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
-    );
+    return selectPendingEventInvitations(events, eventParticipants);
   }, [events, eventParticipants]);
 };
 
@@ -405,17 +467,7 @@ export const useGroupMembersForGroup = (groupId: bigint | null) => {
   const [allMemberships] = useTable(tables.group_membership);
 
   return useMemo(() => {
-    if (!memberships || !users) return [];
-
-    return [...memberships].map((m) => {
-      const user = users.find(
-        (u) => u.identity.toHexString() === m.userIdentity.toHexString()
-      );
-      return {
-        membership: m,
-        user: user,
-      };
-    });
+    return selectGroupMembersForGroup(memberships, users);
   }, [memberships, users]);
 };
 

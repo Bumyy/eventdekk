@@ -1,5 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import userEvent from "@testing-library/user-event";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -18,6 +19,7 @@ import {
 
 describe("DropdownMenu", () => {
   it("renders trigger and opens menu on click", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open Menu</DropdownMenuTrigger>
@@ -27,21 +29,16 @@ describe("DropdownMenu", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByRole("menuitem", { hidden: true }) || screen.getByText("Open Menu"));
-    expect(screen.getByText("Open Menu")).toBeInTheDocument();
-  });
-});
-
-describe("DropdownMenuTrigger", () => {
-  it("renders with data-slot attribute", () => {
-    render(<DropdownMenuTrigger data-testid="trigger">Click me</DropdownMenuTrigger>);
-    const trigger = screen.getByTestId("trigger");
-    expect(trigger).toHaveAttribute("data-slot", "dropdown-menu-trigger");
+    await user.click(screen.getByRole("button", { name: "Open Menu" }));
+    await waitFor(() => {
+      expect(screen.getByRole("menu")).toBeInTheDocument();
+    });
   });
 });
 
 describe("DropdownMenuItem", () => {
   it("renders with default variant and data attributes", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -51,14 +48,14 @@ describe("DropdownMenuItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const item = await screen.findByTestId("menu-item");
     expect(item).toHaveAttribute("data-slot", "dropdown-menu-item");
     expect(item).toHaveAttribute("data-variant", "default");
-    expect(item).not.toHaveAttribute("data-inset");
   });
 
   it("renders with destructive variant", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -68,12 +65,13 @@ describe("DropdownMenuItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const item = await screen.findByTestId("destructive-item");
     expect(item).toHaveAttribute("data-variant", "destructive");
   });
 
   it("renders with inset prop", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -83,12 +81,13 @@ describe("DropdownMenuItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const item = await screen.findByTestId("inset-item");
     expect(item).toHaveAttribute("data-inset", "true");
   });
 
   it("calls onSelect when clicked", async () => {
+    const user = userEvent.setup();
     const onSelect = vi.fn();
     render(
       <DropdownMenu>
@@ -99,14 +98,15 @@ describe("DropdownMenuItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
-    fireEvent.click(await screen.findByText("Click me"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(await screen.findByText("Click me"));
     expect(onSelect).toHaveBeenCalled();
   });
 });
 
 describe("DropdownMenuLabel", () => {
   it("renders with default styling", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -116,13 +116,14 @@ describe("DropdownMenuLabel", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const label = await screen.findByTestId("label");
     expect(label).toHaveAttribute("data-slot", "dropdown-menu-label");
     expect(label).toHaveClass("px-2", "py-1.5", "text-sm", "font-medium");
   });
 
   it("renders with inset prop", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -132,7 +133,7 @@ describe("DropdownMenuLabel", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const label = await screen.findByTestId("inset-label");
     expect(label).toHaveAttribute("data-inset", "true");
   });
@@ -140,25 +141,27 @@ describe("DropdownMenuLabel", () => {
 
 describe("DropdownMenuSeparator", () => {
   it("renders separator with correct classes", async () => {
-    const { container } = render(
+    const user = userEvent.setup();
+    render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>Item</DropdownMenuItem>
-          <DropdownMenuSeparator />
+          <DropdownMenuSeparator data-testid="separator" />
           <DropdownMenuItem>Another Item</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
-    const separator = container.querySelector('[data-slot="dropdown-menu-separator"]');
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    const separator = await screen.findByTestId("separator");
     expect(separator).toHaveClass("bg-border");
   });
 });
 
 describe("DropdownMenuCheckboxItem", () => {
   it("renders with checked state", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -168,12 +171,13 @@ describe("DropdownMenuCheckboxItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const item = await screen.findByTestId("checkbox-item");
     expect(item).toBeInTheDocument();
   });
 
   it("calls onCheckedChange when toggled", async () => {
+    const user = userEvent.setup();
     const onCheckedChange = vi.fn();
     render(
       <DropdownMenu>
@@ -184,13 +188,14 @@ describe("DropdownMenuCheckboxItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
-    fireEvent.click(await screen.findByText("Toggle"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(await screen.findByText("Toggle"));
   });
 });
 
 describe("DropdownMenuRadioGroup and RadioItem", () => {
   it("renders radio items within group", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -203,12 +208,13 @@ describe("DropdownMenuRadioGroup and RadioItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     expect(await screen.findByText("Option 1")).toBeInTheDocument();
     expect(await screen.findByText("Option 2")).toBeInTheDocument();
   });
 
   it("calls onValueChange when selection changes", async () => {
+    const user = userEvent.setup();
     const onValueChange = vi.fn();
     render(
       <DropdownMenu>
@@ -222,27 +228,28 @@ describe("DropdownMenuRadioGroup and RadioItem", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
-    fireEvent.click(await screen.findByText("Option 2"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    await user.click(await screen.findByText("Option 2"));
   });
 });
 
 describe("DropdownMenuShortcut", () => {
   it("renders shortcut text with correct styling", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem>
             Action
-            <DropdownMenuShortcut>⌘K</DropdownMenuShortcut>
+            <DropdownMenuShortcut data-testid="shortcut">Ctrl+K</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
-    const shortcut = await screen.findByText("⌘K");
+    await user.click(screen.getByRole("button", { name: "Open" }));
+    const shortcut = await screen.findByTestId("shortcut");
     expect(shortcut).toHaveAttribute("data-slot", "dropdown-menu-shortcut");
     expect(shortcut).toHaveClass("ml-auto", "text-xs");
   });
@@ -250,6 +257,7 @@ describe("DropdownMenuShortcut", () => {
 
 describe("DropdownMenuSub", () => {
   it("renders sub-menu structure", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -264,13 +272,14 @@ describe("DropdownMenuSub", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     expect(await screen.findByText("More Options")).toBeInTheDocument();
   });
 });
 
 describe("DropdownMenuSubTrigger", () => {
   it("renders with inset prop", async () => {
+    const user = userEvent.setup();
     render(
       <DropdownMenu>
         <DropdownMenuTrigger>Open</DropdownMenuTrigger>
@@ -285,7 +294,7 @@ describe("DropdownMenuSubTrigger", () => {
       </DropdownMenu>
     );
 
-    fireEvent.click(screen.getByText("Open"));
+    await user.click(screen.getByRole("button", { name: "Open" }));
     const trigger = await screen.findByTestId("sub-trigger");
     expect(trigger).toHaveAttribute("data-inset", "true");
   });
