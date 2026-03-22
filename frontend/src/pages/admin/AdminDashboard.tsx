@@ -57,6 +57,7 @@ export default function AdminDashboard() {
         name: event.name,
         start: event.startTime.toDate(),
         end: event.endTime.toDate(),
+        canEdit: event.creatorGroupId === groupIdBigInt,
         category: event.isInternal
           ? "internal"
           : event.creatorGroupId === groupIdBigInt
@@ -192,6 +193,10 @@ export default function AdminDashboard() {
       <AdminWeeklyCalendar
         events={weeklyCalendarEvents}
         allEventsForInsights={allEventsForInsights}
+        onEventClick={(event) => {
+          if (!groupId || !event.canEdit) return;
+          navigate(`/admin/groups/${groupId}/events/${event.id}/edit`);
+        }}
         onScheduleSuggestion={(start, end) => {
           if (!groupId) return;
           const params = new URLSearchParams({

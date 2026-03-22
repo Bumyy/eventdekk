@@ -92,16 +92,6 @@ export default function AdminEntry() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {canManageGroup(group.role) && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => navigate(`/admin/planner/${group.groupId}`)}
-                  >
-                    <CalendarSearch className="h-4 w-4 mr-1" />
-                    Planner
-                  </Button>
-                )}
                 <Button
                   onClick={() => navigate(`/admin/dashboard/${group.groupId}`)}
                   disabled={!canManageGroup(group.role)}
