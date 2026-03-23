@@ -1,12 +1,20 @@
+import { ArrowRight } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Group, FlightSignup } from "@/module_bindings/types";
+import { Group, FlightSignup, SubEventType } from "@/module_bindings/types";
 
 interface ParticipantListProps {
   signups: FlightSignup[];
   groups: Group[];
+  subEventType?: SubEventType;
+  hubIcao?: string | null;
 }
 
-export function ParticipantList({ signups, groups }: ParticipantListProps) {
+export function ParticipantList({
+  signups,
+  groups,
+  subEventType,
+  hubIcao,
+}: ParticipantListProps) {
   if (signups.length === 0) {
     return (
       <p className="mt-2 text-sm text-muted-foreground">
@@ -42,6 +50,20 @@ export function ParticipantList({ signups, groups }: ParticipantListProps) {
                   {[signup.callsign, signup.aircraftType]
                     .filter(Boolean)
                     .join(" - ")}
+                </p>
+              )}
+              {subEventType?.tag === "FlyIn" && (
+                <p className="truncate text-base sm:text-lg font-semibold tracking-tight">
+                  <span className="font-mono">{signup.departureIcao || "???"}</span>{" "}
+                  <ArrowRight className="mx-1 inline h-4 w-4 align-[-1px] text-muted-foreground" />
+                  <span className="font-mono">{hubIcao || signup.arrivalIcao || "???"}</span>
+                </p>
+              )}
+              {subEventType?.tag === "FlyOut" && (
+                <p className="truncate text-base sm:text-lg font-semibold tracking-tight">
+                  <span className="font-mono">{hubIcao || signup.departureIcao || "???"}</span>{" "}
+                  <ArrowRight className="mx-1 inline h-4 w-4 align-[-1px] text-muted-foreground" />
+                  <span className="font-mono">{signup.arrivalIcao || "???"}</span>
                 </p>
               )}
             </div>

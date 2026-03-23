@@ -8,7 +8,6 @@ import {
 } from "@/module_bindings/types";
 import { Badge } from "@/components/ui/badge";
 import { formatInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
-import { RouteDisplay } from "./RouteDisplay";
 import { ParticipantList } from "./ParticipantList";
 
 type SubEventTypeType = Infer<typeof SubEvent>;
@@ -61,12 +60,7 @@ function getRouteElement(subEvent: SubEventTypeType) {
   }
 
   if (subEvent.hubIcao) {
-    return (
-      <span>
-        {subEvent.subEventType.tag === "FlyIn" ? "To" : "From"}:{" "}
-        {subEvent.hubIcao}
-      </span>
-    );
+    return <span className="tracking-wide">{subEvent.hubIcao}</span>;
   }
 
   return null;
@@ -113,7 +107,9 @@ export function SubEventDetails({
             {formatTimeInTimezone(subEvent.scheduledEndTime, userTimezone)}
           </p>
           {routeElement && (
-            <p className="mt-2 text-sm font-medium">{routeElement}</p>
+            <p className="mt-2 text-base sm:text-lg font-semibold tracking-tight">
+              {routeElement}
+            </p>
           )}
         </div>
 
@@ -125,7 +121,12 @@ export function SubEventDetails({
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
             Who joined this sub-event
           </p>
-          <ParticipantList signups={signups} groups={groups} />
+          <ParticipantList
+            signups={signups}
+            groups={groups}
+            subEventType={subEvent.subEventType}
+            hubIcao={subEvent.hubIcao}
+          />
         </div>
       </div>
     </article>

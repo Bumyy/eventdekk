@@ -55,9 +55,8 @@ function getRouteElement(subEvent: SubEventTypeType) {
 
   if (subEvent.hubIcao) {
     return (
-      <span>
-        {subEvent.subEventType.tag === "FlyIn" ? "To" : "From"}{" "}
-        {subEvent.hubIcao}
+      <span className="inline-flex items-center gap-2">
+        <span className="tracking-wide">{subEvent.hubIcao}</span>
       </span>
     );
   }
