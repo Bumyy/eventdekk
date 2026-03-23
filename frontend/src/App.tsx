@@ -2,7 +2,8 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
-import { Toaster, toast } from "sonner";
+import { toast } from "sonner";
+import { Toaster } from "@/components/ui/sonner";
 
 // --- SpacetimeDB Imports ---
 import { SpacetimeDBProvider } from "spacetimedb/react";
