@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect, useRef } from "react";
+import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -38,46 +38,91 @@ import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
 import GroupPlanner from "@/pages/admin/GroupPlanner";
 
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
-  // <-- Extracted logout here
   const { sdbToken, isLoading, logout } = useAuth();
 
-  const [connectionKey, setConnectionKey] = useState(0);
+  const [reconnectNonce, setReconnectNonce] = useState(0);
   const [isConnecting, setIsConnecting] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
+  const [hasConnected, setHasConnected] = useState(false);
+
   const isConnectedRef = useRef(false);
+  const timerRef = useRef<number | null>(null);
+  const activeNonceRef = useRef(reconnectNonce);
+  activeNonceRef.current = reconnectNonce;
 
-  useEffect(() => {
-    const triggerReconnect = () => {
+  const clearTimer = () => {
+    if (timerRef.current !== null) {
+      clearTimeout(timerRef.current);
+      timerRef.current = null;
+    }
+  };
+
+  const triggerReconnect = useCallback((delay = 3000, force = false) => {
+    if (isConnectedRef.current) return;
+
+    if (timerRef.current !== null && !force) {
+      return;
+    }
+
+    if (force) {
+      clearTimer();
+    }
+
+    setIsConnecting(true);
+
+    timerRef.current = window.setTimeout(() => {
+      timerRef.current = null;
       if (!isConnectedRef.current) {
-        console.log("Network restored. Remounting SpacetimeDB...");
-        setIsConnecting(true);
-        setConnectionKey((prev) => prev + 1);
+        console.log("Attempting to reconnect...");
+        setReconnectNonce((prev) => prev + 1);
       }
-    };
-
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        triggerReconnect();
-      }
-    };
-
-    window.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("online", triggerReconnect);
-
-    return () => {
-      window.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("online", triggerReconnect);
-    };
+    }, delay);
   }, []);
 
+  useEffect(() => {
+    const handleResume = () => {
+      if (!isConnectedRef.current) {
+        console.log("App resumed/online, scheduling fast reconnect");
+        triggerReconnect(100, true);
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        handleResume();
+      }
+    };
+
+    window.addEventListener("online", handleResume);
+    window.addEventListener("focus", handleResume);
+    window.addEventListener("pageshow", handleResume);
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      window.removeEventListener("online", handleResume);
+      window.removeEventListener("focus", handleResume);
+      window.removeEventListener("pageshow", handleResume);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      clearTimer();
+    };
+  }, [triggerReconnect]);
+
   const connectionBuilder = useMemo(() => {
-    void connectionKey;
+    const instanceNonce = reconnectNonce;
+    const url = new URL(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000");
+    url.searchParams.set("reconnect", String(instanceNonce));
 
     return DbConnection.builder()
-      .withUri(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000")
+      .withUri(url)
       .withDatabaseName("eventdekk")
       .withToken(sdbToken || undefined)
       .onConnect((conn: DbConnection, identity: Identity, token: string) => {
+        if (activeNonceRef.current !== instanceNonce) return;
+
+        clearTimer();
         isConnectedRef.current = true;
+        setIsConnected(true);
+        setHasConnected(true);
         setIsConnecting(false);
         console.log("Connected to STDB with identity:", identity.toHexString());
 
@@ -86,21 +131,20 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
         }
       })
       .onDisconnect(() => {
-        isConnectedRef.current = false;
-        console.warn("Disconnected from SpacetimeDB");
+        if (activeNonceRef.current !== instanceNonce) return;
 
-        setTimeout(() => {
-          if (!isConnectedRef.current) {
-            setIsConnecting(true);
-            setConnectionKey((prev) => prev + 1);
-          }
-        }, 3000);
+        isConnectedRef.current = false;
+        setIsConnected(false);
+        console.warn("Disconnected from SpacetimeDB");
+        triggerReconnect(3000);
       })
       .onConnectError((_ctx: ErrorContext, err: Error) => {
+        if (activeNonceRef.current !== instanceNonce) return;
+
         isConnectedRef.current = false;
+        setIsConnected(false);
         console.error("Error connecting to SpacetimeDB:", err);
 
-        // <-- NEW: Check for Auth / Token Errors
         const errorMessage = err.message || err.toString();
         if (
           errorMessage.includes("Failed to verify token") ||
@@ -109,32 +153,26 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
         ) {
           console.warn("Invalid or expired token detected. Forcing logout...");
           toast.error("Your session has expired. Please log in again.");
-
-          logout(true); // Call silent logout (avoids duplicate toast messages)
-
-          return; // IMPORTANT: Return here to stop the auto-retry loop entirely
+          logout(true);
+          return;
         }
 
-        // Auto-retry mechanism (Only runs if it's a standard network drop, not a bad token)
-        setTimeout(() => {
-          if (!isConnectedRef.current) {
-            setIsConnecting(true);
-            setConnectionKey((prev) => prev + 1);
-          }
-        }, 5000);
+        triggerReconnect(3000);
       });
-  }, [sdbToken, connectionKey, logout]); // <-- Added logout to dependencies
+  }, [sdbToken, reconnectNonce, logout, triggerReconnect]);
 
   if (isLoading) {
     return <AuthLoading />;
   }
 
+  const showBanner = isConnecting && hasConnected && !isConnected;
+
   return (
     <SpacetimeDBProvider
-      key={connectionKey}
+      key={reconnectNonce}
       connectionBuilder={connectionBuilder}
     >
-      {isConnecting && connectionKey > 0 && (
+      {showBanner && (
         <div className="fixed top-0 left-0 w-full bg-yellow-500 text-black text-center py-1 z-50 text-sm font-semibold">
           Reconnecting to server...
         </div>
@@ -182,24 +220,24 @@ function App() {
                       </ProtectedRoute>
                     }
                   >
-<Route index element={<AdminEntry />} />
-                  <Route path="site" element={<SiteAdmin />} />
-                  <Route path="site/group/create" element={<CreateGroup />} />
-                  <Route
-                    path="dashboard/:groupId"
-                    element={<AdminDashboard />}
-                  />
-                  <Route path="planner/:groupId" element={<GroupPlanner />} />
-                  <Route path="events/:groupId" element={<AdminEvents />} />
-                  <Route path="members/:groupId" element={<AdminMembers />} />
-                  <Route
-                    path="settings/:groupId"
-                    element={<AdminGroupSettings />}
-                  />
-                  <Route
-                    path="groups/:groupId/events/:eventId/edit"
-                    element={<EditEvent />}
-                  />
+                    <Route index element={<AdminEntry />} />
+                    <Route path="site" element={<SiteAdmin />} />
+                    <Route path="site/group/create" element={<CreateGroup />} />
+                    <Route
+                      path="dashboard/:groupId"
+                      element={<AdminDashboard />}
+                    />
+                    <Route path="planner/:groupId" element={<GroupPlanner />} />
+                    <Route path="events/:groupId" element={<AdminEvents />} />
+                    <Route path="members/:groupId" element={<AdminMembers />} />
+                    <Route
+                      path="settings/:groupId"
+                      element={<AdminGroupSettings />}
+                    />
+                    <Route
+                      path="groups/:groupId/events/:eventId/edit"
+                      element={<EditEvent />}
+                    />
                   </Route>
 
                   <Route
