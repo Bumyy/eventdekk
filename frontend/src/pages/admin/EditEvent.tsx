@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { Loader2, Send } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { SenderError, Timestamp } from "spacetimedb";
 import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
@@ -828,12 +828,13 @@ export default function EditEvent() {
       }}
     >
       <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Edit Event</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
           <Button
             variant="outline"
             onClick={() => navigate(`/admin/events/${groupId}`)}
+            className="w-full sm:w-auto"
           >
             Cancel
           </Button>
@@ -842,33 +843,28 @@ export default function EditEvent() {
               variant="default"
               onClick={() => handleUpdateEvent(true)}
               disabled={isLoading || isUploading}
+              className="w-full sm:w-auto"
             >
               {isLoading || isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Publishing...
+                  Publish
                 </>
-              ) : (
-                <>
-                  <Send className="mr-2 h-4 w-4" />
-                  Publish Event
-                </>
-              )}
+              ) : "Publish"}
             </Button>
           )}
           <Button
             onClick={() => handleUpdateEvent(false)}
             disabled={isLoading || isUploading}
+            className="w-full sm:w-auto"
           >
             {isLoading || isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {isUploading ? "Uploading..." : "Saving..."}
+                Save
               </>
-            ) : eventStatus?.tag === "Draft" ? (
-              "Save as Draft"
             ) : (
-              "Save Changes"
+              "Save"
             )}
           </Button>
         </div>
