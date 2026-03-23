@@ -33,6 +33,37 @@ export function SubEventDialogForm({
   showTypeField = true,
   idPrefix = "",
 }: SubEventDialogFormProps) {
+  if (form && setForm && userTimezone && members) {
+    return (
+      <SubEventDialogFormFields
+        formState={form}
+        setFormState={setForm}
+        resolvedTimezone={userTimezone}
+        memberOptions={members}
+        showTypeField={showTypeField}
+        idPrefix={idPrefix}
+      />
+    );
+  }
+
+  return (
+    <SubEventDialogFormFromContext
+      mode={mode}
+      showTypeField={showTypeField}
+      idPrefix={idPrefix}
+    />
+  );
+}
+
+function SubEventDialogFormFromContext({
+  mode,
+  showTypeField,
+  idPrefix,
+}: {
+  mode: "add" | "edit";
+  showTypeField: boolean;
+  idPrefix: string;
+}) {
   const context = useOptionalEditEventContext();
 
   const contextTimezone = context?.userTimezone;
@@ -40,22 +71,39 @@ export function SubEventDialogForm({
   const contextForm = mode === "add" ? context?.subEventForm : context?.editSubEventForm;
   const contextSetForm = mode === "add" ? context?.setSubEventForm : context?.setEditSubEventForm;
 
-  const resolvedForm = contextForm ?? form;
-  const resolvedSetForm = contextSetForm ?? setForm;
-  const resolvedTimezone = contextTimezone ?? userTimezone;
-  const resolvedMembers = contextMembers ?? members;
-
-  if (!resolvedForm || !resolvedSetForm || !resolvedTimezone || !resolvedMembers) {
+  if (!contextForm || !contextSetForm || !contextTimezone || !contextMembers) {
     throw new Error(
       "SubEventDialogForm requires context or explicit form, setForm, userTimezone, and members props"
     );
   }
 
-  const {
-    memberOptions,
-  } = { memberOptions: resolvedMembers };
-  const formState = resolvedForm;
-  const setFormState = resolvedSetForm;
+  return (
+    <SubEventDialogFormFields
+      formState={contextForm}
+      setFormState={contextSetForm}
+      resolvedTimezone={contextTimezone}
+      memberOptions={contextMembers}
+      showTypeField={showTypeField}
+      idPrefix={idPrefix}
+    />
+  );
+}
+
+function SubEventDialogFormFields({
+  formState,
+  setFormState,
+  resolvedTimezone,
+  memberOptions,
+  showTypeField,
+  idPrefix,
+}: {
+  formState: SubEventFormState;
+  setFormState: (form: SubEventFormState) => void;
+  resolvedTimezone: string;
+  memberOptions: MemberOption[];
+  showTypeField: boolean;
+  idPrefix: string;
+}) {
   const withPrefix = (id: string) => `${idPrefix}${id}`;
 
   return (
@@ -104,7 +152,7 @@ export function SubEventDialogForm({
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <DateTimePicker
           label="Start Time"
           value={formState.startTime}
@@ -133,7 +181,7 @@ export function SubEventDialogForm({
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
                 <Label htmlFor={withPrefix("departureIcao")}>Departure ICAO</Label>
                 <Input

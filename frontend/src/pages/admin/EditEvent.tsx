@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   useEvents,
@@ -160,24 +160,33 @@ export default function EditEvent() {
   }, [events, eventId, navigate]);
 
   // Get sub events for this event
-  const eventSubEvents = subEvents.filter(
-    (se) => se.eventId.toString() === eventId
+  const eventSubEvents = useMemo(
+    () => subEvents.filter((se) => se.eventId.toString() === eventId),
+    [subEvents, eventId]
   );
 
   // Get signups related to this event's sub-events
-  const eventSignups = flightSignups.filter((signup) =>
-    eventSubEvents.some((subEvent) => subEvent.subEventId === signup.subEventId)
+  const eventSignups = useMemo(
+    () =>
+      flightSignups.filter((signup) =>
+        eventSubEvents.some((subEvent) => subEvent.subEventId === signup.subEventId)
+      ),
+    [flightSignups, eventSubEvents]
   );
 
   // Group signups by sub-event
-  const signupsBySubEvent = eventSubEvents.reduce(
-    (acc, subEvent) => {
-      acc[subEvent.subEventId.toString()] = eventSignups.filter(
-        (signup) => signup.subEventId === subEvent.subEventId
-      );
-      return acc;
-    },
-    {} as Record<string, typeof flightSignups>
+  const signupsBySubEvent = useMemo(
+    () =>
+      eventSubEvents.reduce(
+        (acc, subEvent) => {
+          acc[subEvent.subEventId.toString()] = eventSignups.filter(
+            (signup) => signup.subEventId === subEvent.subEventId
+          );
+          return acc;
+        },
+        {} as Record<string, typeof flightSignups>
+      ),
+    [eventSubEvents, eventSignups, flightSignups]
   );
 
   // Load existing own flight signups
@@ -501,11 +510,13 @@ export default function EditEvent() {
     }
   };
 
-  const handleAddSubEvent = async () => {
+  const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !eventId) return;
 
+    const formData = formOverride ?? subEventForm;
+
     let subEventType: SubEventType;
-    switch (subEventForm.type) {
+    switch (formData.type) {
       case "GroupFlight":
         subEventType = { tag: "GroupFlight" };
         break;
@@ -519,31 +530,31 @@ export default function EditEvent() {
 
     try {
       const leadMember = members.find(
-        (m) => m.user?.identity.toHexString() === subEventForm.eventLeadHex
+        (m) => m.user?.identity.toHexString() === formData.eventLeadHex
       );
 
       await connection.reducers.addSubEvent({
         eventId: BigInt(eventId),
-        name: subEventForm.name,
-        description: subEventForm.description,
+        name: formData.name,
+        description: formData.description,
         subEventType: subEventType,
-        scheduledStartTime: Timestamp.fromDate(subEventForm.startTime),
-        scheduledEndTime: Timestamp.fromDate(subEventForm.endTime),
+        scheduledStartTime: Timestamp.fromDate(formData.startTime),
+        scheduledEndTime: Timestamp.fromDate(formData.endTime),
         hubIcao:
-          subEventForm.type === "FlyIn" || subEventForm.type === "FlyOut"
-            ? subEventForm.hubIcao
+          formData.type === "FlyIn" || formData.type === "FlyOut"
+            ? formData.hubIcao
             : undefined,
         groupFlightDepartureIcao:
-          subEventForm.type === "GroupFlight"
-            ? subEventForm.departureIcao
+          formData.type === "GroupFlight"
+            ? formData.departureIcao
             : undefined,
         groupFlightArrivalIcao:
-          subEventForm.type === "GroupFlight"
-            ? subEventForm.arrivalIcao
+          formData.type === "GroupFlight"
+            ? formData.arrivalIcao
             : undefined,
         groupFlightRoute:
-          subEventForm.type === "GroupFlight" ? subEventForm.route : undefined,
-        notes: subEventForm.notes || undefined,
+          formData.type === "GroupFlight" ? formData.route : undefined,
+        notes: formData.notes || undefined,
         eventLead: leadMember?.user?.identity || undefined,
       });
 
@@ -567,7 +578,7 @@ export default function EditEvent() {
     }
   };
 
-  const handleDeleteSubEvent = async (subEventId: bigint) => {
+  const handleDeleteSubEvent = useCallback(async (subEventId: bigint) => {
     if (!connection) return;
     if (confirm("Are you sure you want to delete this sub-event?")) {
       try {
@@ -588,9 +599,9 @@ export default function EditEvent() {
         console.error("Error deleting sub-event:", error);
       }
     }
-  };
+  }, [connection]);
 
-  const handleEditSubEventClick = (subEvent: {
+  const handleEditSubEventClick = useCallback((subEvent: {
     subEventType: SubEventType;
     name: string;
     description?: string | null;
@@ -622,13 +633,15 @@ export default function EditEvent() {
     });
     setEditingSubEventId(subEvent.subEventId);
     setShowEditSubEventDialog(true);
-  };
+  }, []);
 
-  const handleUpdateSubEvent = async () => {
+  const handleUpdateSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !editingSubEventId) return;
 
+    const formData = formOverride ?? editSubEventForm;
+
     let subEventType: SubEventType;
-    switch (editSubEventForm.type) {
+    switch (formData.type) {
       case "GroupFlight":
         subEventType = { tag: "GroupFlight" };
         break;
@@ -641,35 +654,35 @@ export default function EditEvent() {
     }
 
     const leadMember = members.find(
-      (m) => m.user?.identity.toHexString() === editSubEventForm.eventLeadHex
+      (m) => m.user?.identity.toHexString() === formData.eventLeadHex
     );
 
     try {
       await connection.reducers.updateSubEvent({
         subEventId: editingSubEventId,
-        name: editSubEventForm.name,
-        description: editSubEventForm.description || undefined,
+        name: formData.name,
+        description: formData.description || undefined,
         subEventType: subEventType,
-        scheduledStartTime: Timestamp.fromDate(editSubEventForm.startTime),
-        scheduledEndTime: Timestamp.fromDate(editSubEventForm.endTime),
+        scheduledStartTime: Timestamp.fromDate(formData.startTime),
+        scheduledEndTime: Timestamp.fromDate(formData.endTime),
         hubIcao:
-          editSubEventForm.type === "FlyIn" ||
-          editSubEventForm.type === "FlyOut"
-            ? editSubEventForm.hubIcao
+          formData.type === "FlyIn" ||
+          formData.type === "FlyOut"
+            ? formData.hubIcao
             : undefined,
         groupFlightDepartureIcao:
-          editSubEventForm.type === "GroupFlight"
-            ? editSubEventForm.departureIcao
+          formData.type === "GroupFlight"
+            ? formData.departureIcao
             : undefined,
         groupFlightArrivalIcao:
-          editSubEventForm.type === "GroupFlight"
-            ? editSubEventForm.arrivalIcao
+          formData.type === "GroupFlight"
+            ? formData.arrivalIcao
             : undefined,
         groupFlightRoute:
-          editSubEventForm.type === "GroupFlight"
-            ? editSubEventForm.route
+          formData.type === "GroupFlight"
+            ? formData.route
             : undefined,
-        notes: editSubEventForm.notes || undefined,
+        notes: formData.notes || undefined,
         eventLead: leadMember?.user?.identity || undefined,
       });
 
@@ -732,17 +745,21 @@ export default function EditEvent() {
     }
   };
 
-  const memberOptions = members.flatMap((m) => {
-    if (!m.user) return [];
+  const memberOptions = useMemo(
+    () =>
+      members.flatMap((m) => {
+        if (!m.user) return [];
 
-    return [
-      {
-        identityHex: m.user.identity.toHexString(),
-        displayName: m.user.displayName || "Unknown User",
-        callsignPrefix: m.user.ifcCallsignPrefix || undefined,
-      },
-    ];
-  });
+        return [
+          {
+            identityHex: m.user.identity.toHexString(),
+            displayName: m.user.displayName || "Unknown User",
+            callsignPrefix: m.user.ifcCallsignPrefix || undefined,
+          },
+        ];
+      }),
+    [members]
+  );
 
   const clearBanner = () => {
     setSelectedFile(null);

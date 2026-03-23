@@ -40,8 +40,8 @@ interface EditEventContextValue {
   setSubEventForm: (form: SubEventFormState) => void;
   editSubEventForm: SubEventFormState;
   setEditSubEventForm: (form: SubEventFormState) => void;
-  handleAddSubEvent: () => void | Promise<void>;
-  handleUpdateSubEvent: () => void | Promise<void>;
+  handleAddSubEvent: (formOverride?: SubEventFormState) => void | Promise<void>;
+  handleUpdateSubEvent: (formOverride?: SubEventFormState) => void | Promise<void>;
   handleEditSubEventClick: (subEvent: SubEvent) => void;
   handleDeleteSubEvent: (subEventId: bigint) => void | Promise<void>;
 
