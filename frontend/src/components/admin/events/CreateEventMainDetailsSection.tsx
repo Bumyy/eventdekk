@@ -1,5 +1,4 @@
 import { Checkbox } from "@/components/ui/checkbox";
-import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -10,14 +9,10 @@ export function CreateEventMainDetailsSection() {
   const {
     name,
     description,
-    startDateTime,
-    endDateTime,
     ifcEventLink,
     isInternal,
     setName,
     setDescription,
-    setStartDateTime,
-    setEndDateTime,
     setIfcEventLink,
     setIsInternal,
     previewUrl,
@@ -32,8 +27,6 @@ export function CreateEventMainDetailsSection() {
 
   return (
     <div className="space-y-4">
-      <h3 className="text-lg font-semibold">Main Event Details</h3>
-
       <div className="space-y-2">
         <Label htmlFor="name">Event Name</Label>
         <Input
@@ -53,22 +46,6 @@ export function CreateEventMainDetailsSection() {
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Enter event description"
           required
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DateTimePicker
-          label="Start Time"
-          value={startDateTime}
-          onChange={setStartDateTime}
-          placeholder="Select start date and time"
-        />
-
-        <DateTimePicker
-          label="End Time"
-          value={endDateTime}
-          onChange={setEndDateTime}
-          placeholder="Select end date and time"
         />
       </div>
 

@@ -50,8 +50,13 @@ const Home = () => {
     const upcoming = events
       .filter((event) => {
         const eventDate = toUserTimezoneDate(event.startTime);
+        const eventEndDate = toUserTimezoneDate(event.endTime);
         const yesterday = addDays(now, -1);
-        return isAfter(eventDate, yesterday) && isBefore(eventDate, nextWeek);
+        return (
+          isAfter(eventDate, yesterday) &&
+          isBefore(eventDate, nextWeek) &&
+          isAfter(eventEndDate, now)
+        );
       })
       .sort(
         (a, b) =>

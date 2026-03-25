@@ -48,6 +48,7 @@ export function CreateEventDialog({
   const [bannerUrl, setBannerUrl] = useState("");
   const [subEvents, setSubEvents] = useState<SubEventFormData[]>([]);
   const [expandedSubEvents, setExpandedSubEvents] = useState<number[]>([]);
+  const [isAdvancedSubEventsMode, setIsAdvancedSubEventsMode] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   const members = useGroupMembersForGroup(groupId);
@@ -75,8 +76,37 @@ export function CreateEventDialog({
 
   useEffect(() => {
     if (!open) return;
-    if (prefillStartTime) setStartDateTime(prefillStartTime);
-    if (prefillEndTime) setEndDateTime(prefillEndTime);
+    if (prefillStartTime) setStartDateTime(new Date(prefillStartTime));
+    if (prefillEndTime) setEndDateTime(new Date(prefillEndTime));
+  }, [open, prefillStartTime, prefillEndTime]);
+
+  const createDefaultSubEvent = (
+    defaultStartDateTime?: Date,
+    defaultEndDateTime?: Date
+  ): SubEventFormData => {
+    const scheduledStartTime = defaultStartDateTime
+      ? new Date(defaultStartDateTime)
+      : new Date();
+    const scheduledEndTime = defaultEndDateTime
+      ? new Date(defaultEndDateTime)
+      : new Date(scheduledStartTime.getTime() + 2 * 60 * 60 * 1000);
+
+    return {
+      subEventType: { tag: "GroupFlight" } as SubEventType,
+      name: "",
+      description: "",
+      scheduledStartTime,
+      scheduledEndTime,
+      eventLeadHex: "none",
+    };
+  };
+
+  useEffect(() => {
+    if (!open) return;
+    setSubEvents((prev) => {
+      if (prev.length > 0) return prev;
+      return [createDefaultSubEvent(prefillStartTime, prefillEndTime)];
+    });
   }, [open, prefillStartTime, prefillEndTime]);
 
   const clearBanner = () => {
@@ -104,28 +134,44 @@ export function CreateEventDialog({
   };
 
   const handleAddSubEvent = () => {
+    setIsAdvancedSubEventsMode(true);
     const newIndex = subEvents.length;
-    const defaultStartTime = startDateTime ? new Date(startDateTime) : new Date();
-    const defaultEndTime = new Date(defaultStartTime);
-    defaultEndTime.setHours(defaultEndTime.getHours() + 2);
 
-    setSubEvents([
-      ...subEvents,
-      {
-        subEventType: { tag: "GroupFlight" } as SubEventType,
-        name: "",
-        description: "",
-        scheduledStartTime: defaultStartTime,
-        scheduledEndTime: defaultEndTime,
-        eventLeadHex: "none",
-      },
-    ]);
-    setExpandedSubEvents((prev) => [...prev, newIndex]);
+    const subEventsWithFirstUpdated =
+      subEvents.length === 1 && !subEvents[0].name
+        ? [
+            {
+              ...subEvents[0],
+              name,
+              description,
+            },
+            ...subEvents.slice(1),
+          ]
+        : subEvents;
+
+    setSubEvents([...subEventsWithFirstUpdated, createDefaultSubEvent(startDateTime, endDateTime)]);
+    setExpandedSubEvents((prev) => {
+      const expandedIndices = [...prev, newIndex];
+      if (subEvents.length === 1 && !subEvents[0].name) {
+        expandedIndices.push(0);
+      }
+      return expandedIndices;
+    });
   };
 
   const handleRemoveSubEvent = (index: number) => {
+    if (subEvents.length <= 1) {
+      toast.error("At least one sub-event is required.");
+      return;
+    }
+
     setSubEvents(subEvents.filter((_, i) => i !== index));
     setExpandedSubEvents((prev) => prev.filter((i) => i !== index));
+
+    if (subEvents.length - 1 <= 1) {
+      setIsAdvancedSubEventsMode(false);
+      setExpandedSubEvents([]);
+    }
   };
 
   const handleUpdateSubEvent = (index: number, data: Partial<SubEventFormData>) => {
@@ -219,10 +265,25 @@ export function CreateEventDialog({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!startDateTime || !endDateTime) {
-      toast.error("Please fill out all required fields");
+    if (subEvents.length === 0) {
+      toast.error("Please add at least one sub-event.");
       return;
     }
+
+    const hasInvalidSubEventTimes = subEvents.some(
+      (subEvent) => !subEvent.scheduledStartTime || !subEvent.scheduledEndTime
+    );
+    if (hasInvalidSubEventTimes) {
+      toast.error("Please fill out all required sub-event times.");
+      return;
+    }
+
+    const eventStartTime = new Date(
+      Math.min(...subEvents.map((subEvent) => subEvent.scheduledStartTime.getTime()))
+    );
+    const eventEndTime = new Date(
+      Math.max(...subEvents.map((subEvent) => subEvent.scheduledEndTime.getTime()))
+    );
 
     if (isCreating) return;
     setIsCreating(true);
@@ -247,17 +308,20 @@ export function CreateEventDialog({
       await onSubmit({
         name,
         description,
-        startTime: startDateTime,
-        endTime: endDateTime,
+        startTime: eventStartTime,
+        endTime: eventEndTime,
         isInternal,
         ifcEventLink: ifcEventLink || undefined,
         bannerUrl: finalBannerUrl || undefined,
-        subEvents: subEvents.map((event) => {
+        subEvents: subEvents.map((event, index) => {
           const leadMember = members.find(
             (m) => m.user?.identity.toHexString() === event.eventLeadHex
           );
+          const shouldMirrorMainDetails = !isAdvancedSubEventsMode && index === 0;
           return {
             ...event,
+            name: shouldMirrorMainDetails ? name : event.name,
+            description: shouldMirrorMainDetails ? description : event.description,
             scheduledStartTime: event.scheduledStartTime,
             scheduledEndTime: event.scheduledEndTime,
             eventLead: leadMember?.user?.identity,
@@ -267,13 +331,14 @@ export function CreateEventDialog({
 
       setName("");
       setDescription("");
-      setStartDateTime(undefined);
-      setEndDateTime(undefined);
+      setStartDateTime(prefillStartTime ? new Date(prefillStartTime) : undefined);
+      setEndDateTime(prefillEndTime ? new Date(prefillEndTime) : undefined);
       setIsInternal(false);
       setIfcEventLink("");
       setBannerUrl("");
-      setSubEvents([]);
+      setSubEvents([createDefaultSubEvent(prefillStartTime, prefillEndTime)]);
       setExpandedSubEvents([]);
+      setIsAdvancedSubEventsMode(false);
       setSelectedFile(null);
       setPreviewUrl(null);
 
@@ -296,7 +361,7 @@ export function CreateEventDialog({
           <DialogHeader>
             <DialogTitle>Create New Event</DialogTitle>
             <DialogDescription>
-              Create a main event and add sub-events of different types.
+              Create your event with one default wave, then add more waves if needed.
             </DialogDescription>
           </DialogHeader>
 
@@ -315,6 +380,7 @@ export function CreateEventDialog({
               isCreating,
               subEvents,
               expandedSubEvents,
+              isAdvancedSubEventsMode,
               userTimezone,
               memberOptions,
               setName,

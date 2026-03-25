@@ -1,10 +1,14 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CreateEventSubEventCard } from "./CreateEventSubEventCard";
 import { CreateEventProvider, CreateEventContextValue } from "./CreateEventContext";
+import { CreateEventSubEventsSection } from "./CreateEventSubEventsSection";
+
+vi.mock("./CreateEventSubEventCard", () => ({
+  CreateEventSubEventCard: ({ index }: { index: number }) => <div>Sub Event Card {index}</div>,
+}));
 
 vi.mock("./SubEventDialogForm", () => ({
-  SubEventDialogForm: () => <div>SubEventDialogForm</div>,
+  SubEventDialogForm: () => <div>Default Wave Form</div>,
 }));
 
 const makeValue = (
@@ -24,12 +28,10 @@ const makeValue = (
   subEvents: [
     {
       subEventType: { tag: "GroupFlight" },
-      name: "Alpha Flight",
-      description: "Alpha desc",
+      name: "Default Wave",
+      description: "",
       scheduledStartTime: new Date("2026-01-01T10:00:00Z"),
       scheduledEndTime: new Date("2026-01-01T12:00:00Z"),
-      groupFlightDepartureIcao: "KJFK",
-      groupFlightArrivalIcao: "KLAX",
       eventLeadHex: "none",
     },
   ],
@@ -50,19 +52,7 @@ const makeValue = (
   handleRemoveSubEvent: vi.fn(),
   handleSetSubEventType: vi.fn(),
   toggleSubEventExpansion: vi.fn(),
-  toDialogSubEventFormState: vi.fn(() => ({
-    name: "Alpha Flight",
-    description: "Alpha desc",
-    type: "GroupFlight",
-    startTime: new Date("2026-01-01T10:00:00Z"),
-    endTime: new Date("2026-01-01T12:00:00Z"),
-    hubIcao: "",
-    departureIcao: "KJFK",
-    arrivalIcao: "KLAX",
-    route: "",
-    notes: "",
-    eventLeadHex: "none",
-  })),
+  toDialogSubEventFormState: vi.fn(),
   fromDialogSubEventFormState: vi.fn(),
   updateSubEventFromDialog: vi.fn(),
   handleSubmit: vi.fn(async () => {}),
@@ -70,65 +60,51 @@ const makeValue = (
   ...overrides,
 });
 
-describe("CreateEventSubEventCard", () => {
-  it("renders collapsed preview and route info", () => {
+describe("CreateEventSubEventsSection", () => {
+  it("shows single-wave form in simple mode", () => {
     const value = makeValue();
     render(
       <CreateEventProvider value={value}>
-        <CreateEventSubEventCard index={0} />
+        <CreateEventSubEventsSection />
       </CreateEventProvider>
     );
 
-    expect(screen.getByText("Alpha Flight")).toBeInTheDocument();
-    expect(screen.getByText("KJFK -> KLAX")).toBeInTheDocument();
+    expect(screen.getByText("Default Wave Form")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add Another Wave" }));
+    expect(value.handleAddSubEvent).toHaveBeenCalled();
   });
 
-  it("calls toggle and remove handlers", () => {
+  it("renders sub-event cards in advanced mode", () => {
     const value = makeValue({
+      isAdvancedSubEventsMode: true,
       subEvents: [
         {
           subEventType: { tag: "GroupFlight" },
-          name: "Alpha Flight",
-          description: "Alpha desc",
+          name: "Wave 1",
+          description: "",
           scheduledStartTime: new Date("2026-01-01T10:00:00Z"),
           scheduledEndTime: new Date("2026-01-01T12:00:00Z"),
-          groupFlightDepartureIcao: "KJFK",
-          groupFlightArrivalIcao: "KLAX",
           eventLeadHex: "none",
         },
         {
           subEventType: { tag: "FlyIn" },
-          name: "Bravo Arrival",
-          description: "Bravo desc",
+          name: "Wave 2",
+          description: "",
           scheduledStartTime: new Date("2026-01-01T13:00:00Z"),
           scheduledEndTime: new Date("2026-01-01T15:00:00Z"),
-          hubIcao: "EGLL",
           eventLeadHex: "none",
         },
       ],
     });
-    const { container } = render(
-      <CreateEventProvider value={value}>
-        <CreateEventSubEventCard index={0} />
-      </CreateEventProvider>
-    );
 
-    const iconButtons = container.querySelectorAll("button[data-size='icon']");
-    fireEvent.click(iconButtons[0]);
-    fireEvent.click(iconButtons[1]);
-
-    expect(value.toggleSubEventExpansion).toHaveBeenCalledWith(0);
-    expect(value.handleRemoveSubEvent).toHaveBeenCalledWith(0);
-  });
-
-  it("renders form when expanded", () => {
-    const value = makeValue({ expandedSubEvents: [0] });
     render(
       <CreateEventProvider value={value}>
-        <CreateEventSubEventCard index={0} />
+        <CreateEventSubEventsSection />
       </CreateEventProvider>
     );
 
-    expect(screen.getByText("SubEventDialogForm")).toBeInTheDocument();
+    expect(screen.getByText("Waves")).toBeInTheDocument();
+    expect(screen.getByText("Sub Event Card 0")).toBeInTheDocument();
+    expect(screen.getByText("Sub Event Card 1")).toBeInTheDocument();
   });
 });

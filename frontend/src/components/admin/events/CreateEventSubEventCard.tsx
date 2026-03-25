@@ -14,6 +14,7 @@ interface CreateEventSubEventCardProps {
 export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps) {
   const {
     subEvents,
+    isAdvancedSubEventsMode,
     expandedSubEvents,
     toggleSubEventExpansion,
     handleRemoveSubEvent,
@@ -26,6 +27,7 @@ export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps)
 
   const subEvent = subEvents[index];
   const isExpanded = expandedSubEvents.includes(index);
+  const canRemove = subEvents.length > 1;
 
   if (!subEvent) return null;
 
@@ -113,6 +115,7 @@ export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps)
             variant="ghost"
             size="icon"
             onClick={() => handleRemoveSubEvent(index)}
+            disabled={!canRemove}
           >
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -122,7 +125,9 @@ export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps)
       {!isExpanded && (
         <div className="mt-4 p-4 bg-muted/50 rounded-lg">
           <div className="flex items-center gap-2">
-            <h4 className="font-medium">{subEvent.name || "Untitled Event"}</h4>
+            <h4 className="font-medium">
+              {subEvent.name || `Wave ${index + 1}`}
+            </h4>
             <span className="text-muted-foreground">•</span>
 
             {subEvent.subEventType.tag === "GroupFlight" &&

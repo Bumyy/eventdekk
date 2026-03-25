@@ -21,6 +21,7 @@ const makeValue = (): CreateEventContextValue => ({
   isCreating: false,
   subEvents: [],
   expandedSubEvents: [],
+  isAdvancedSubEventsMode: false,
   userTimezone: "UTC",
   memberOptions: [],
   setName: vi.fn(),

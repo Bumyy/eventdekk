@@ -16,6 +16,7 @@ export interface CreateEventContextValue {
   isCreating: boolean;
   subEvents: SubEventFormData[];
   expandedSubEvents: number[];
+  isAdvancedSubEventsMode: boolean;
   userTimezone: string;
   memberOptions: MemberOption[];
 
