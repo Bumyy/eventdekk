@@ -1,7 +1,4 @@
-import {
-  formatInTimezone,
-  formatTimeInTimezone,
-} from "@/utils/timezoneUtils";
+import { formatInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
 
 interface EventDateTimeInfoProps {
   startTime: Date;
@@ -9,6 +6,7 @@ interface EventDateTimeInfoProps {
   timezone: string;
   groupCount: number;
   signupCount: number;
+  groupColor?: string;
 }
 
 export function EventDateTimeInfo({
@@ -17,12 +15,16 @@ export function EventDateTimeInfo({
   timezone,
   groupCount,
   signupCount,
+  groupColor,
 }: EventDateTimeInfoProps) {
   const groupLabel = groupCount === 1 ? "group" : "groups";
   const signupLabel = signupCount === 1 ? "signup" : "signups";
 
   return (
-    <div className="rounded-2xl border bg-muted/30 px-4 py-3 sm:px-5">
+    <div
+      className="border-l-4 px-3"
+      style={groupColor ? { borderLeftColor: groupColor } : undefined}
+    >
       <div className="space-y-1">
         <p className="text-lg sm:text-2xl font-semibold leading-tight">
           {formatInTimezone(startTime, timezone, {

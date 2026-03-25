@@ -116,6 +116,53 @@ export function EventDetailsContent({
     return () => clearTimeout(timeout);
   }, [highlightedSubEventId]);
 
+  const hasMultipleSubEvents = eventSubEvents.length > 1;
+
+  if (!hasMultipleSubEvents && eventSubEvents.length === 1) {
+    const subEvent = eventSubEvents[0];
+    const subEventSignups = signupsBySubEvent.get(subEvent.subEventId) || [];
+
+    return (
+      <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
+        <EventBanner event={event} hostGroup={hostGroup} />
+
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_280px]">
+          <div className="min-h-0 border-r flex flex-col">
+            <ScrollArea className="flex-1 p-3 sm:p-4">
+              <EventDateTimeInfo
+                startTime={event.startTime.toDate()}
+                endTime={event.endTime.toDate()}
+                timezone={userTimezone}
+                groupCount={uniqueParticipantGroups}
+                signupCount={totalSignups}
+                groupColor={hostGroup?.color || undefined}
+              />
+
+              <div className="mt-2.5 sm:mt-3">
+                <SubEventDetails
+                  subEvent={subEvent}
+                  signups={subEventSignups}
+                  groups={groups}
+                  userTimezone={userTimezone}
+                />
+              </div>
+            </ScrollArea>
+          </div>
+
+          <EventSidebar
+            eventId={event.eventId}
+            subEventCount={1}
+            totalSignups={totalSignups}
+            participantGroups={uniqueParticipantGroups}
+            ifcEventLink={event.ifcEventLink}
+            canRegister={canRegister}
+            onRegister={onRegister}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
       <EventBanner event={event} hostGroup={hostGroup} />
@@ -129,8 +176,8 @@ export function EventDetailsContent({
           >
             <TabsList className="mx-3 mt-3 grid w-auto grid-cols-2 sm:mx-4">
               <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="subevents">
-                Sub-events ({eventSubEvents.length})
+              <TabsTrigger value="waves">
+                Waves ({eventSubEvents.length})
               </TabsTrigger>
             </TabsList>
 
@@ -145,6 +192,7 @@ export function EventDetailsContent({
                   timezone={userTimezone}
                   groupCount={uniqueParticipantGroups}
                   signupCount={totalSignups}
+                  groupColor={hostGroup?.color || undefined}
                 />
 
                 <div className="space-y-2.5 sm:space-y-3">
@@ -168,10 +216,10 @@ export function EventDetailsContent({
                 </div>
               </TabsContent>
 
-              <TabsContent value="subevents" className="mt-2 space-y-3 pb-4">
+              <TabsContent value="waves" className="mt-2 space-y-3 pb-4">
                 <div className="rounded-2xl border bg-muted/20 px-4 py-3">
                   <p className="text-sm font-medium">
-                    {eventSubEvents.length} sub-event
+                    {eventSubEvents.length} wave
                     {eventSubEvents.length === 1 ? "" : "s"}
                   </p>
                   <p className="text-sm text-muted-foreground">

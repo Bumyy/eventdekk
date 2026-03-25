@@ -96,6 +96,7 @@ export default function EditEvent() {
     {}
   );
   const [isSubmittingFlights, setIsSubmittingFlights] = useState(false);
+  const [isAdvancedSubEventsMode, setIsAdvancedSubEventsMode] = useState(false);
 
   // Effect to create/revoke preview URL
   useEffect(() => {
@@ -137,7 +138,7 @@ export default function EditEvent() {
     }
   };
 
-  // Load event data
+// Load event data
   useEffect(() => {
     if (!events || !eventId || events.length === 0) return;
     const event = events.find((e: Event) => e.eventId.toString() === eventId);
@@ -164,6 +165,13 @@ export default function EditEvent() {
     () => subEvents.filter((se) => se.eventId.toString() === eventId),
     [subEvents, eventId]
   );
+
+  // Set isAdvancedSubEventsMode based on sub-events count
+  useEffect(() => {
+    if (eventSubEvents.length > 1) {
+      setIsAdvancedSubEventsMode(true);
+    }
+  }, [eventSubEvents.length]);
 
   // Get signups related to this event's sub-events
   const eventSignups = useMemo(
@@ -471,6 +479,21 @@ export default function EditEvent() {
       }
     }
 
+    // Calculate event times from sub-events
+    let eventStartTime = startTime;
+    let eventEndTime = endTime;
+    
+    if (eventSubEvents.length > 0) {
+      const minStartTime = new Date(
+        Math.min(...eventSubEvents.map(se => se.scheduledStartTime.toDate().getTime()))
+      );
+      const maxEndTime = new Date(
+        Math.max(...eventSubEvents.map(se => se.scheduledEndTime.toDate().getTime()))
+      );
+      eventStartTime = minStartTime;
+      eventEndTime = maxEndTime;
+    }
+
     // If publishing, set to Published. Otherwise, keep the current status
     const newStatus = publish ? EventStatus.Published : eventStatus;
 
@@ -479,8 +502,8 @@ export default function EditEvent() {
         eventId: BigInt(eventId),
         name: name,
         description: description,
-        startTime: startTime ? Timestamp.fromDate(startTime) : null,
-        endTime: endTime ? Timestamp.fromDate(endTime) : null,
+        startTime: eventStartTime ? Timestamp.fromDate(eventStartTime) : null,
+        endTime: eventEndTime ? Timestamp.fromDate(eventEndTime) : null,
         ifcEventLink: ifcEventLink || null,
         bannerUrl: finalBannerUrl || null,
         status: newStatus,
@@ -510,7 +533,7 @@ export default function EditEvent() {
     }
   };
 
-  const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
+const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !eventId) return;
 
     const formData = formOverride ?? subEventForm;
@@ -527,6 +550,8 @@ export default function EditEvent() {
         subEventType = { tag: "FlyOut" };
         break;
     }
+
+    setIsAdvancedSubEventsMode(true);
 
     try {
       const leadMember = members.find(
@@ -578,11 +603,14 @@ export default function EditEvent() {
     }
   };
 
-  const handleDeleteSubEvent = useCallback(async (subEventId: bigint) => {
+const handleDeleteSubEvent = useCallback(async (subEventId: bigint) => {
     if (!connection) return;
     if (confirm("Are you sure you want to delete this sub-event?")) {
       try {
         await connection.reducers.deleteSubEvent({ subEventId: subEventId });
+        if (eventSubEvents.length - 1 <= 1) {
+          setIsAdvancedSubEventsMode(false);
+        }
         toast.success("Sub-event deleted", {
           description: "The sub-event was deleted successfully.",
         });
@@ -599,9 +627,9 @@ export default function EditEvent() {
         console.error("Error deleting sub-event:", error);
       }
     }
-  }, [connection]);
+  }, [connection, eventSubEvents.length]);
 
-  const handleEditSubEventClick = useCallback((subEvent: {
+const handleEditSubEventClick = useCallback((subEvent: {
     subEventType: SubEventType;
     name: string;
     description?: string | null;
@@ -634,6 +662,99 @@ export default function EditEvent() {
     setEditingSubEventId(subEvent.subEventId);
     setShowEditSubEventDialog(true);
   }, []);
+
+  const toSubEventFormState = useCallback((subEvent: {
+    subEventType: SubEventType;
+    name: string;
+    description?: string | null;
+    scheduledStartTime: { toDate: () => Date };
+    scheduledEndTime: { toDate: () => Date };
+    hubIcao?: string | null;
+    groupFlightDepartureIcao?: string | null;
+    groupFlightArrivalIcao?: string | null;
+    groupFlightRoute?: string | null;
+    notes?: string | null;
+    eventLead?: { toHexString: () => string } | null;
+    subEventId: bigint;
+  }): SubEventFormState => {
+    const typeStr = subEvent.subEventType.tag;
+    return {
+      name: subEvent.name,
+      description: subEvent.description || "",
+      type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
+      startTime: subEvent.scheduledStartTime.toDate(),
+      endTime: subEvent.scheduledEndTime.toDate(),
+      hubIcao: subEvent.hubIcao || "",
+      departureIcao: subEvent.groupFlightDepartureIcao || "",
+      arrivalIcao: subEvent.groupFlightArrivalIcao || "",
+      route: subEvent.groupFlightRoute || "",
+      notes: subEvent.notes || "",
+      eventLeadHex: subEvent.eventLead
+        ? subEvent.eventLead.toHexString()
+        : "none",
+    };
+  }, []);
+
+  const updateFirstSubEventFromForm = useCallback(async (formState: SubEventFormState) => {
+    if (!connection || !eventId || eventSubEvents.length === 0) return;
+    
+    const firstSubEvent = eventSubEvents[0];
+    
+    let subEventType: SubEventType;
+    switch (formState.type) {
+      case "GroupFlight":
+        subEventType = { tag: "GroupFlight" };
+        break;
+      case "FlyIn":
+        subEventType = { tag: "FlyIn" };
+        break;
+      case "FlyOut":
+        subEventType = { tag: "FlyOut" };
+        break;
+    }
+
+    const leadMember = members.find(
+      (m) => m.user?.identity.toHexString() === formState.eventLeadHex
+    );
+
+    try {
+      await connection.reducers.updateSubEvent({
+        subEventId: firstSubEvent.subEventId,
+        name: name,
+        description: description,
+        subEventType: subEventType,
+        scheduledStartTime: Timestamp.fromDate(formState.startTime),
+        scheduledEndTime: Timestamp.fromDate(formState.endTime),
+        hubIcao:
+          formState.type === "FlyIn" ||
+          formState.type === "FlyOut"
+            ? formState.hubIcao
+            : undefined,
+        groupFlightDepartureIcao:
+          formState.type === "GroupFlight"
+            ? formState.departureIcao
+            : undefined,
+        groupFlightArrivalIcao:
+          formState.type === "GroupFlight"
+            ? formState.arrivalIcao
+            : undefined,
+        groupFlightRoute:
+          formState.type === "GroupFlight"
+            ? formState.route
+            : undefined,
+        notes: formState.notes || undefined,
+        eventLead: leadMember?.user?.identity || undefined,
+      });
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error updating wave", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error updating wave");
+      }
+    }
+  }, [connection, eventId, eventSubEvents, members, name, description]);
 
   const handleUpdateSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !editingSubEventId) return;
@@ -770,7 +891,7 @@ export default function EditEvent() {
     return <div>Loading...</div>;
   }
 
-  return (
+return (
     <EditEventProvider
       value={{
         userTimezone,
@@ -785,6 +906,7 @@ export default function EditEvent() {
         selectedFile,
         isUploading,
         isLoading,
+        isAdvancedSubEventsMode,
         setName,
         setDescription,
         setStartTime,
@@ -794,6 +916,7 @@ export default function EditEvent() {
         handleFileChange,
         setBannerUrl,
         clearBanner,
+        setIsAdvancedSubEventsMode,
         eventSubEvents,
         signupsBySubEvent,
         groups,
@@ -810,6 +933,8 @@ export default function EditEvent() {
         handleUpdateSubEvent,
         handleEditSubEventClick,
         handleDeleteSubEvent,
+        toSubEventFormState,
+        updateFirstSubEventFromForm,
         showInviteGroupsDialog,
         setShowInviteGroupsDialog,
         selectedGroups,

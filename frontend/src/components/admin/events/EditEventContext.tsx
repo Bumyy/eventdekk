@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { Group, FlightSignup, SubEvent } from "@/module_bindings/types";
+import { Group, FlightSignup, SubEvent, SubEventType } from "@/module_bindings/types";
 import { MemberOption, SelectedGroup, SubEventFormState } from "./types";
 
 interface EditEventContextValue {
@@ -16,6 +16,7 @@ interface EditEventContextValue {
   selectedFile: File | null;
   isUploading: boolean;
   isLoading: boolean;
+  isAdvancedSubEventsMode: boolean;
 
   setName: (value: string) => void;
   setDescription: (value: string) => void;
@@ -26,6 +27,7 @@ interface EditEventContextValue {
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setBannerUrl: (value: string) => void;
   clearBanner: () => void;
+  setIsAdvancedSubEventsMode: (value: boolean) => void;
 
   eventSubEvents: SubEvent[];
   signupsBySubEvent: Record<string, FlightSignup[]>;
@@ -44,6 +46,8 @@ interface EditEventContextValue {
   handleUpdateSubEvent: (formOverride?: SubEventFormState) => void | Promise<void>;
   handleEditSubEventClick: (subEvent: SubEvent) => void;
   handleDeleteSubEvent: (subEventId: bigint) => void | Promise<void>;
+  toSubEventFormState: (subEvent: SubEvent) => SubEventFormState;
+  updateFirstSubEventFromForm: (formState: SubEventFormState) => void | Promise<void>;
 
   showInviteGroupsDialog: boolean;
   setShowInviteGroupsDialog: (open: boolean) => void;

@@ -21,6 +21,8 @@ interface SubEventDialogFormProps {
   userTimezone?: string;
   members?: MemberOption[];
   showTypeField?: boolean;
+  showIdentityFields?: boolean;
+  showScheduleFields?: boolean;
   idPrefix?: string;
 }
 
@@ -31,6 +33,8 @@ export function SubEventDialogForm({
   userTimezone,
   members,
   showTypeField = true,
+  showIdentityFields = true,
+  showScheduleFields = true,
   idPrefix = "",
 }: SubEventDialogFormProps) {
   if (form && setForm && userTimezone && members) {
@@ -41,6 +45,8 @@ export function SubEventDialogForm({
         resolvedTimezone={userTimezone}
         memberOptions={members}
         showTypeField={showTypeField}
+        showIdentityFields={showIdentityFields}
+        showScheduleFields={showScheduleFields}
         idPrefix={idPrefix}
       />
     );
@@ -50,6 +56,8 @@ export function SubEventDialogForm({
     <SubEventDialogFormFromContext
       mode={mode}
       showTypeField={showTypeField}
+      showIdentityFields={showIdentityFields}
+      showScheduleFields={showScheduleFields}
       idPrefix={idPrefix}
     />
   );
@@ -58,10 +66,14 @@ export function SubEventDialogForm({
 function SubEventDialogFormFromContext({
   mode,
   showTypeField,
+  showIdentityFields,
+  showScheduleFields,
   idPrefix,
 }: {
   mode: "add" | "edit";
   showTypeField: boolean;
+  showIdentityFields: boolean;
+  showScheduleFields: boolean;
   idPrefix: string;
 }) {
   const context = useOptionalEditEventContext();
@@ -84,6 +96,8 @@ function SubEventDialogFormFromContext({
       resolvedTimezone={contextTimezone}
       memberOptions={contextMembers}
       showTypeField={showTypeField}
+      showIdentityFields={showIdentityFields}
+      showScheduleFields={showScheduleFields}
       idPrefix={idPrefix}
     />
   );
@@ -95,6 +109,8 @@ function SubEventDialogFormFields({
   resolvedTimezone,
   memberOptions,
   showTypeField,
+  showIdentityFields,
+  showScheduleFields,
   idPrefix,
 }: {
   formState: SubEventFormState;
@@ -102,21 +118,25 @@ function SubEventDialogFormFields({
   resolvedTimezone: string;
   memberOptions: MemberOption[];
   showTypeField: boolean;
+  showIdentityFields: boolean;
+  showScheduleFields: boolean;
   idPrefix: string;
 }) {
   const withPrefix = (id: string) => `${idPrefix}${id}`;
 
   return (
     <div className="space-y-4 p-1">
-      <div className="space-y-2">
-        <Label htmlFor={withPrefix("subEventName")}>Name</Label>
-        <Input
-          id={withPrefix("subEventName")}
-          value={formState.name}
-          onChange={(e) => setFormState({ ...formState, name: e.target.value })}
-          placeholder="Enter sub-event name"
-        />
-      </div>
+      {showIdentityFields && (
+        <div className="space-y-2">
+          <Label htmlFor={withPrefix("subEventName")}>Name</Label>
+          <Input
+            id={withPrefix("subEventName")}
+            value={formState.name}
+            onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+            placeholder="Enter sub-event name"
+          />
+        </div>
+      )}
 
       {showTypeField && (
         <div className="space-y-2">
@@ -141,33 +161,37 @@ function SubEventDialogFormFields({
         </div>
       )}
 
-      <div className="space-y-2">
-        <Label htmlFor={withPrefix("subEventDescription")}>Description</Label>
-        <Textarea
-          id={withPrefix("subEventDescription")}
-          value={formState.description}
-          onChange={(e) => setFormState({ ...formState, description: e.target.value })}
-          placeholder="Enter sub-event description"
-          rows={3}
-        />
-      </div>
+      {showIdentityFields && (
+        <div className="space-y-2">
+          <Label htmlFor={withPrefix("subEventDescription")}>Description</Label>
+          <Textarea
+            id={withPrefix("subEventDescription")}
+            value={formState.description}
+            onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+            placeholder="Enter sub-event description"
+            rows={3}
+          />
+        </div>
+      )}
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <DateTimePicker
-          label="Start Time"
-          value={formState.startTime}
-          onChange={(date) => date && setFormState({ ...formState, startTime: date })}
-          placeholder={formatDateTimeInTimezone(formState.startTime, resolvedTimezone)}
-          timezone={resolvedTimezone}
-        />
-        <DateTimePicker
-          label="End Time"
-          value={formState.endTime}
-          onChange={(date) => date && setFormState({ ...formState, endTime: date })}
-          placeholder={formatDateTimeInTimezone(formState.endTime, resolvedTimezone)}
-          timezone={resolvedTimezone}
-        />
-      </div>
+      {showScheduleFields && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <DateTimePicker
+            label="Start Time"
+            value={formState.startTime}
+            onChange={(date) => date && setFormState({ ...formState, startTime: date })}
+            placeholder={formatDateTimeInTimezone(formState.startTime, resolvedTimezone)}
+            timezone={resolvedTimezone}
+          />
+          <DateTimePicker
+            label="End Time"
+            value={formState.endTime}
+            onChange={(date) => date && setFormState({ ...formState, endTime: date })}
+            placeholder={formatDateTimeInTimezone(formState.endTime, resolvedTimezone)}
+            timezone={resolvedTimezone}
+          />
+        </div>
+      )}
 
       {formState.type === "FlyIn" || formState.type === "FlyOut" ? (
         <div className="space-y-2">

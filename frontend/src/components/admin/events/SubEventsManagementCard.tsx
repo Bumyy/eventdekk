@@ -37,6 +37,8 @@ export function SubEventsManagementCard() {
     groups,
     memberOptions,
     userTimezone,
+    isAdvancedSubEventsMode,
+    setIsAdvancedSubEventsMode,
     showAddSubEventDialog,
     setShowAddSubEventDialog,
     showEditSubEventDialog,
@@ -47,10 +49,15 @@ export function SubEventsManagementCard() {
     handleDeleteSubEvent,
     subEventForm,
     editSubEventForm,
+    toSubEventFormState,
+    updateFirstSubEventFromForm,
+    name,
+    description,
   } = useEditEventContext();
 
   const [addFormDraft, setAddFormDraft] = useState<SubEventFormState>(subEventForm);
   const [editFormDraft, setEditFormDraft] = useState<SubEventFormState>(editSubEventForm);
+  const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(null);
 
   useEffect(() => {
     if (showAddSubEventDialog) {
@@ -64,6 +71,22 @@ export function SubEventsManagementCard() {
     }
   }, [showEditSubEventDialog, editSubEventForm]);
 
+  useEffect(() => {
+    if (eventSubEvents.length > 0 && !isAdvancedSubEventsMode) {
+      const firstSubEvent = eventSubEvents[0];
+      setFirstWaveForm(toSubEventFormState(firstSubEvent as any));
+    }
+  }, [eventSubEvents, isAdvancedSubEventsMode, toSubEventFormState]);
+
+  const handleFirstWaveFormChange = (form: SubEventFormState) => {
+    setFirstWaveForm(form);
+  };
+
+  const handleAddNewWave = () => {
+    setIsAdvancedSubEventsMode(true);
+    setShowAddSubEventDialog(true);
+  };
+
   const subEventCards = useMemo(() => {
     if (eventSubEvents.length === 0) {
       return <p className="text-muted-foreground">No sub-events. Add one to get started!</p>;
@@ -71,7 +94,7 @@ export function SubEventsManagementCard() {
 
     return (
       <div className="grid grid-cols-1 gap-6">
-        {eventSubEvents.map((subEvent) => {
+        {eventSubEvents.map((subEvent, index) => {
           const subEventSignups = signupsBySubEvent[subEvent.subEventId.toString()] || [];
           const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
           const isFlyIn = subEvent.subEventType.tag === "FlyIn";
@@ -105,7 +128,7 @@ export function SubEventsManagementCard() {
                         </Badge>
                       )}
                     </div>
-                    <h3 className="font-semibold text-lg truncate">{subEvent.name}</h3>
+                    <h3 className="font-semibold text-lg truncate">{subEvent.name || `Wave ${index + 1}`}</h3>
                     {subEvent.description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {subEvent.description}
@@ -117,7 +140,7 @@ export function SubEventsManagementCard() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
-                      onClick={() => handleEditSubEventClick(subEvent)}
+                      onClick={() => handleEditSubEventClick(subEvent as any)}
                     >
                       <Pencil className="h-4 w-4" />
                     </Button>
@@ -126,6 +149,7 @@ export function SubEventsManagementCard() {
                       size="icon"
                       className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
                       onClick={() => handleDeleteSubEvent(subEvent.subEventId)}
+                      disabled={eventSubEvents.length <= 1}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -371,24 +395,49 @@ export function SubEventsManagementCard() {
     handleDeleteSubEvent,
   ]);
 
-  return (
-    <Card className="py-4">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-          <CardTitle>Sub-Events</CardTitle>
-          <CardDescription>Manage the sub-events for this event</CardDescription>
-        </div>
+  if (!isAdvancedSubEventsMode && eventSubEvents.length === 1) {
+    const firstSubEvent = eventSubEvents[0];
+    
+    return (
+      <Card className="py-4">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Wave Details</CardTitle>
+            <CardDescription>
+              Set the wave type, time, airports, and notes. Add more waves if this event is more complex.
+            </CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {firstWaveForm && (
+            <SubEventDialogForm
+              mode="edit"
+              form={firstWaveForm}
+              setForm={handleFirstWaveFormChange}
+              userTimezone={userTimezone}
+              members={memberOptions}
+              showTypeField
+              showIdentityFields={false}
+              showScheduleFields
+              idPrefix="edit-first-wave-"
+            />
+          )}
+
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleAddNewWave}
+            className="w-full"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Another Wave
+          </Button>
+        </CardContent>
 
         <Dialog open={showAddSubEventDialog} onOpenChange={setShowAddSubEventDialog}>
-          <DialogTrigger asChild>
-            <Button className="flex items-center gap-1">
-              <Plus className="h-4 w-4" />
-              Add Sub-Event
-            </Button>
-          </DialogTrigger>
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
-              <DialogTitle>Add Sub-Event</DialogTitle>
+              <DialogTitle>Add Wave</DialogTitle>
             </DialogHeader>
             <ScrollArea className="max-h-[70vh]">
               <SubEventDialogForm
@@ -403,7 +452,7 @@ export function SubEventsManagementCard() {
               <Button variant="outline" onClick={() => setShowAddSubEventDialog(false)}>
                 Cancel
               </Button>
-              <Button onClick={() => handleAddSubEvent(addFormDraft)}>Add Sub-Event</Button>
+              <Button onClick={() => handleAddSubEvent(addFormDraft)}>Add Wave</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -411,7 +460,71 @@ export function SubEventsManagementCard() {
         <Dialog open={showEditSubEventDialog} onOpenChange={setShowEditSubEventDialog}>
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
-              <DialogTitle>Edit Sub-Event</DialogTitle>
+              <DialogTitle>Edit Wave</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh]">
+              <SubEventDialogForm
+                mode="edit"
+                form={editFormDraft}
+                setForm={(form) => setEditFormDraft(form)}
+                userTimezone={userTimezone}
+                members={memberOptions}
+                idPrefix="edit-"
+              />
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowEditSubEventDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleUpdateSubEvent(editFormDraft)}>Save Changes</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="py-4">
+      <CardHeader className="flex flex-row items-center justify-between">
+        <div>
+          <CardTitle>Waves</CardTitle>
+          <CardDescription>Manage the waves for this event</CardDescription>
+        </div>
+
+        <Dialog open={showAddSubEventDialog} onOpenChange={setShowAddSubEventDialog}>
+          <DialogTrigger asChild>
+            <Button className="flex items-center gap-1">
+              <Plus className="h-4 w-4" />
+              Add Wave
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[550px]">
+            <DialogHeader>
+              <DialogTitle>Add Wave</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[70vh]">
+              <SubEventDialogForm
+                mode="add"
+                form={addFormDraft}
+                setForm={(form) => setAddFormDraft(form)}
+                userTimezone={userTimezone}
+                members={memberOptions}
+              />
+            </ScrollArea>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowAddSubEventDialog(false)}>
+                Cancel
+              </Button>
+              <Button onClick={() => handleAddSubEvent(addFormDraft)}>Add Wave</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={showEditSubEventDialog} onOpenChange={setShowEditSubEventDialog}>
+          <DialogContent className="sm:max-w-[550px]">
+            <DialogHeader>
+              <DialogTitle>Edit Wave</DialogTitle>
             </DialogHeader>
             <ScrollArea className="max-h-[70vh]">
               <SubEventDialogForm

@@ -3,8 +3,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { DateTimePicker } from "@/components/ui/datetime-picker";
-import { formatDateTimeInTimezone } from "@/utils/timezoneUtils";
 import { EventBannerField } from "./EventBannerField";
 import { useEditEventContext } from "./EditEventContext";
 
@@ -12,15 +10,10 @@ export function EventDetailsFormCard() {
   const {
     name,
     description,
-    startTime,
-    endTime,
     ifcEventLink,
     isInternal,
-    userTimezone,
     setName,
     setDescription,
-    setStartTime,
-    setEndTime,
     setIfcEventLink,
     setIsInternal,
   } = useEditEventContext();
@@ -50,32 +43,6 @@ export function EventDetailsFormCard() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Enter event description"
             rows={4}
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <DateTimePicker
-            label="Start Time"
-            value={startTime}
-            onChange={(date) => setStartTime(date || null)}
-            placeholder={
-              startTime
-                ? formatDateTimeInTimezone(startTime, userTimezone)
-                : "Select date and time"
-            }
-            timezone={userTimezone}
-          />
-
-          <DateTimePicker
-            label="End Time"
-            value={endTime}
-            onChange={(date) => setEndTime(date || null)}
-            placeholder={
-              endTime
-                ? formatDateTimeInTimezone(endTime, userTimezone)
-                : "Select date and time"
-            }
-            timezone={userTimezone}
           />
         </div>
 
