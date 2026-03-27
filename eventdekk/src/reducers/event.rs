@@ -11,7 +11,7 @@ pub fn create_event(
     banner_url: Option<String>, sub_events_data: Vec<SubEventData>, status: Option<EventStatus>,
     is_internal: bool,
 ) -> Result<(), String> {
-    check_permission(ctx, creator_group_id, PermissionLevel::CEO)?;
+    check_permission(ctx, creator_group_id, PermissionLevel::Staff)?;
     if name.trim().is_empty() { return Err("Event name cannot be empty.".to_string()); }
     if start_time >= end_time { return Err("Event start time must be before end time.".to_string()); }
 
