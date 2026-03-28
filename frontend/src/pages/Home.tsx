@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { EventCard } from "@/components/EventCard";
 import EventDialog from "@/components/EventDialog";
 import {
-  useEvents,
+  useAllActiveEvents,
   useDiscoveryEvents,
   useGroups,
 } from "@/hooks/spacetimeHooks";
@@ -16,7 +16,7 @@ import { Badge } from "@/components/ui/badge";
 type EventType = Infer<typeof SpacetimeEvent>;
 
 const Home = () => {
-  const events = useEvents();
+  const events = useAllActiveEvents();
   const discoveryEvents = useDiscoveryEvents();
   const groups = useGroups();
   const [searchParams] = useSearchParams();
@@ -36,9 +36,6 @@ const Home = () => {
 
   const nextWeek = useMemo(() => addDays(now, 7), [now]);
 
-  console.log(discoveryEvents, events);
-
-  // Get events that are in discovery and their display priorities
   const discoveryEventMap = useMemo(() => {
     return new Map(
       discoveryEvents.map((de) => [de.eventId, de.displayPriority])

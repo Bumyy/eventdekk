@@ -128,7 +128,7 @@ export function EventDetailsContent({
 
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_280px]">
           <div className="min-h-0 border-r flex flex-col">
-            <ScrollArea className="flex-1 p-3 sm:p-4">
+            <ScrollArea className="min-h-0 flex-1 p-3 sm:p-4">
               <EventDateTimeInfo
                 startTime={event.startTime.toDate()}
                 endTime={event.endTime.toDate()}

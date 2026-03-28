@@ -195,6 +195,13 @@ export function CreateEventDialog({
     );
   };
 
+  const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
+  const isIcaoLengthValid = (icao?: string) => {
+    if (!icao) return true;
+    return icao.trim().length === 4;
+  };
+
   const toDialogSubEventFormState = (subEvent: SubEventFormData): SubEventFormState => {
     const mappedType: SubEventFormState["type"] =
       subEvent.subEventType.tag === "GroupFlight"
@@ -233,12 +240,12 @@ export function CreateEventDialog({
       scheduledEndTime: state.endTime,
       hubIcao:
         state.type === "FlyIn" || state.type === "FlyOut"
-          ? state.hubIcao
+          ? limitIcaoLength(state.hubIcao)
           : undefined,
       groupFlightDepartureIcao:
-        state.type === "GroupFlight" ? state.departureIcao : undefined,
+        state.type === "GroupFlight" ? limitIcaoLength(state.departureIcao) : undefined,
       groupFlightArrivalIcao:
-        state.type === "GroupFlight" ? state.arrivalIcao : undefined,
+        state.type === "GroupFlight" ? limitIcaoLength(state.arrivalIcao) : undefined,
       groupFlightRoute: state.type === "GroupFlight" ? state.route : undefined,
       notes: state.notes || undefined,
       eventLeadHex: state.eventLeadHex,
@@ -275,6 +282,17 @@ export function CreateEventDialog({
     );
     if (hasInvalidSubEventTimes) {
       toast.error("Please fill out all required sub-event times.");
+      return;
+    }
+
+    const hasInvalidIcaoLength = subEvents.some(
+      (subEvent) =>
+        !isIcaoLengthValid(subEvent.hubIcao) ||
+        !isIcaoLengthValid(subEvent.groupFlightDepartureIcao) ||
+        !isIcaoLengthValid(subEvent.groupFlightArrivalIcao)
+    );
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
       return;
     }
 

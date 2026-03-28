@@ -46,6 +46,8 @@ export const selectSubEventsForEvents = <
     .sort((a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime));
 };
 
+const EXCLUDED_EVENT_STATUSES = ["Cancelled", "Internal", "Draft"];
+
 export const selectAllActiveEvents = <
   TEvent extends { status: { tag: string }; startTime: DateLike },
 >(
@@ -53,7 +55,7 @@ export const selectAllActiveEvents = <
 ): TEvent[] => {
   if (!events) return [];
   return [...events]
-    .filter((event) => event.status.tag !== "Cancelled")
+    .filter((event) => !EXCLUDED_EVENT_STATUSES.includes(event.status.tag))
     .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
 };
 
@@ -196,6 +198,29 @@ export const useEvents = () => {
 export const useEventParticipants = () => {
   const [rows] = useTable(tables.event_participant);
   return rows;
+};
+
+/**
+ * Event participants for a specific event
+ * Uses server-side subscription with .where() for efficient filtering
+ */
+export const useEventParticipantsForEvent = (eventId: bigint | null) => {
+  const query = useMemo(
+    () =>
+      eventId
+        ? tables.event_participant.where((ep) => ep.eventId.eq(eventId))
+        : tables.event_participant.where((ep) => ep.eventId.eq(0n)),
+    [eventId]
+  );
+
+  const [participants] = useTable(query);
+  // This line is needed due to a bug in SpacetimeDB react SDK, do not remove
+  const [allParticipants] = useTable(tables.event_participant);
+
+  return useMemo(() => {
+    if (!participants) return [];
+    return [...participants];
+  }, [participants]);
 };
 
 export const useSubEvents = () => {

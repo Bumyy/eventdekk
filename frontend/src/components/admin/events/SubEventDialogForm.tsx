@@ -14,6 +14,13 @@ import { formatDateTimeInTimezone } from "@/utils/timezoneUtils";
 import { useOptionalEditEventContext } from "./EditEventContext";
 import { MemberOption, SubEventFormState, SubEventFormType } from "./types";
 
+const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
+const isIcaoLengthValid = (icao?: string) => {
+  if (!icao) return true;
+  return icao.trim().length === 4;
+};
+
 interface SubEventDialogFormProps {
   mode?: "add" | "edit";
   form?: SubEventFormState;
@@ -199,9 +206,16 @@ function SubEventDialogFormFields({
           <Input
             id={withPrefix("hubIcao")}
             value={formState.hubIcao}
-            onChange={(e) => setFormState({ ...formState, hubIcao: e.target.value })}
+            onChange={(e) =>
+              setFormState({ ...formState, hubIcao: limitIcaoLength(e.target.value) })
+            }
             placeholder="KJFK"
+            maxLength={4}
+            className={!isIcaoLengthValid(formState.hubIcao) ? "border-destructive" : ""}
           />
+          {!isIcaoLengthValid(formState.hubIcao) && (
+            <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
+          )}
         </div>
       ) : (
         <>
@@ -212,19 +226,31 @@ function SubEventDialogFormFields({
                   id={withPrefix("departureIcao")}
                   value={formState.departureIcao}
                   onChange={(e) =>
-                  setFormState({ ...formState, departureIcao: e.target.value })
+                  setFormState({ ...formState, departureIcao: limitIcaoLength(e.target.value) })
                   }
                   placeholder="KJFK"
+                  maxLength={4}
+                  className={!isIcaoLengthValid(formState.departureIcao) ? "border-destructive" : ""}
                 />
+                {!isIcaoLengthValid(formState.departureIcao) && (
+                  <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
+                )}
             </div>
             <div className="space-y-2">
               <Label htmlFor={withPrefix("arrivalIcao")}>Arrival ICAO</Label>
               <Input
                 id={withPrefix("arrivalIcao")}
                 value={formState.arrivalIcao}
-                onChange={(e) => setFormState({ ...formState, arrivalIcao: e.target.value })}
+                onChange={(e) =>
+                  setFormState({ ...formState, arrivalIcao: limitIcaoLength(e.target.value) })
+                }
                 placeholder="KLAX"
+                maxLength={4}
+                className={!isIcaoLengthValid(formState.arrivalIcao) ? "border-destructive" : ""}
               />
+              {!isIcaoLengthValid(formState.arrivalIcao) && (
+                <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
+              )}
             </div>
           </div>
           <div className="space-y-2">

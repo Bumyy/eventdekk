@@ -63,7 +63,9 @@ describe("SubEventDetails", () => {
     );
 
     expect(screen.getByText("Test Flight")).toBeInTheDocument();
-    expect(screen.getByText("This is a test flight description")).toBeInTheDocument();
+    expect(
+      screen.getByText("This is a test flight description")
+    ).toBeInTheDocument();
   });
 
   it("renders formatted date", () => {
@@ -145,7 +147,7 @@ describe("SubEventDetails", () => {
       />
     );
 
-    expect(screen.getByText("Who joined this sub-event")).toBeInTheDocument();
+    expect(screen.getByText("Who joined this wave")).toBeInTheDocument();
     expect(screen.getByText("1")).toBeInTheDocument();
   });
 
@@ -160,7 +162,10 @@ describe("SubEventDetails", () => {
       />
     );
 
-    expect(container.querySelector("article")).toHaveClass("ring-2", "ring-primary/40");
+    expect(container.querySelector("article")).toHaveClass(
+      "ring-2",
+      "ring-primary/40"
+    );
   });
 
   it("does not apply highlight styling when isHighlighted is false", () => {

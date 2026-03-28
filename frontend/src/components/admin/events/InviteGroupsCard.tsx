@@ -25,8 +25,7 @@ export function InviteGroupsCard() {
     showInviteGroupsDialog,
     setShowInviteGroupsDialog,
     selectedGroups,
-    groups,
-    currentGroupId,
+    availableInviteGroups,
     handleSelectGroup,
     handleRemoveGroup,
     handleInviteGroups,
@@ -83,8 +82,7 @@ export function InviteGroupsCard() {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[300px]" align="start">
                     <ScrollArea className="h-[300px]">
-                      {groups
-                        .filter((group) => group.groupId !== currentGroupId)
+                      {availableInviteGroups
                         .map((group) => (
                           <DropdownMenuItem
                             key={group.groupId.toString()}

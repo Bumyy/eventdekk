@@ -119,7 +119,7 @@ export function SubEventDetails({
 
         <div className="rounded-lg border bg-muted/30 p-3">
           <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wide">
-            Who joined this sub-event
+            Who joined this wave
           </p>
           <ParticipantList
             signups={signups}

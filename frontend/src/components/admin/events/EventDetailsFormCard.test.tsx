@@ -32,6 +32,7 @@ const editContextValue = {
   eventSubEvents: [],
   signupsBySubEvent: {},
   groups: [],
+  availableInviteGroups: [],
   memberOptions: [],
   showAddSubEventDialog: false,
   setShowAddSubEventDialog: vi.fn(),

@@ -6,6 +6,7 @@ import {
   useGroups,
   useFlightSignups,
   useGroupMembersForGroup,
+  useEventParticipantsForEvent,
 } from "@/hooks/spacetimeHooks";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -27,11 +28,13 @@ import {
 
 export default function EditEvent() {
   const { eventId, groupId } = useParams();
+  const eventIdBigInt = useMemo(() => (eventId ? BigInt(eventId) : null), [eventId]);
   const currentGroupId = groupId ? BigInt(groupId) : null;
   const navigate = useNavigate();
   const events = useEvents();
   const subEvents = useSubEvents();
   const groups = useGroups();
+  const eventParticipants = useEventParticipantsForEvent(eventIdBigInt);
   const flightSignups = useFlightSignups();
   const { getConnection } = useSpacetimeDB();
   const connection = getConnection();
@@ -97,6 +100,13 @@ export default function EditEvent() {
   );
   const [isSubmittingFlights, setIsSubmittingFlights] = useState(false);
   const [isAdvancedSubEventsMode, setIsAdvancedSubEventsMode] = useState(false);
+
+  const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
+  const isIcaoLengthValid = (icao?: string) => {
+    if (!icao) return true;
+    return icao.trim().length === 4;
+  };
 
   // Effect to create/revoke preview URL
   useEffect(() => {
@@ -294,6 +304,27 @@ export default function EditEvent() {
   const handleSubmitOwnFlights = async () => {
     if (!connection || !eventId || !groupId) return;
 
+    const hasInvalidIcaoLength = selectedOwnSubEvents.some((subEventId) => {
+      const subEvent = subEvents.find((se) => se.subEventId === subEventId);
+      const details = ownFlightDetails[subEventId.toString()];
+      if (!subEvent || !details) return false;
+
+      if (subEvent.subEventType.tag === "FlyIn") {
+        return !isIcaoLengthValid(details.customDepartureIcao);
+      }
+
+      if (subEvent.subEventType.tag === "FlyOut") {
+        return !isIcaoLengthValid(details.customArrivalIcao);
+      }
+
+      return false;
+    });
+
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
+      return;
+    }
+
     setIsSubmittingFlights(true);
 
     try {
@@ -355,14 +386,14 @@ export default function EditEvent() {
         let arrivalIcao = "";
 
         if (isGroupFlight) {
-          departureIcao = subEvent.groupFlightDepartureIcao || "";
-          arrivalIcao = subEvent.groupFlightArrivalIcao || "";
+          departureIcao = limitIcaoLength(subEvent.groupFlightDepartureIcao || "");
+          arrivalIcao = limitIcaoLength(subEvent.groupFlightArrivalIcao || "");
         } else if (isFlyIn) {
-          departureIcao = details.customDepartureIcao || "";
-          arrivalIcao = subEvent.hubIcao || "";
+          departureIcao = limitIcaoLength(details.customDepartureIcao || "");
+          arrivalIcao = limitIcaoLength(subEvent.hubIcao || "");
         } else if (isFlyOut) {
-          departureIcao = subEvent.hubIcao || "";
-          arrivalIcao = details.customArrivalIcao || "";
+          departureIcao = limitIcaoLength(subEvent.hubIcao || "");
+          arrivalIcao = limitIcaoLength(details.customArrivalIcao || "");
         }
 
         console.log("Departure ICAO:", departureIcao);
@@ -538,6 +569,15 @@ const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
 
     const formData = formOverride ?? subEventForm;
 
+    const hasInvalidIcaoLength =
+      !isIcaoLengthValid(formData.hubIcao) ||
+      !isIcaoLengthValid(formData.departureIcao) ||
+      !isIcaoLengthValid(formData.arrivalIcao);
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
+      return;
+    }
+
     let subEventType: SubEventType;
     switch (formData.type) {
       case "GroupFlight":
@@ -567,15 +607,15 @@ const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
         scheduledEndTime: Timestamp.fromDate(formData.endTime),
         hubIcao:
           formData.type === "FlyIn" || formData.type === "FlyOut"
-            ? formData.hubIcao
+            ? limitIcaoLength(formData.hubIcao)
             : undefined,
         groupFlightDepartureIcao:
           formData.type === "GroupFlight"
-            ? formData.departureIcao
+            ? limitIcaoLength(formData.departureIcao)
             : undefined,
         groupFlightArrivalIcao:
           formData.type === "GroupFlight"
-            ? formData.arrivalIcao
+            ? limitIcaoLength(formData.arrivalIcao)
             : undefined,
         groupFlightRoute:
           formData.type === "GroupFlight" ? formData.route : undefined,
@@ -697,6 +737,15 @@ const handleEditSubEventClick = useCallback((subEvent: {
 
   const updateFirstSubEventFromForm = useCallback(async (formState: SubEventFormState) => {
     if (!connection || !eventId || eventSubEvents.length === 0) return;
+
+    const hasInvalidIcaoLength =
+      !isIcaoLengthValid(formState.hubIcao) ||
+      !isIcaoLengthValid(formState.departureIcao) ||
+      !isIcaoLengthValid(formState.arrivalIcao);
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
+      return;
+    }
     
     const firstSubEvent = eventSubEvents[0];
     
@@ -728,15 +777,15 @@ const handleEditSubEventClick = useCallback((subEvent: {
         hubIcao:
           formState.type === "FlyIn" ||
           formState.type === "FlyOut"
-            ? formState.hubIcao
+            ? limitIcaoLength(formState.hubIcao)
             : undefined,
         groupFlightDepartureIcao:
           formState.type === "GroupFlight"
-            ? formState.departureIcao
+            ? limitIcaoLength(formState.departureIcao)
             : undefined,
         groupFlightArrivalIcao:
           formState.type === "GroupFlight"
-            ? formState.arrivalIcao
+            ? limitIcaoLength(formState.arrivalIcao)
             : undefined,
         groupFlightRoute:
           formState.type === "GroupFlight"
@@ -760,6 +809,15 @@ const handleEditSubEventClick = useCallback((subEvent: {
     if (!connection || !editingSubEventId) return;
 
     const formData = formOverride ?? editSubEventForm;
+
+    const hasInvalidIcaoLength =
+      !isIcaoLengthValid(formData.hubIcao) ||
+      !isIcaoLengthValid(formData.departureIcao) ||
+      !isIcaoLengthValid(formData.arrivalIcao);
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
+      return;
+    }
 
     let subEventType: SubEventType;
     switch (formData.type) {
@@ -789,15 +847,15 @@ const handleEditSubEventClick = useCallback((subEvent: {
         hubIcao:
           formData.type === "FlyIn" ||
           formData.type === "FlyOut"
-            ? formData.hubIcao
+            ? limitIcaoLength(formData.hubIcao)
             : undefined,
         groupFlightDepartureIcao:
           formData.type === "GroupFlight"
-            ? formData.departureIcao
+            ? limitIcaoLength(formData.departureIcao)
             : undefined,
         groupFlightArrivalIcao:
           formData.type === "GroupFlight"
-            ? formData.arrivalIcao
+            ? limitIcaoLength(formData.arrivalIcao)
             : undefined,
         groupFlightRoute:
           formData.type === "GroupFlight"
@@ -882,6 +940,15 @@ const handleEditSubEventClick = useCallback((subEvent: {
     [members]
   );
 
+  const availableInviteGroups = useMemo(() => {
+    const invitedGroupIds = new Set(eventParticipants.map((participant) => participant.groupId));
+
+    return groups.filter(
+      (group) =>
+        group.groupId !== currentGroupId && !invitedGroupIds.has(group.groupId)
+    );
+  }, [groups, currentGroupId, eventParticipants]);
+
   const clearBanner = () => {
     setSelectedFile(null);
     if (!previewUrl) setBannerUrl("");
@@ -920,6 +987,7 @@ return (
         eventSubEvents,
         signupsBySubEvent,
         groups,
+        availableInviteGroups,
         memberOptions,
         showAddSubEventDialog,
         setShowAddSubEventDialog,

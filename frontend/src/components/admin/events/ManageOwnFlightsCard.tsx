@@ -24,6 +24,8 @@ import {
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
 import { useEditEventContext } from "./EditEventContext";
 
+const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
 export function ManageOwnFlightsCard() {
   const {
     showManageOwnFlightsDialog,
@@ -206,7 +208,7 @@ export function ManageOwnFlightsCard() {
                                       updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "customDepartureIcao",
-                                        e.target.value
+                                        limitIcaoLength(e.target.value)
                                       )
                                     }
                                     placeholder={
@@ -217,6 +219,7 @@ export function ManageOwnFlightsCard() {
                                         : "Enter departure ICAO"
                                     }
                                     disabled={isSubmittingFlights || isGroupFlight || isFlyOut}
+                                    maxLength={4}
                                   />
                                   {(isGroupFlight || isFlyOut) && (
                                     <p className="text-xs text-muted-foreground mt-1">
@@ -249,7 +252,7 @@ export function ManageOwnFlightsCard() {
                                       updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "customArrivalIcao",
-                                        e.target.value
+                                        limitIcaoLength(e.target.value)
                                       )
                                     }
                                     placeholder={
@@ -260,6 +263,7 @@ export function ManageOwnFlightsCard() {
                                         : "Enter arrival ICAO"
                                     }
                                     disabled={isSubmittingFlights || isGroupFlight || isFlyIn}
+                                    maxLength={4}
                                   />
                                   {(isGroupFlight || isFlyIn) && (
                                     <p className="text-xs text-muted-foreground mt-1">

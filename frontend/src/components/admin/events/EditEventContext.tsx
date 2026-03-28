@@ -32,6 +32,7 @@ interface EditEventContextValue {
   eventSubEvents: SubEvent[];
   signupsBySubEvent: Record<string, FlightSignup[]>;
   groups: Group[];
+  availableInviteGroups: Group[];
   memberOptions: MemberOption[];
 
   showAddSubEventDialog: boolean;

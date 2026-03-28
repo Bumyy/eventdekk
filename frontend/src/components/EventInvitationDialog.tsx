@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import {
   Calendar,
   Clock,
@@ -234,22 +235,68 @@ export function EventInvitationDialog({
     }
   };
 
+  const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
+  const isIcaoLengthValid = (icao?: string) => {
+    if (!icao) return true;
+    return icao.trim().length === 4;
+  };
+
+  const getIcaoLengthError = (icao?: string) => {
+    if (!icao) return undefined;
+    return isIcaoLengthValid(icao)
+      ? undefined
+      : "ICAO must be exactly 4 characters.";
+  };
+
   const updateFlightDetail = (
     subEventId: string,
     field: keyof FlightDetails,
     value: string | undefined
   ) => {
+    const limitedValue =
+      field === "customDepartureIcao" || field === "customArrivalIcao"
+        ? limitIcaoLength(value || "")
+        : value;
+
     setFlightDetails((prev) => ({
       ...prev,
       [subEventId]: {
         ...prev[subEventId],
-        [field]: value,
+        [field]: limitedValue,
       },
     }));
   };
 
   const handleAcceptInvitation = async () => {
     if (!invitation) return;
+
+    const hasInvalidIcaoLength = selectedSubEvents.some((subEventId) => {
+      const selectedSubEvent = invitationSubEvents.find(
+        (se) => se.subEventId === subEventId
+      );
+      if (!selectedSubEvent) return false;
+
+      const details = flightDetails[subEventId.toString()];
+      const isGroupFlight = selectedSubEvent.subEventType.tag === "GroupFlight";
+      const isFlyIn = selectedSubEvent.subEventType.tag === "FlyIn";
+      const isFlyOut = selectedSubEvent.subEventType.tag === "FlyOut";
+
+      if (!isGroupFlight && !isFlyOut && !isIcaoLengthValid(details?.customDepartureIcao)) {
+        return true;
+      }
+
+      if (!isGroupFlight && !isFlyIn && !isIcaoLengthValid(details?.customArrivalIcao)) {
+        return true;
+      }
+
+      return false;
+    });
+    if (hasInvalidIcaoLength) {
+      toast.error("ICAO fields must be exactly 4 characters.");
+      return;
+    }
+
     try {
       setIsProcessing(true);
       await onAccept(invitation, selectedSubEvents, flightDetails);
@@ -316,6 +363,30 @@ export function EventInvitationDialog({
     return conflicts;
   }, [availabilityData, invitationSubEvents, currentEventId, isManagingExisting, invitation?.eventId]);
 
+  const hasInvalidSelectedIcao = useMemo(() => {
+    return selectedSubEvents.some((subEventId) => {
+      const selectedSubEvent = invitationSubEvents.find(
+        (se) => se.subEventId === subEventId
+      );
+      if (!selectedSubEvent) return false;
+
+      const details = flightDetails[subEventId.toString()];
+      const isGroupFlight = selectedSubEvent.subEventType.tag === "GroupFlight";
+      const isFlyIn = selectedSubEvent.subEventType.tag === "FlyIn";
+      const isFlyOut = selectedSubEvent.subEventType.tag === "FlyOut";
+
+      if (!isGroupFlight && !isFlyOut && !isIcaoLengthValid(details?.customDepartureIcao)) {
+        return true;
+      }
+
+      if (!isGroupFlight && !isFlyIn && !isIcaoLengthValid(details?.customArrivalIcao)) {
+        return true;
+      }
+
+      return false;
+    });
+  }, [selectedSubEvents, invitationSubEvents, flightDetails]);
+
   return (
     <>
       {/* Animated backdrop to match CreateEventDialog */}
@@ -359,6 +430,20 @@ export function EventInvitationDialog({
                     subEvent.subEventType.tag === "GroupFlight";
                   const isFlyIn = subEvent.subEventType.tag === "FlyIn";
                   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
+                  const subEventFlightDetails =
+                    flightDetails[subEvent.subEventId.toString()];
+                  const customDepartureIcao =
+                    subEventFlightDetails?.customDepartureIcao || "";
+                  const customArrivalIcao =
+                    subEventFlightDetails?.customArrivalIcao || "";
+                  const departureIcaoError =
+                    !isGroupFlight && !isFlyOut
+                      ? getIcaoLengthError(customDepartureIcao)
+                      : undefined;
+                  const arrivalIcaoError =
+                    !isGroupFlight && !isFlyIn
+                      ? getIcaoLengthError(customArrivalIcao)
+                      : undefined;
 
                   return (
                     <Card key={subEvent.subEventId.toString()} className="p-4">
@@ -564,9 +649,7 @@ export function EventInvitationDialog({
                                           ""
                                         : isFlyOut
                                           ? subEvent.hubIcao || ""
-                                          : flightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customDepartureIcao || ""
+                                          : customDepartureIcao
                                     }
                                     onChange={(e) =>
                                       updateFlightDetail(
@@ -587,7 +670,14 @@ export function EventInvitationDialog({
                                     disabled={
                                       isProcessing || isGroupFlight || isFlyOut
                                     }
+                                    maxLength={4}
+                                    aria-invalid={!!departureIcaoError}
                                   />
+                                  {departureIcaoError && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      {departureIcaoError}
+                                    </p>
+                                  )}
                                   {(isGroupFlight || isFlyOut) && (
                                     <p className="text-xs text-muted-foreground mt-1">
                                       Departure is fixed to:{" "}
@@ -615,9 +705,7 @@ export function EventInvitationDialog({
                                         ? subEvent.groupFlightArrivalIcao || ""
                                         : isFlyIn
                                           ? subEvent.hubIcao || ""
-                                          : flightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customArrivalIcao || ""
+                                          : customArrivalIcao
                                     }
                                     onChange={(e) =>
                                       updateFlightDetail(
@@ -638,7 +726,14 @@ export function EventInvitationDialog({
                                     disabled={
                                       isProcessing || isGroupFlight || isFlyIn
                                     }
+                                    maxLength={4}
+                                    aria-invalid={!!arrivalIcaoError}
                                   />
+                                  {arrivalIcaoError && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      {arrivalIcaoError}
+                                    </p>
+                                  )}
                                   {(isGroupFlight || isFlyIn) && (
                                     <p className="text-xs text-muted-foreground mt-1">
                                       Arrival is fixed to:{" "}
@@ -766,7 +861,11 @@ export function EventInvitationDialog({
             <Button
               variant="default"
               onClick={handleAcceptInvitation}
-              disabled={selectedSubEvents.length === 0 || isProcessing}
+              disabled={
+                selectedSubEvents.length === 0 ||
+                isProcessing ||
+                hasInvalidSelectedIcao
+              }
             >
               {isProcessing ? (
                 <>
