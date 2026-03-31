@@ -16,6 +16,8 @@ import {
   useCurrentUser,
   useUsers,
   useGroupAvailabilityData,
+  useGroupMemberships,
+  useGroupById,
 } from "@/hooks/spacetimeHooks";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
@@ -35,7 +37,7 @@ import {
 export default function AdminEvents() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<string[]>([]);
-  const { getConnection } = useSpacetimeDB();
+  const { getConnection, identity } = useSpacetimeDB();
   const connection = getConnection();
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
@@ -82,6 +84,8 @@ export default function AdminEvents() {
   const groups = useGroups();
   const currentUser = useCurrentUser();
   const users = useUsers();
+  const memberships = useGroupMemberships();
+  const currentGroup = useGroupById(groupIdBigInt);
 
   // Use the new filtered hooks
   const upcomingEvents = useUpcomingHostedEvents(groupIdBigInt);
@@ -107,6 +111,25 @@ export default function AdminEvents() {
   }, [pendingInvitations, upcomingAttendingEvents]);
 
   const relevantSubEvents = useSubEventsForEvents(relevantEventIds);
+
+  const canPublishEvents = useMemo(() => {
+    if (!groupIdBigInt || !identity) return false;
+
+    if (
+      currentGroup &&
+      currentGroup.ceoIdentity.toHexString() === identity.toHexString()
+    ) {
+      return true;
+    }
+
+    const membership = memberships.find(
+      (m) =>
+        m.groupId === groupIdBigInt &&
+        m.userIdentity.toHexString() === identity.toHexString()
+    );
+
+    return membership?.permissionLevel.tag === "CEO";
+  }, [groupIdBigInt, identity, memberships, currentGroup]);
 
   const invitationSubEvents = useSubEventsForEvents(invitationEventIds);
   console.log(invitationEventIds);
@@ -312,6 +335,10 @@ export default function AdminEvents() {
 
   const handlePublishEvent = (eventId: bigint) => {
     if (!connection) return;
+    if (!canPublishEvents) {
+      toast.error("Only Admins can publish events");
+      return;
+    }
 
     // Find the current event data to preserve all other fields
     const currentEvent = upcomingEvents?.find((e) => e.eventId === eventId);
@@ -725,6 +752,7 @@ export default function AdminEvents() {
             onDeleteEvent={handleDeleteEvent}
             onManageParticipation={handleManageParticipation}
             onPublishEvent={handlePublishEvent}
+            canPublishEvents={canPublishEvents}
             currentUser={currentUser}
             users={users || []}
           />

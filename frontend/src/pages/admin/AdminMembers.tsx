@@ -2,7 +2,11 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { useGroupMembersForGroup, useUsers, useGroupById } from "@/hooks/spacetimeHooks";
+import {
+  useGroupMembersForGroup,
+  useUsers,
+  useGroupById,
+} from "@/hooks/spacetimeHooks";
 import { useParams } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -28,6 +32,21 @@ import { useSpacetimeDB } from "spacetimedb/react";
 
 type PermissionLevel = Infer<typeof PermissionLevel>;
 
+function getPermissionLabel(member: {
+  isCeo: boolean;
+  permissionLevel: { tag: "CEO" | "Staff" | "Member" };
+}) {
+  if (member.isCeo) {
+    return "CEO";
+  }
+
+  if (member.permissionLevel.tag === "CEO") {
+    return "Admin";
+  }
+
+  return member.permissionLevel.tag;
+}
+
 export default function AdminMembers() {
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
@@ -44,19 +63,23 @@ export default function AdminMembers() {
       tag: "Member",
     });
 
-  const regularMembers = memberships
-    ?.filter((m) => {
-      if (!currentGroup) return true;
-      return m.membership.userIdentity.toHexString() !==currentGroup.ceoIdentity.toHexString();
-    })
-    .map((m) => ({
-      membershipId: m.membership.membershipId,
-      groupId: m.membership.groupId,
-      userIdentity: m.membership.userIdentity,
-      permissionLevel: m.membership.permissionLevel,
-      user: m.user,
-      isCeo: false,
-    })) || [];
+  const regularMembers =
+    memberships
+      ?.filter((m) => {
+        if (!currentGroup) return true;
+        return (
+          m.membership.userIdentity.toHexString() !==
+          currentGroup.ceoIdentity.toHexString()
+        );
+      })
+      .map((m) => ({
+        membershipId: m.membership.membershipId,
+        groupId: m.membership.groupId,
+        userIdentity: m.membership.userIdentity,
+        permissionLevel: m.membership.permissionLevel,
+        user: m.user,
+        isCeo: false,
+      })) || [];
 
   const ceoMember = currentGroup
     ? {
@@ -72,7 +95,9 @@ export default function AdminMembers() {
       }
     : null;
 
-  const groupMembers = ceoMember ? [ceoMember, ...regularMembers] : regularMembers;
+  const groupMembers = ceoMember
+    ? [ceoMember, ...regularMembers]
+    : regularMembers;
 
   const memberIdentities = new Set(
     groupMembers.map((member) => member.userIdentity.toHexString())
@@ -184,7 +209,7 @@ export default function AdminMembers() {
                     value={newMemberPermission.tag}
                     onValueChange={(value) =>
                       setNewMemberPermission({
-                        tag: value as "CEO" | "Staff" | "Member",
+                        tag: value as "Ceo" | "Staff" | "Member",
                       })
                     }
                   >
@@ -192,6 +217,7 @@ export default function AdminMembers() {
                       <SelectValue placeholder="Select permission level" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="Ceo">Admin</SelectItem>
                       <SelectItem value="Staff">Staff</SelectItem>
                       <SelectItem value="Member">Member</SelectItem>
                     </SelectContent>
@@ -241,7 +267,7 @@ export default function AdminMembers() {
                           : "secondary"
                       }
                     >
-                      {member.permissionLevel.tag}
+                      {getPermissionLabel(member)}
                     </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">

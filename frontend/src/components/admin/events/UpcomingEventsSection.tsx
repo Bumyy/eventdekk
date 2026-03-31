@@ -1,5 +1,24 @@
 import { EventCard } from "./EventCard";
-import { SubEvent, FlightSignup } from "@/module_bindings/types";
+import { Event, Group, SubEvent, FlightSignup, User } from "@/module_bindings/types";
+
+interface UpcomingEventsSectionProps {
+  upcomingEvents: Event[];
+  upcomingAttendingEvents: Event[];
+  subEvents: SubEvent[];
+  flightSignups: FlightSignup[];
+  groups: Group[];
+  userTimezone: string;
+  groupId: bigint;
+  expandedEvents: string[];
+  currentUser?: User;
+  users: User[];
+  onToggleExpand: (eventId: string) => void;
+  onManageEvent: (eventId: bigint) => void;
+  onDeleteEvent: (eventId: bigint) => void;
+  onManageParticipation: (event: Event) => void;
+  onPublishEvent?: (eventId: bigint) => void;
+  canPublishEvents?: boolean;
+}
 
 function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): boolean {
   const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
@@ -99,6 +118,7 @@ export function UpcomingEventsSection({
   onDeleteEvent,
   onManageParticipation,
   onPublishEvent,
+  canPublishEvents = true,
 }: UpcomingEventsSectionProps) {
   const getGroupInfo = (groupId: bigint) => {
     const group = groups?.find((g) => g.groupId === groupId);
@@ -148,7 +168,11 @@ export function UpcomingEventsSection({
                   }
                   onManage={() => onManageEvent(event.eventId)}
                   onDelete={() => onDeleteEvent(event.eventId)}
-                  onPublish={() => onPublishEvent?.(event.eventId)}
+                  onPublish={
+                    canPublishEvents
+                      ? () => onPublishEvent?.(event.eventId)
+                      : undefined
+                  }
                 />
               );
             })}

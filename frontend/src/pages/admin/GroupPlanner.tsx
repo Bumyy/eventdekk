@@ -208,7 +208,7 @@ export default function GroupPlanner() {
     return (
       <div className="flex items-center justify-center h-64">
         <p className="text-muted-foreground">
-          You need CEO or Staff permissions to use the planner.
+          You need Admin or Staff permissions to use the planner.
         </p>
       </div>
     );

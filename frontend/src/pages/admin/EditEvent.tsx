@@ -5,8 +5,10 @@ import {
   useSubEvents,
   useGroups,
   useFlightSignups,
-  useGroupMembersForGroup,
+  useGroupLeadMembersForGroup,
   useEventParticipantsForEvent,
+  useGroupMemberships,
+  useGroupById,
 } from "@/hooks/spacetimeHooks";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
@@ -36,10 +38,31 @@ export default function EditEvent() {
   const groups = useGroups();
   const eventParticipants = useEventParticipantsForEvent(eventIdBigInt);
   const flightSignups = useFlightSignups();
-  const { getConnection } = useSpacetimeDB();
+  const { getConnection, identity } = useSpacetimeDB();
   const connection = getConnection();
   const userTimezone = useUserTimezone();
-  const members = useGroupMembersForGroup(currentGroupId);
+  const members = useGroupLeadMembersForGroup(currentGroupId);
+  const memberships = useGroupMemberships();
+  const currentGroup = useGroupById(currentGroupId);
+
+  const canPublishEvents = useMemo(() => {
+    if (!currentGroupId || !identity) return false;
+
+    if (
+      currentGroup &&
+      currentGroup.ceoIdentity.toHexString() === identity.toHexString()
+    ) {
+      return true;
+    }
+
+    const membership = memberships.find(
+      (m) =>
+        m.groupId === currentGroupId &&
+        m.userIdentity.toHexString() === identity.toHexString()
+    );
+
+    return membership?.permissionLevel.tag === "CEO";
+  }, [currentGroupId, identity, currentGroup, memberships]);
 
   // Event data states
   const [name, setName] = useState("");
@@ -486,6 +509,11 @@ export default function EditEvent() {
 
   const handleUpdateEvent = async (publish: boolean = false) => {
     if (!connection || !eventId) return;
+
+    if (publish && !canPublishEvents) {
+      toast.error("Only Admins can publish events");
+      return;
+    }
 
     setIsLoading(true);
 
@@ -1031,7 +1059,7 @@ return (
           >
             Cancel
           </Button>
-          {eventStatus?.tag === "Draft" && (
+          {eventStatus?.tag === "Draft" && canPublishEvents && (
             <Button
               variant="default"
               onClick={() => handleUpdateEvent(true)}

@@ -6,6 +6,12 @@ import { useGroups, useGroupMemberships } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
 
+function getRoleLabel(role: { tag: "CEO" | "Staff" | "Member" }, isCeo: boolean) {
+  if (isCeo) return "CEO";
+  if (role.tag === "CEO") return "Admin";
+  return role.tag;
+}
+
 export default function AdminEntry() {
   const navigate = useNavigate();
   const { identity } = useSpacetimeDB();
@@ -87,7 +93,7 @@ export default function AdminEntry() {
                     </Badge>
                   </div>
                   <p className="text-muted-foreground">
-                    {group.memberCount} members • {group.role.tag}
+                    {group.memberCount} members • {getRoleLabel(group.role, group.ceoIdentity.toHexString() === identity?.toHexString())}
                   </p>
                 </div>
               </div>

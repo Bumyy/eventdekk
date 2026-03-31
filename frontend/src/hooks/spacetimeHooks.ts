@@ -20,7 +20,9 @@ export const selectSubEventsForGroup = <
 
   return [...allSubEvents]
     .filter((se) => groupEventIds.has(se.eventId))
-    .sort((a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime));
+    .sort(
+      (a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime)
+    );
 };
 
 export const selectSubEventsForEvents = <
@@ -43,7 +45,9 @@ export const selectSubEventsForEvents = <
   const eventIdSet = new Set(eventIds);
   return [...allSubEvents]
     .filter((se) => eventIdSet.has(se.eventId))
-    .sort((a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime));
+    .sort(
+      (a, b) => toMillis(a.scheduledStartTime) - toMillis(b.scheduledStartTime)
+    );
 };
 
 const EXCLUDED_EVENT_STATUSES = ["Cancelled", "Internal", "Draft"];
@@ -62,7 +66,11 @@ export const selectAllActiveEvents = <
 export const selectGroupRelatedEvents = <
   THostedEvent extends { eventId: bigint },
   TParticipant extends { eventId: bigint; status: { tag: string } },
-  TEvent extends { eventId: bigint; status: { tag: string }; startTime: DateLike },
+  TEvent extends {
+    eventId: bigint;
+    status: { tag: string };
+    startTime: DateLike;
+  },
 >(
   groupId: bigint | null,
   hostedEvents: readonly THostedEvent[] | undefined,
@@ -81,7 +89,8 @@ export const selectGroupRelatedEvents = <
   return [...allEvents]
     .filter(
       (event) =>
-        (hostedEventIds.has(event.eventId) || acceptedEventIds.has(event.eventId)) &&
+        (hostedEventIds.has(event.eventId) ||
+          acceptedEventIds.has(event.eventId)) &&
         event.status.tag !== "Cancelled"
     )
     .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
@@ -496,20 +505,58 @@ export const useGroupMembersForGroup = (groupId: bigint | null) => {
   }, [memberships, users]);
 };
 
+export const useGroupLeadMembersForGroup = (groupId: bigint | null) => {
+  const query = useMemo(() => {
+    return groupId
+      ? tables.group_membership.where((r) => r.groupId.eq(groupId))
+      : tables.group_membership.where((r) => r.groupId.eq(0n));
+  }, [groupId]);
+
+  const [memberships] = useTable(query);
+  const [users] = useTable(tables.user);
+  //const [allMemberships] = useTable(tables.group_membership);
+
+  return useMemo(() => {
+    const leadMemberships = (memberships || []).filter((membership) => {
+      const permissionTag = membership.permissionLevel.tag;
+      return permissionTag === "Staff" || permissionTag === "Ceo";
+    });
+
+    return selectGroupMembersForGroup(leadMemberships, users);
+  }, [memberships, users]);
+};
+
 export interface GroupAvailabilityData {
-  hostedEvents: ReturnType<typeof useUpcomingHostedEvents> extends Array<infer T> ? T[] : never;
-  attendingEvents: ReturnType<typeof useUpcomingAttendingEvents> extends Array<infer T> ? T[] : never;
-  hostedSubEvents: ReturnType<typeof useSubEventsForGroup> extends Array<infer T> ? T[] : never;
+  hostedEvents: ReturnType<typeof useUpcomingHostedEvents> extends Array<
+    infer T
+  >
+    ? T[]
+    : never;
+  attendingEvents: ReturnType<typeof useUpcomingAttendingEvents> extends Array<
+    infer T
+  >
+    ? T[]
+    : never;
+  hostedSubEvents: ReturnType<typeof useSubEventsForGroup> extends Array<
+    infer T
+  >
+    ? T[]
+    : never;
 }
 
-export const useGroupAvailabilityData = (groupId: bigint | null): GroupAvailabilityData => {
+export const useGroupAvailabilityData = (
+  groupId: bigint | null
+): GroupAvailabilityData => {
   const hostedEvents = useUpcomingHostedEvents(groupId);
   const attendingEvents = useUpcomingAttendingEvents(groupId);
   const hostedSubEvents = useSubEventsForGroup(groupId);
 
-  return useMemo(() => ({
-    hostedEvents: hostedEvents || [],
-    attendingEvents: attendingEvents || [],
-    hostedSubEvents: hostedSubEvents || [],
-  }), [hostedEvents, attendingEvents, hostedSubEvents]);
+  return useMemo(
+    () => ({
+      hostedEvents: hostedEvents || [],
+      attendingEvents: attendingEvents || [],
+      hostedSubEvents: hostedSubEvents || [],
+    }),
+    [hostedEvents, attendingEvents, hostedSubEvents]
+  );
 };

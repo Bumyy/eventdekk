@@ -9,7 +9,7 @@ import { uploadImage } from "@/api/apiService";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { SubEventType } from "@/module_bindings/types";
-import { useGroupMembersForGroup } from "@/hooks/spacetimeHooks";
+import { useGroupLeadMembersForGroup } from "@/hooks/spacetimeHooks";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import {
   CreateEventDialogFooter,
@@ -51,7 +51,7 @@ export function CreateEventDialog({
   const [isAdvancedSubEventsMode, setIsAdvancedSubEventsMode] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
-  const members = useGroupMembersForGroup(groupId);
+  const members = useGroupLeadMembersForGroup(groupId);
   const userTimezone = useUserTimezone();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
