@@ -466,7 +466,7 @@ export function EventInvitationDialog({
                             </label>
                             {getEventTypeBadge(subEvent.subEventType)}
                           </div>
-                          <p className="text-sm text-muted-foreground mb-2">
+                          <p className="text-sm text-muted-foreground mb-2 overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
                             {subEvent.description}
                           </p>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground mb-3">
