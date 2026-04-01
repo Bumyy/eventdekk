@@ -209,7 +209,7 @@ export default function AdminMembers() {
                     value={newMemberPermission.tag}
                     onValueChange={(value) =>
                       setNewMemberPermission({
-                        tag: value as "Ceo" | "Staff" | "Member",
+                        tag: value as "CEO" | "Staff" | "Member",
                       })
                     }
                   >
@@ -217,7 +217,7 @@ export default function AdminMembers() {
                       <SelectValue placeholder="Select permission level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="Ceo">Admin</SelectItem>
+                      <SelectItem value="CEO">Admin</SelectItem>
                       <SelectItem value="Staff">Staff</SelectItem>
                       <SelectItem value="Member">Member</SelectItem>
                     </SelectContent>
