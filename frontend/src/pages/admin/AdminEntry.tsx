@@ -1,8 +1,12 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { Building2, CalendarSearch } from "lucide-react";
-import { useGroups, useGroupMemberships } from "@/hooks/spacetimeHooks";
+import { Building2, FilePlus2 } from "lucide-react";
+import {
+  useGroups,
+  useGroupMemberships,
+  useSuperAdmins,
+} from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
 
@@ -17,6 +21,11 @@ export default function AdminEntry() {
   const { identity } = useSpacetimeDB();
   const groups = useGroups();
   const memberships = useGroupMemberships();
+  const superAdmins = useSuperAdmins();
+
+  const isSuperAdmin = !!identity && superAdmins.some(
+    (admin) => admin.identity.toHexString() === identity.toHexString()
+  );
 
   // Filter and map groups to include role information
   const userGroups = groups
@@ -58,12 +67,22 @@ export default function AdminEntry() {
     <div className="max-w-2xl mx-auto">
       <div className="flex items-center justify-between mb-8">
         <h1 className="text-3xl font-bold">Select Group to Administrate</h1>
-        <Button variant="outline" size="sm" asChild>
-          <Link to="/admin/site">
-            <Building2 className="h-4 w-4 mr-2" />
-            Site Admin
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/admin/apply-group">
+              <FilePlus2 className="h-4 w-4 mr-2" />
+              Apply for Group
+            </Link>
+          </Button>
+          {isSuperAdmin && (
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/admin/site">
+                <Building2 className="h-4 w-4 mr-2" />
+                Site Admin
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
       <div className="grid gap-4">
         {userGroups.map((group) => (

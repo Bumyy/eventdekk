@@ -1,40 +1,94 @@
-use crate::enums::PermissionLevel;
-use crate::tables::{group, group_membership, user, Group, GroupMembership};
+use crate::enums::{ApplicationStatus, PermissionLevel};
+use crate::tables::{
+    group, group_application, group_membership, super_admin, user, Group, GroupApplication,
+    GroupMembership, SuperAdmin,
+};
 use crate::utils::{check_permission, find_group_or_err};
 use log::info;
 use spacetimedb::{reducer, Identity, ReducerContext, Table};
 
-#[reducer]
-pub fn register_group(
+fn is_super_admin(ctx: &ReducerContext, identity: Identity) -> bool {
+    ctx.db.super_admin().identity().find(identity).is_some()
+}
+
+fn require_super_admin(ctx: &ReducerContext) -> Result<(), String> {
+    if ctx.db.super_admin().iter().next().is_none() {
+        ctx.db.super_admin().insert(SuperAdmin {
+            identity: ctx.sender,
+            granted_at: ctx.timestamp,
+            granted_by: None,
+        });
+        info!("Bootstrap super admin initialized: {:?}", ctx.sender);
+        return Ok(());
+    }
+
+    if is_super_admin(ctx, ctx.sender) {
+        Ok(())
+    } else {
+        Err("Only super admins can perform this action.".to_string())
+    }
+}
+
+fn normalize_optional_string(value: Option<String>) -> Option<String> {
+    value.and_then(|v| {
+        let trimmed = v.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
+}
+
+fn validate_group_fields(
     ctx: &ReducerContext,
+    name: &str,
+    tag: &str,
+    exclude_group_id: Option<u64>,
+) -> Result<(), String> {
+    if name.trim().is_empty() || tag.trim().is_empty() {
+        return Err("Group name and tag cannot be empty.".to_string());
+    }
+
+    let normalized_tag = tag.trim().to_lowercase();
+    let tag_conflict = ctx.db.group().iter().any(|g| {
+        if exclude_group_id.is_some() && Some(g.group_id) == exclude_group_id {
+            return false;
+        }
+        g.tag.trim().eq_ignore_ascii_case(&normalized_tag)
+    });
+
+    if tag_conflict {
+        return Err(format!("Group tag '{}' already exists.", tag.trim()));
+    }
+
+    Ok(())
+}
+
+fn create_group_with_ceo_membership(
+    ctx: &ReducerContext,
+    ceo_identity: Identity,
     name: String,
     tag: String,
     description: String,
     website_url: Option<String>,
     logo_url: Option<String>,
-) -> Result<(), String> {
-    let ceo_identity = ctx.sender;
-
-    if name.trim().is_empty() || tag.trim().is_empty() {
-        return Err("Group name and tag cannot be empty.".to_string());
-    }
-    if ctx.db.group().iter().any(|g| g.tag == tag) {
-        return Err(format!("Group tag '{}' already exists.", tag));
-    }
-
+    ifvarb_approved: bool,
+) -> Group {
     let new_group = Group {
         group_id: 0,
         name,
         tag,
         description,
         ceo_identity,
-        ifvarb_approved: true, // Assumed pre-approved
+        ifvarb_approved,
         website_url,
         logo_url,
         rating: None,
         created_at: ctx.timestamp,
         color: None,
     };
+
     let inserted_group = ctx.db.group().insert(new_group);
 
     let ceo_membership = GroupMembership {
@@ -45,9 +99,199 @@ pub fn register_group(
     };
     ctx.db.group_membership().insert(ceo_membership);
 
+    inserted_group
+}
+
+#[reducer]
+pub fn grant_super_admin(ctx: &ReducerContext, identity: Identity) -> Result<(), String> {
+    require_super_admin(ctx)?;
+
+    if ctx.db.super_admin().identity().find(identity).is_some() {
+        return Err("Identity is already a super admin.".to_string());
+    }
+
+    ctx.db.super_admin().insert(SuperAdmin {
+        identity,
+        granted_at: ctx.timestamp,
+        granted_by: Some(ctx.sender),
+    });
+
+    info!("Super admin {:?} granted by {:?}", identity, ctx.sender);
+    Ok(())
+}
+
+#[reducer]
+pub fn revoke_super_admin(ctx: &ReducerContext, identity: Identity) -> Result<(), String> {
+    require_super_admin(ctx)?;
+
+    if identity == ctx.sender {
+        return Err("You cannot revoke your own super admin access.".to_string());
+    }
+
+    if ctx.db.super_admin().identity().delete(identity) {
+        info!("Super admin {:?} revoked by {:?}", identity, ctx.sender);
+        Ok(())
+    } else {
+        Err("Identity is not a super admin.".to_string())
+    }
+}
+
+#[reducer]
+pub fn apply_for_group(
+    ctx: &ReducerContext,
+    name: String,
+    tag: String,
+    description: String,
+    website_url: Option<String>,
+    logo_url: Option<String>,
+) -> Result<(), String> {
+    validate_group_fields(ctx, &name, &tag, None)?;
+
+    if ctx
+        .db
+        .group_application()
+        .iter()
+        .any(|a| a.applicant_identity == ctx.sender && a.status == ApplicationStatus::Pending)
+    {
+        return Err("You already have a pending group application.".to_string());
+    }
+
+    let application = GroupApplication {
+        application_id: 0,
+        applicant_identity: ctx.sender,
+        name: name.trim().to_string(),
+        tag: tag.trim().to_string(),
+        description: description.trim().to_string(),
+        website_url: normalize_optional_string(website_url),
+        logo_url: normalize_optional_string(logo_url),
+        status: ApplicationStatus::Pending,
+        reviewed_by: None,
+        reviewed_at: None,
+        review_note: None,
+        created_group_id: None,
+        created_at: ctx.timestamp,
+    };
+
+    let inserted = ctx.db.group_application().insert(application);
     info!(
-        "Group '{}' registered by CEO {:?}",
-        inserted_group.name, ceo_identity
+        "Group application {} submitted by {:?}",
+        inserted.application_id, ctx.sender
+    );
+    Ok(())
+}
+
+#[reducer]
+pub fn approve_group_application(
+    ctx: &ReducerContext,
+    application_id: u64,
+    review_note: Option<String>,
+) -> Result<(), String> {
+    require_super_admin(ctx)?;
+
+    let mut application = ctx
+        .db
+        .group_application()
+        .application_id()
+        .find(application_id)
+        .ok_or_else(|| format!("Group application {} not found.", application_id))?;
+
+    if application.status != ApplicationStatus::Pending {
+        return Err("Only pending applications can be approved.".to_string());
+    }
+
+    validate_group_fields(ctx, &application.name, &application.tag, None)?;
+
+    let inserted_group = create_group_with_ceo_membership(
+        ctx,
+        application.applicant_identity,
+        application.name.clone(),
+        application.tag.clone(),
+        application.description.clone(),
+        application.website_url.clone(),
+        application.logo_url.clone(),
+        true,
+    );
+
+    application.status = ApplicationStatus::Approved;
+    application.reviewed_by = Some(ctx.sender);
+    application.reviewed_at = Some(ctx.timestamp);
+    application.review_note = normalize_optional_string(review_note);
+    application.created_group_id = Some(inserted_group.group_id);
+
+    ctx.db
+        .group_application()
+        .application_id()
+        .update(application);
+
+    info!(
+        "Group application {} approved by {:?}, created group {}",
+        application_id, ctx.sender, inserted_group.group_id
+    );
+    Ok(())
+}
+
+#[reducer]
+pub fn reject_group_application(
+    ctx: &ReducerContext,
+    application_id: u64,
+    review_note: Option<String>,
+) -> Result<(), String> {
+    require_super_admin(ctx)?;
+
+    let mut application = ctx
+        .db
+        .group_application()
+        .application_id()
+        .find(application_id)
+        .ok_or_else(|| format!("Group application {} not found.", application_id))?;
+
+    if application.status != ApplicationStatus::Pending {
+        return Err("Only pending applications can be rejected.".to_string());
+    }
+
+    application.status = ApplicationStatus::Rejected;
+    application.reviewed_by = Some(ctx.sender);
+    application.reviewed_at = Some(ctx.timestamp);
+    application.review_note = normalize_optional_string(review_note);
+
+    ctx.db
+        .group_application()
+        .application_id()
+        .update(application);
+
+    info!(
+        "Group application {} rejected by {:?}",
+        application_id, ctx.sender
+    );
+    Ok(())
+}
+
+#[reducer]
+pub fn register_group(
+    ctx: &ReducerContext,
+    name: String,
+    tag: String,
+    description: String,
+    website_url: Option<String>,
+    logo_url: Option<String>,
+) -> Result<(), String> {
+    require_super_admin(ctx)?;
+    validate_group_fields(ctx, &name, &tag, None)?;
+
+    let inserted_group = create_group_with_ceo_membership(
+        ctx,
+        ctx.sender,
+        name.trim().to_string(),
+        tag.trim().to_string(),
+        description.trim().to_string(),
+        normalize_optional_string(website_url),
+        normalize_optional_string(logo_url),
+        true,
+    );
+
+    info!(
+        "Group '{}' registered directly by super admin {:?}",
+        inserted_group.name, ctx.sender
     );
     Ok(())
 }
@@ -65,17 +309,14 @@ pub fn update_group(
 ) -> Result<(), String> {
     check_permission(ctx, group_id, PermissionLevel::Staff)?;
     let mut group = find_group_or_err(ctx, group_id)?;
+    validate_group_fields(ctx, &name, &tag, Some(group_id))?;
 
-    if name.trim().is_empty() {
-        return Err("Group name cannot be empty.".to_string());
-    }
-
-    group.name = name;
-    group.tag = tag;
-    group.description = description;
-    group.website_url = website_url;
-    group.logo_url = logo_url;
-    group.color = color;
+    group.name = name.trim().to_string();
+    group.tag = tag.trim().to_string();
+    group.description = description.trim().to_string();
+    group.website_url = normalize_optional_string(website_url);
+    group.logo_url = normalize_optional_string(logo_url);
+    group.color = normalize_optional_string(color);
 
     ctx.db.group().group_id().update(group);
     info!("Group {} updated by user {:?}", group_id, ctx.sender);

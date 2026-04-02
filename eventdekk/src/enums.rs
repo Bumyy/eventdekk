@@ -14,3 +14,6 @@ pub enum ParticipantRole { Host = 0, Participant = 1 }
 
 #[derive(SpacetimeType, Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum SubEventType { FlyIn = 0, FlyOut = 1, GroupFlight = 2 }
+
+#[derive(SpacetimeType, Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ApplicationStatus {Pending = 0, Approved = 1, Rejected = 2}

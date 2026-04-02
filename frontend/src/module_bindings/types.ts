@@ -10,6 +10,14 @@ import {
   type Infer as __Infer,
 } from "spacetimedb";
 
+// The tagged union or sum type for the algebraic type `ApplicationStatus`.
+export const ApplicationStatus = __t.enum("ApplicationStatus", {
+  Pending: __t.unit(),
+  Approved: __t.unit(),
+  Rejected: __t.unit(),
+});
+export type ApplicationStatus = __Infer<typeof ApplicationStatus>;
+
 export const DiscoveryEvent = __t.object("DiscoveryEvent", {
   eventId: __t.u64(),
   displayPriority: __t.u64(),
@@ -92,6 +100,25 @@ export const Group = __t.object("Group", {
   createdAt: __t.timestamp(),
 });
 export type Group = __Infer<typeof Group>;
+
+export const GroupApplication = __t.object("GroupApplication", {
+  applicationId: __t.u64(),
+  applicantIdentity: __t.identity(),
+  name: __t.string(),
+  tag: __t.string(),
+  description: __t.string(),
+  websiteUrl: __t.option(__t.string()),
+  logoUrl: __t.option(__t.string()),
+  get status() {
+    return ApplicationStatus;
+  },
+  reviewedBy: __t.option(__t.identity()),
+  reviewedAt: __t.option(__t.timestamp()),
+  reviewNote: __t.option(__t.string()),
+  createdGroupId: __t.option(__t.u64()),
+  createdAt: __t.timestamp(),
+});
+export type GroupApplication = __Infer<typeof GroupApplication>;
 
 export const GroupMembership = __t.object("GroupMembership", {
   membershipId: __t.u64(),
@@ -212,6 +239,13 @@ export const SubEventType = __t.enum("SubEventType", {
   GroupFlight: __t.unit(),
 });
 export type SubEventType = __Infer<typeof SubEventType>;
+
+export const SuperAdmin = __t.object("SuperAdmin", {
+  identity: __t.identity(),
+  grantedAt: __t.timestamp(),
+  grantedBy: __t.option(__t.identity()),
+});
+export type SuperAdmin = __Infer<typeof SuperAdmin>;
 
 export const User = __t.object("User", {
   identity: __t.identity(),

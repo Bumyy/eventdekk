@@ -37,16 +37,21 @@ import {
 import AddGroupMemberReducer from "./add_group_member_reducer";
 import AddLiveChatMessageReducer from "./add_live_chat_message_reducer";
 import AddSubEventReducer from "./add_sub_event_reducer";
+import ApplyForGroupReducer from "./apply_for_group_reducer";
+import ApproveGroupApplicationReducer from "./approve_group_application_reducer";
 import CreateEventReducer from "./create_event_reducer";
 import DeleteEventReducer from "./delete_event_reducer";
 import DeleteFlightSignupReducer from "./delete_flight_signup_reducer";
 import DeleteLiveChatMessageReducer from "./delete_live_chat_message_reducer";
 import DeleteSubEventReducer from "./delete_sub_event_reducer";
 import EditLiveChatMessageReducer from "./edit_live_chat_message_reducer";
+import GrantSuperAdminReducer from "./grant_super_admin_reducer";
 import InviteGroupToEventReducer from "./invite_group_to_event_reducer";
 import RegisterGroupReducer from "./register_group_reducer";
+import RejectGroupApplicationReducer from "./reject_group_application_reducer";
 import RemoveGroupMemberReducer from "./remove_group_member_reducer";
 import RespondToEventInvitationReducer from "./respond_to_event_invitation_reducer";
+import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
 import SetUserProfileReducer from "./set_user_profile_reducer";
 import SignupForFlightReducer from "./signup_for_flight_reducer";
 import UpdateEventReducer from "./update_event_reducer";
@@ -63,10 +68,12 @@ import EventRow from "./event_table";
 import EventParticipantRow from "./event_participant_table";
 import FlightSignupRow from "./flight_signup_table";
 import GroupRow from "./group_table";
+import GroupApplicationRow from "./group_application_table";
 import GroupMembershipRow from "./group_membership_table";
 import LiveChatMessageRow from "./live_chat_message_table";
 import LiveFlightRow from "./live_flight_table";
 import SubEventRow from "./sub_event_table";
+import SuperAdminRow from "./super_admin_table";
 import UserRow from "./user_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -162,6 +169,23 @@ const tablesSchema = __schema({
       { name: 'group_group_id_key', constraint: 'unique', columns: ['groupId'] },
     ],
   }, GroupRow),
+  group_application: __table({
+    name: 'group_application',
+    indexes: [
+      { accessor: 'idx_applicant', name: 'group_application_applicant_identity_idx_btree', algorithm: 'btree', columns: [
+        'applicantIdentity',
+      ] },
+      { accessor: 'application_id', name: 'group_application_application_id_idx_btree', algorithm: 'btree', columns: [
+        'applicationId',
+      ] },
+      { accessor: 'idx_status', name: 'group_application_status_idx_btree', algorithm: 'btree', columns: [
+        'status',
+      ] },
+    ],
+    constraints: [
+      { name: 'group_application_application_id_key', constraint: 'unique', columns: ['applicationId'] },
+    ],
+  }, GroupApplicationRow),
   group_membership: __table({
     name: 'group_membership',
     indexes: [
@@ -234,6 +258,17 @@ const tablesSchema = __schema({
       { name: 'sub_event_sub_event_id_key', constraint: 'unique', columns: ['subEventId'] },
     ],
   }, SubEventRow),
+  super_admin: __table({
+    name: 'super_admin',
+    indexes: [
+      { accessor: 'identity', name: 'super_admin_identity_idx_btree', algorithm: 'btree', columns: [
+        'identity',
+      ] },
+    ],
+    constraints: [
+      { name: 'super_admin_identity_key', constraint: 'unique', columns: ['identity'] },
+    ],
+  }, SuperAdminRow),
   user: __table({
     name: 'user',
     indexes: [
@@ -255,16 +290,21 @@ const reducersSchema = __reducers(
   __reducerSchema("add_group_member", AddGroupMemberReducer),
   __reducerSchema("add_live_chat_message", AddLiveChatMessageReducer),
   __reducerSchema("add_sub_event", AddSubEventReducer),
+  __reducerSchema("apply_for_group", ApplyForGroupReducer),
+  __reducerSchema("approve_group_application", ApproveGroupApplicationReducer),
   __reducerSchema("create_event", CreateEventReducer),
   __reducerSchema("delete_event", DeleteEventReducer),
   __reducerSchema("delete_flight_signup", DeleteFlightSignupReducer),
   __reducerSchema("delete_live_chat_message", DeleteLiveChatMessageReducer),
   __reducerSchema("delete_sub_event", DeleteSubEventReducer),
   __reducerSchema("edit_live_chat_message", EditLiveChatMessageReducer),
+  __reducerSchema("grant_super_admin", GrantSuperAdminReducer),
   __reducerSchema("invite_group_to_event", InviteGroupToEventReducer),
   __reducerSchema("register_group", RegisterGroupReducer),
+  __reducerSchema("reject_group_application", RejectGroupApplicationReducer),
   __reducerSchema("remove_group_member", RemoveGroupMemberReducer),
   __reducerSchema("respond_to_event_invitation", RespondToEventInvitationReducer),
+  __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),
   __reducerSchema("set_user_profile", SetUserProfileReducer),
   __reducerSchema("signup_for_flight", SignupForFlightReducer),
   __reducerSchema("update_event", UpdateEventReducer),

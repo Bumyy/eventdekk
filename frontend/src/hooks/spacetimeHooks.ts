@@ -170,6 +170,18 @@ export const useGroups = () => {
   return rows;
 };
 
+export const useSuperAdmins = () => {
+  const [rows] = useTable(tables.super_admin);
+  console.log(rows);
+  return rows;
+};
+
+export const useGroupApplications = () => {
+  const [rows] = useTable(tables.group_application);
+  console.log(rows);
+  return rows;
+};
+
 /**
  * Get a specific group by ID
  * Uses server-side subscription with .where() for efficient filtering

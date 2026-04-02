@@ -1,5 +1,35 @@
-use spacetimedb::{table, Identity, Timestamp, SpacetimeType, ScheduleAt};
 use crate::enums::*;
+use spacetimedb::{table, Identity, ScheduleAt, SpacetimeType, Timestamp};
+
+#[table(name = super_admin, public)]
+pub struct SuperAdmin {
+    #[primary_key]
+    pub identity: Identity,
+    pub granted_at: Timestamp,
+    pub granted_by: Option<Identity>,
+}
+
+#[table(name = group_application, public,
+    index(name = idx_applicant, btree(columns = [applicant_identity])),
+    index(name = idx_status, btree(columns = [status]))
+)]
+pub struct GroupApplication {
+    #[primary_key]
+    #[auto_inc]
+    pub application_id: u64,
+    pub applicant_identity: Identity,
+    pub name: String,
+    pub tag: String,
+    pub description: String,
+    pub website_url: Option<String>,
+    pub logo_url: Option<String>,
+    pub status: ApplicationStatus,
+    pub reviewed_by: Option<Identity>,
+    pub reviewed_at: Option<Timestamp>,
+    pub review_note: Option<String>,
+    pub created_group_id: Option<u64>,
+    pub created_at: Timestamp,
+}
 
 #[table(name = group, public, index(name = idx_ceo, btree(columns = [ceo_identity])))]
 pub struct Group {
@@ -132,7 +162,7 @@ pub struct FlightSignup {
 pub struct LiveFlight {
     #[primary_key] pub flight_id: String,
     pub event_id: Option<u64>,
-    pub sub_event_id: Option<u64>, 
+    pub sub_event_id: Option<u64>,
     pub signup_id: Option<u64>,
     pub user_identity: Option<Identity>,
     pub group_id: Option<u64>,
