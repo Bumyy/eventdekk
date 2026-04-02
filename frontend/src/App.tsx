@@ -34,6 +34,7 @@ import AdminEvents from "@/pages/admin/AdminEvents";
 import AdminMembers from "@/pages/admin/AdminMembers";
 import SiteAdmin from "@/pages/admin/SiteAdmin";
 import CreateGroup from "./pages/admin/CreateGroup";
+import EditGroup from "@/pages/admin/EditGroup";
 import EditEvent from "./pages/admin/EditEvent";
 import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
 import GroupPlanner from "@/pages/admin/GroupPlanner";
@@ -226,6 +227,7 @@ function App() {
                     <Route path="apply-group" element={<ApplyForGroup />} />
                     <Route path="site" element={<SiteAdmin />} />
                     <Route path="site/group/create" element={<CreateGroup />} />
+                    <Route path="groups/:groupId/edit" element={<EditGroup />} />
                     <Route
                       path="dashboard/:groupId"
                       element={<AdminDashboard />}

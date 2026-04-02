@@ -1,16 +1,15 @@
 import { useParams } from "react-router-dom";
 import { GroupSettingsEditor } from "@/components/admin/groups/GroupSettingsEditor";
 
-export default function AdminGroupSettings() {
+export default function EditGroup() {
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
 
   return (
     <GroupSettingsEditor
       groupId={groupIdBigInt}
-      title="Group Settings"
-      backTo={groupId ? `/admin/dashboard/${groupId}` : "/admin"}
-      canEditIdentityFields={false}
+      title="Edit Group"
+      backTo="/admin/site"
     />
   );
 }

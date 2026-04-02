@@ -307,12 +307,24 @@ pub fn update_group(
     logo_url: Option<String>,
     color: Option<String>,
 ) -> Result<(), String> {
-    check_permission(ctx, group_id, PermissionLevel::Staff)?;
-    let mut group = find_group_or_err(ctx, group_id)?;
-    validate_group_fields(ctx, &name, &tag, Some(group_id))?;
+    let sender_is_super_admin = is_super_admin(ctx, ctx.sender);
+    if !sender_is_super_admin {
+        check_permission(ctx, group_id, PermissionLevel::Staff)?;
+    }
 
-    group.name = name.trim().to_string();
-    group.tag = tag.trim().to_string();
+    let mut group = find_group_or_err(ctx, group_id)?;
+
+    let trimmed_name = name.trim().to_string();
+    let trimmed_tag = tag.trim().to_string();
+
+    if sender_is_super_admin {
+        validate_group_fields(ctx, &trimmed_name, &trimmed_tag, Some(group_id))?;
+        group.name = trimmed_name;
+        group.tag = trimmed_tag;
+    } else if group.name.trim() != trimmed_name || group.tag.trim() != trimmed_tag {
+        return Err("Only super admins can change group name or tag.".to_string());
+    }
+
     group.description = description.trim().to_string();
     group.website_url = normalize_optional_string(website_url);
     group.logo_url = normalize_optional_string(logo_url);
