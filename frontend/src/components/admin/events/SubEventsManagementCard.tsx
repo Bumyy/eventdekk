@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -58,17 +58,21 @@ export function SubEventsManagementCard() {
   const [addFormDraft, setAddFormDraft] = useState<SubEventFormState>(subEventForm);
   const [editFormDraft, setEditFormDraft] = useState<SubEventFormState>(editSubEventForm);
   const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(null);
+  const wasAddDialogOpen = useRef(false);
+  const wasEditDialogOpen = useRef(false);
 
   useEffect(() => {
-    if (showAddSubEventDialog) {
+    if (showAddSubEventDialog && !wasAddDialogOpen.current) {
       setAddFormDraft(subEventForm);
     }
+    wasAddDialogOpen.current = showAddSubEventDialog;
   }, [showAddSubEventDialog, subEventForm]);
 
   useEffect(() => {
-    if (showEditSubEventDialog) {
+    if (showEditSubEventDialog && !wasEditDialogOpen.current) {
       setEditFormDraft(editSubEventForm);
     }
+    wasEditDialogOpen.current = showEditSubEventDialog;
   }, [showEditSubEventDialog, editSubEventForm]);
 
   useEffect(() => {

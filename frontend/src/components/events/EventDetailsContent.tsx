@@ -89,13 +89,13 @@ export function EventDetailsContent({
 
   const openSubEventInDetails = (subEventId: bigint) => {
     const targetId = subEventId.toString();
-    setActiveTab("subevents");
+    setActiveTab("waves");
     setPendingScrollSubEventId(targetId);
     setHighlightedSubEventId(targetId);
   };
 
   useEffect(() => {
-    if (activeTab !== "subevents" || !pendingScrollSubEventId) return;
+    if (activeTab !== "waves" || !pendingScrollSubEventId) return;
 
     const targetElement = subEventRefs.current[pendingScrollSubEventId];
     if (!targetElement) return;

@@ -139,7 +139,9 @@ export default function SiteAdmin() {
 
   const onRevokeSuperAdmin = async (adminIdentity: string) => {
     if (!connection) return;
-    await connection.reducers.revokeSuperAdmin({ identity: adminIdentity });
+    await connection.reducers.revokeSuperAdmin({
+      identity: Identity.fromString(adminIdentity),
+    });
   };
 
   if (!isSuperAdmin) {

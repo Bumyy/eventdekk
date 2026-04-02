@@ -58,7 +58,7 @@ export function CreateEventSubEventsSection() {
       <div className="space-y-4">
         {subEvents.map((subEvent, index) => (
           <CreateEventSubEventCard
-            key={`${subEvent.name}-${index}-${subEvent.scheduledStartTime.getTime()}`}
+            key={`create-wave-${index}`}
             index={index}
           />
         ))}

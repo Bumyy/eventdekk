@@ -19,7 +19,11 @@ import {
 import { useState } from "react";
 import eventdekkLogo from "../assets/eventdekk_logo.png";
 import { cn } from "@/lib/utils";
-import { useGroups, useCurrentUser } from "@/hooks/spacetimeHooks";
+import {
+  useGroups,
+  useCurrentUser,
+  useSuperAdmins,
+} from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -46,8 +50,14 @@ const Navigation = () => {
   const { isAuthenticated, logout, isLoading: isAuthLoading } = useAuth();
   const { identity, isActive: isConnected } = useSpacetimeDB();
   const groups = useGroups();
+  const superAdmins = useSuperAdmins();
 
   const currentUser = useCurrentUser();
+  const isSuperAdmin =
+    !!identity &&
+    superAdmins.some(
+      (admin) => admin.identity.toHexString() === identity.toHexString()
+    );
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(
@@ -97,6 +107,11 @@ const Navigation = () => {
   ];
 
   // Admin Specific Links Context
+  const adminRootLinks = [{ name: "Select Group", path: "/admin", icon: Shield }];
+  if (isSuperAdmin) {
+    adminRootLinks.push({ name: "Site Admin", path: "/admin/site", icon: Settings });
+  }
+
   const adminNavLinks = groupId
     ? [
         {
@@ -117,10 +132,7 @@ const Navigation = () => {
           icon: Settings,
         },
       ]
-    : [
-        { name: "Select Group", path: "/admin", icon: Shield },
-        { name: "Site Admin", path: "/admin/site", icon: Settings },
-      ];
+    : adminRootLinks;
 
   // Morph navigation based on the current context
   const navLinks = isAdminArea ? adminNavLinks : mainNavLinks;
