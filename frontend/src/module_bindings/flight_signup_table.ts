@@ -22,4 +22,5 @@ export default __t.row({
   desiredDepartureTime: __t.option(__t.timestamp()).name("desired_departure_time"),
   desiredArrivalTime: __t.option(__t.timestamp()).name("desired_arrival_time"),
   createdAt: __t.timestamp().name("created_at"),
+  eventLead: __t.option(__t.identity()).name("event_lead"),
 });

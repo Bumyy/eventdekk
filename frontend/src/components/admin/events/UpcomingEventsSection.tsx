@@ -41,6 +41,7 @@ function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): b
 
 interface SignupIssues {
   hasIssues: boolean;
+  missingGroupLead: boolean;
   missingCallsign: boolean;
   missingAircraftType: boolean;
   missingDepartureTime: boolean;
@@ -56,6 +57,7 @@ function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues
 
   const issues: SignupIssues = {
     hasIssues: false,
+    missingGroupLead: false,
     missingCallsign: false,
     missingAircraftType: false,
     missingDepartureTime: false,
@@ -63,6 +65,11 @@ function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues
     missingDepartureIcao: false,
     missingArrivalIcao: false,
   };
+
+  if (!signup.eventLead) {
+    issues.missingGroupLead = true;
+    issues.hasIssues = true;
+  }
 
   if (!signup.callsign || signup.callsign.trim() === "") {
     issues.missingCallsign = true;
@@ -126,22 +133,9 @@ export function UpcomingEventsSection({
       name: group?.name || "Unknown Group",
       logo: group?.logoUrl || "",
       tag: group?.tag || "",
+      color: group?.color || "#1f2937",
     };
   };
-
-  const getFlightSignupsForGroup = (): Array<{
-    groupId: bigint;
-    subEventId: bigint;
-  }> => {
-    return (
-      flightSignups?.map((signup) => ({
-        groupId: signup.groupId,
-        subEventId: signup.subEventId,
-      })) || []
-    );
-  };
-
-  const flightSignupsInfo = getFlightSignupsForGroup();
 
   return (
     <div className="space-y-4">
@@ -160,6 +154,7 @@ export function UpcomingEventsSection({
                   subEvents={eventSubEvents}
                   userTimezone={userTimezone}
                   isHosting={true}
+                  creatorGroupInfo={getGroupInfo(event.creatorGroupId)}
                   expanded={expandedEvents.includes(event.eventId.toString())}
                   currentUser={currentUser}
                   users={users}
@@ -244,7 +239,7 @@ export function UpcomingEventsSection({
                     onToggleExpand(`attending-${event.eventId.toString()}`)
                   }
                   onManageParticipation={() => onManageParticipation(event)}
-                  flightSignups={flightSignupsInfo}
+                  flightSignups={groupSignupsForEvent}
                   hasIncompleteInfo={hasIncompleteInfo}
                   signupsWithIssues={signupsWithIssues}
                 />

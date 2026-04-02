@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
-import { SenderError, Timestamp } from "spacetimedb";
+import { Identity, SenderError, Timestamp } from "spacetimedb";
 import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { useSpacetimeDB } from "spacetimedb/react";
@@ -123,6 +123,8 @@ export default function EditEvent() {
   );
   const [isSubmittingFlights, setIsSubmittingFlights] = useState(false);
   const [isAdvancedSubEventsMode, setIsAdvancedSubEventsMode] = useState(false);
+  const [selectedOwnGroupLeadHex, setSelectedOwnGroupLeadHex] =
+    useState<string>("none");
 
   const limitIcaoLength = (icao: string) => icao.slice(0, 4);
 
@@ -251,13 +253,19 @@ export default function EditEvent() {
       const signedUpSubEventIds = ownSignups.map((signup) => signup.subEventId);
       setSelectedOwnSubEvents(signedUpSubEventIds);
 
+      const firstLeadHex = ownSignups.find((signup) => signup.eventLead)?.eventLead?.toHexString();
+      setSelectedOwnGroupLeadHex(firstLeadHex || "none");
+
       // Populate flight details from existing signups
       const detailsMap: Record<string, any> = {};
-      ownSignups.forEach((signup) => {
-        detailsMap[signup.subEventId.toString()] = {
-          callsign: signup.callsign || "",
-          aircraftType: signup.aircraftType || "",
-          departureTime: signup.desiredDepartureTime
+        ownSignups.forEach((signup) => {
+          detailsMap[signup.subEventId.toString()] = {
+            eventLeadHex: signup.eventLead
+              ? signup.eventLead.toHexString()
+              : "none",
+            callsign: signup.callsign || "",
+            aircraftType: signup.aircraftType || "",
+            departureTime: signup.desiredDepartureTime
             ? format(signup.desiredDepartureTime.toDate(), "yyyy-MM-dd'T'HH:mm")
             : "",
           arrivalTime: signup.desiredArrivalTime
@@ -291,6 +299,7 @@ export default function EditEvent() {
         if (!prev[subEventId.toString()]) {
           // Initialize with defaults based on sub-event type
           const details = {
+            eventLeadHex: "none",
             callsign: "",
             aircraftType: "",
             route: "",
@@ -389,6 +398,10 @@ export default function EditEvent() {
       for (const subEventId of selectedOwnSubEvents) {
         const details = ownFlightDetails[subEventId.toString()];
         if (!details) continue;
+        const selectedEventLead =
+          selectedOwnGroupLeadHex !== "none"
+            ? Identity.fromString(selectedOwnGroupLeadHex)
+            : null;
 
         // Check if we need to update or add
         const existingSignup = existingSignups.find(
@@ -444,6 +457,7 @@ export default function EditEvent() {
               routeDetails: details.route || undefined,
               callsign: details.callsign || null,
               aircraftType: details.aircraftType || null,
+              eventLead: selectedEventLead,
               desiredDepartureTime: departureTime || undefined,
               desiredArrivalTime: arrivalTime || undefined,
             });
@@ -464,6 +478,7 @@ export default function EditEvent() {
             await connection.reducers.signupForFlight({
               subEventId: subEventId,
               groupId: BigInt(groupId),
+              eventLead: selectedEventLead,
               departureIcao: departureIcao,
               arrivalIcao: arrivalIcao,
               routeDetails: details.route || undefined,
@@ -1017,6 +1032,8 @@ return (
         groups,
         availableInviteGroups,
         memberOptions,
+        selectedOwnGroupLeadHex,
+        setSelectedOwnGroupLeadHex,
         showAddSubEventDialog,
         setShowAddSubEventDialog,
         showEditSubEventDialog,

@@ -19,7 +19,13 @@ interface GroupAvailabilityData {
 interface ConflictInfo {
   hasConflict: boolean;
   sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[];
-  overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[];
+  overlappingEvents: {
+    name: string;
+    start: Date;
+    end: Date;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[];
   isFree: boolean;
 }
 
@@ -37,8 +43,18 @@ function checkSubEventConflicts(
     ...availabilityData.attendingEvents.map((e) => ({ ...e, isHosted: false })),
   ];
 
-  const sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[] = [];
-  const overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[] = [];
+  const sameDayEvents: {
+    name: string;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[] = [];
+  const overlappingEvents: {
+    name: string;
+    start: Date;
+    end: Date;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[] = [];
 
   const allSubEvents = availabilityData.hostedSubEvents;
 
@@ -50,15 +66,19 @@ function checkSubEventConflicts(
 
     if (existingDay.getTime() === subEventDay.getTime()) {
       const parentEvent = allEvents.find((e) => e.eventId === subEv.eventId);
-      if (parentEvent && !sameDayEvents.some((e) => e.name === parentEvent.name)) {
-        sameDayEvents.push({ 
-          name: parentEvent.name, 
-          isHosted: parentEvent.isHosted, 
-          isInternal: parentEvent.isInternal 
+      if (
+        parentEvent &&
+        !sameDayEvents.some((e) => e.name === parentEvent.name)
+      ) {
+        sameDayEvents.push({
+          name: parentEvent.name,
+          isHosted: parentEvent.isHosted,
+          isInternal: parentEvent.isInternal,
         });
       }
 
-      const hasOverlap = subEventStart < existingEnd && subEventEnd > existingStart;
+      const hasOverlap =
+        subEventStart < existingEnd && subEventEnd > existingStart;
       if (hasOverlap) {
         overlappingEvents.push({
           name: `${subEv.name} (${parentEvent?.name || "Unknown"})`,
@@ -79,7 +99,11 @@ function checkSubEventConflicts(
 
     if (eventDay.getTime() === subEventDay.getTime()) {
       if (!sameDayEvents.some((e) => e.name === event.name)) {
-        sameDayEvents.push({ name: event.name, isHosted: event.isHosted, isInternal: event.isInternal });
+        sameDayEvents.push({
+          name: event.name,
+          isHosted: event.isHosted,
+          isInternal: event.isInternal,
+        });
       }
 
       const hasOverlap = subEventStart < eventEnd && subEventEnd > eventStart;
@@ -157,6 +181,7 @@ export function EventInvitationsSection({
       name: group?.name || "Unknown Group",
       logo: group?.logoUrl || "",
       tag: group?.tag || "",
+      color: group?.color || "#1f2937",
     };
   };
 
@@ -169,67 +194,94 @@ export function EventInvitationsSection({
               (se) => se.eventId === event.eventId
             );
             const creatorGroupInfo = getGroupInfo(event.creatorGroupId);
-            const { hasConflicts, sameDayCount } = getEventConflicts(eventSubEvents, availabilityData);
+            const { hasConflicts, sameDayCount } = getEventConflicts(
+              eventSubEvents,
+              availabilityData
+            );
 
             return (
-              <Card key={event.eventId.toString()} className="p-4">
-                <div className="flex items-start justify-between">
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-xl font-semibold">{event.name}</h2>
-                      {hasConflicts && (
-                        <Badge variant="destructive" className="flex items-center gap-1">
-                          <AlertTriangle className="h-3 w-3" />
-                          Time conflict
-                        </Badge>
-                      )}
-                      {!hasConflicts && sameDayCount > 0 && (
-                        <Badge variant="outline" className="flex items-center gap-1 border-yellow-500 text-yellow-600 dark:text-yellow-400">
-                          <Calendar className="h-3 w-3" />
-                          {sameDayCount} event{sameDayCount !== 1 ? "s" : ""} same day
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-                      {event.description}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                      <span>
-                        {formatDateInTimezone(event.startTime, userTimezone)}
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {formatTimeInTimezone(event.startTime, userTimezone)}
-                      </span>
-                      <span>•</span>
-                      <Badge
-                        variant="outline"
-                        className="flex items-center gap-1"
-                      >
-                        <Calendar className="h-3 w-3 mr-1" />
-                        {eventSubEvents.length} sub-events
-                      </Badge>
-                      <span>•</span>
-                      <div className="flex items-center gap-2">
-                        <span>Host:</span>
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage
-                            src={creatorGroupInfo.logo}
-                            alt={creatorGroupInfo.name}
-                          />
-                          <AvatarFallback className="text-xs">
-                            {creatorGroupInfo.tag ||
-                              creatorGroupInfo.name.substring(0, 2)}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span>{creatorGroupInfo.name}</span>
+              <Card key={event.eventId.toString()} className="overflow-hidden p-0">
+                <div className="flex flex-col sm:flex-row">
+                  {event.bannerUrl && (
+                    <div className="relative h-32 sm:h-auto sm:w-44 md:w-56 shrink-0">
+                      <img
+                        src={event.bannerUrl}
+                        alt={event.name}
+                        className="h-full w-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-transparent sm:bg-gradient-to-b sm:from-black/50 sm:to-transparent" />
+                      <div className="absolute bottom-2 left-3 right-3 text-white sm:hidden">
+                        <p className="text-sm font-semibold line-clamp-1">{event.name}</p>
                       </div>
                     </div>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button variant="outline" onClick={() => onRespond(event)}>
-                      Respond
-                    </Button>
+                  )}
+
+                  <div className="flex-1 p-4">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h2 className="text-xl font-semibold">{event.name}</h2>
+                          {hasConflicts && (
+                            <Badge
+                              variant="destructive"
+                              className="flex items-center gap-1"
+                            >
+                              <AlertTriangle className="h-3 w-3" />
+                              Time conflict
+                            </Badge>
+                          )}
+                          {!hasConflicts && sameDayCount > 0 && (
+                            <Badge
+                              variant="outline"
+                              className="flex items-center gap-1 border-yellow-500 text-yellow-600 dark:text-yellow-400"
+                            >
+                              <Calendar className="h-3 w-3" />
+                              {sameDayCount} event{sameDayCount !== 1 ? "s" : ""}{" "}
+                              same day
+                            </Badge>
+                          )}
+                        </div>
+                        <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                          {event.description}
+                        </p>
+                        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                          <span>
+                            {formatDateInTimezone(event.startTime, userTimezone)}
+                          </span>
+                          <span>•</span>
+                          <span>
+                            {formatTimeInTimezone(event.startTime, userTimezone)}
+                          </span>
+                          <span>•</span>
+                          <Badge
+                            variant="outline"
+                            className="flex items-center gap-1"
+                          >
+                            <Calendar className="h-3 w-3 mr-1" />
+                            {eventSubEvents.length} sub-events
+                          </Badge>
+                          <span>•</span>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-5 w-5">
+                              <AvatarImage
+                                src={creatorGroupInfo.logo}
+                                alt={creatorGroupInfo.name}
+                              />
+                              <AvatarFallback className="text-xs">
+                                {creatorGroupInfo.tag ||
+                                  creatorGroupInfo.name.substring(0, 2)}
+                              </AvatarFallback>
+                            </Avatar>
+                            <span>{creatorGroupInfo.name}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => onRespond(event)}>
+                          Respond
+                        </Button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </Card>

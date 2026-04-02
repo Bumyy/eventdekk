@@ -13,6 +13,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { formatDateInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
 import {
   Calendar as CalendarIcon2,
@@ -35,6 +42,9 @@ export function ManageOwnFlightsCard() {
     ownFlightDetails,
     isSubmittingFlights,
     userTimezone,
+    memberOptions,
+    selectedOwnGroupLeadHex,
+    setSelectedOwnGroupLeadHex,
     handleToggleOwnSubEvent,
     updateOwnFlightDetail,
     handleSubmitOwnFlights,
@@ -73,6 +83,30 @@ export function ManageOwnFlightsCard() {
                   <p className="text-sm text-muted-foreground">
                     Choose which sub-events your group will participate in and
                     provide the necessary flight details.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="own-group-event-lead">Group Event Lead (Optional)</Label>
+                  <Select
+                    value={selectedOwnGroupLeadHex}
+                    onValueChange={setSelectedOwnGroupLeadHex}
+                  >
+                    <SelectTrigger id="own-group-event-lead">
+                      <SelectValue placeholder="Select group event lead" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">None</SelectItem>
+                      {memberOptions.map((member) => (
+                        <SelectItem key={member.identityHex} value={member.identityHex}>
+                          {member.callsignPrefix ? `[${member.callsignPrefix}] ` : ""}
+                          {member.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Applies to all selected signups for this group in this event.
                   </p>
                 </div>
 

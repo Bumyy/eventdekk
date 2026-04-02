@@ -1,18 +1,25 @@
-use spacetimedb::{reducer, ReducerContext, Table};
-use log::{info, warn};
 use crate::tables::{user, User};
+use log::{info, warn};
+use spacetimedb::{reducer, ReducerContext, Table};
 
 #[reducer(client_connected)]
 pub fn client_connected(ctx: &ReducerContext) {
     let identity = ctx.sender;
     if let Some(user) = ctx.db.user().identity().find(identity) {
         info!("User reconnected: {:?}", identity);
-        ctx.db.user().identity().update(User { online: true, ..user });
+        ctx.db.user().identity().update(User {
+            online: true,
+            ..user
+        });
     } else {
         info!("New user connected: {:?}", identity);
         ctx.db.user().insert(User {
-            identity, display_name: None, ifc_profile_url: None,
-            online: true, ifc_callsign_prefix: None, timezone: None,
+            identity,
+            display_name: None,
+            ifc_profile_url: None,
+            online: true,
+            ifc_callsign_prefix: None,
+            timezone: None,
         });
     }
 }
@@ -22,7 +29,10 @@ pub fn client_disconnected(ctx: &ReducerContext) {
     let identity = ctx.sender;
     if let Some(user) = ctx.db.user().identity().find(identity) {
         info!("User disconnected: {:?}", identity);
-        ctx.db.user().identity().update(User { online: false, ..user });
+        ctx.db.user().identity().update(User {
+            online: false,
+            ..user
+        });
     } else {
         warn!("Disconnect event for unknown user: {:?}", identity);
     }

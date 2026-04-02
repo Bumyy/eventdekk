@@ -83,6 +83,7 @@ export const FlightSignup = __t.object("FlightSignup", {
   desiredDepartureTime: __t.option(__t.timestamp()),
   desiredArrivalTime: __t.option(__t.timestamp()),
   createdAt: __t.timestamp(),
+  eventLead: __t.option(__t.identity()),
 });
 export type FlightSignup = __Infer<typeof FlightSignup>;
 

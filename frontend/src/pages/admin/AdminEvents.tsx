@@ -23,7 +23,7 @@ import { useUserTimezone } from "@/utils/timezoneUtils";
 import { CreateEventDialog } from "@/components/CreateEventDialog";
 import { SubEventType, EventStatus, Event } from "@/module_bindings/types";
 import { useParams, useNavigate } from "react-router-dom";
-import { Timestamp, SenderError } from "spacetimedb";
+import { Identity, Timestamp, SenderError } from "spacetimedb";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { toast } from "sonner";
 import { EventInvitationDialog } from "@/components/EventInvitationDialog";
@@ -294,6 +294,7 @@ export default function AdminEvents() {
 
     relevantSignups.forEach((signup) => {
       flightDetailsFromSignups[signup.subEventId.toString()] = {
+        eventLeadHex: signup.eventLead ? signup.eventLead.toHexString() : "none",
         callsign: signup.callsign || "",
         aircraftType: signup.aircraftType || "",
         route: signup.routeDetails || "",
@@ -379,6 +380,7 @@ export default function AdminEvents() {
     flightDetails: Record<
       string,
       {
+        eventLeadHex?: string;
         callsign?: string;
         aircraftType?: string;
         departureTime?: string;
@@ -420,6 +422,10 @@ export default function AdminEvents() {
         }
 
         const details = flightDetails[subEventId.toString()] || {};
+        const selectedEventLead =
+          details.eventLeadHex && details.eventLeadHex !== "none"
+            ? Identity.fromString(details.eventLeadHex)
+            : null;
 
         // Determine departure and arrival based on sub-event type
         let departureIcao = "";
@@ -451,6 +457,7 @@ export default function AdminEvents() {
           await connection.reducers.signupForFlight({
             subEventId: subEventId,
             groupId: groupIdBigInt!,
+            eventLead: selectedEventLead,
             departureIcao: departureIcao,
             arrivalIcao: arrivalIcao,
             routeDetails: details.route || "",
@@ -605,6 +612,10 @@ export default function AdminEvents() {
         );
         if (!subEvent) continue;
         const details = flightDetails[subEventId.toString()] || {};
+        const selectedEventLead =
+          details.eventLeadHex && details.eventLeadHex !== "none"
+            ? Identity.fromString(details.eventLeadHex)
+            : null;
 
         // Determine departure and arrival based on sub-event type
         let departureIcao = "";
@@ -646,6 +657,7 @@ export default function AdminEvents() {
               routeDetails: details.route || "",
               callsign: details.callsign,
               aircraftType: details.aircraftType,
+              eventLead: selectedEventLead,
               desiredDepartureTime: departureTime,
               desiredArrivalTime: arrivalTime,
             });
@@ -655,6 +667,7 @@ export default function AdminEvents() {
             await connection.reducers.signupForFlight({
               subEventId: subEventId,
               groupId: groupIdBigInt!,
+              eventLead: selectedEventLead,
               departureIcao: departureIcao,
               arrivalIcao: arrivalIcao,
               routeDetails: details.route || "",

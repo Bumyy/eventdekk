@@ -33,6 +33,7 @@ interface FlightSignupInfo {
 
 interface SignupIssues {
   hasIssues: boolean;
+  missingGroupLead: boolean;
   missingCallsign: boolean;
   missingAircraftType: boolean;
   missingDepartureTime: boolean;
@@ -59,9 +60,10 @@ interface EventCardProps {
     name: string;
     logo: string;
     tag: string;
+    color?: string;
   };
   expanded?: boolean;
-  flightSignups?: FlightSignupInfo[];
+  flightSignups?: FlightSignup[];
   currentUser?: any;
   users?: any[];
   onToggleExpand?: () => void;
@@ -120,25 +122,49 @@ export function EventCard({
   signupsWithIssues = [],
 }: EventCardProps) {
   const isDraft = event.status?.tag === "Draft";
+  const hasBannerImage = Boolean(event.bannerUrl);
 
   const missingLeadsCount = isHosting
     ? subEvents.filter((se) => !se.eventLead).length
     : 0;
 
-  const isUserLeadForThisEvent =
-    currentUser &&
-    subEvents.some(
-      (se) =>
-        se.eventLead &&
-        se.eventLead.toHexString() === currentUser.identity.toHexString()
-    );
+  const isUserLeadForThisEvent = currentUser
+    ? isHosting
+      ? subEvents.some(
+          (se) =>
+            se.eventLead &&
+            se.eventLead.toHexString() === currentUser.identity.toHexString()
+        )
+      : signupsWithIssues.some(
+          (entry) =>
+            entry.signup.eventLead &&
+            entry.signup.eventLead.toHexString() ===
+              currentUser.identity.toHexString()
+        )
+    : false;
 
   return (
     <Card
-      className={`p-4 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}`}
+      className={`overflow-hidden p-0 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}`}
     >
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-2">
+      <div className="flex flex-col sm:flex-row">
+        {hasBannerImage && (
+          <div className="relative h-32 sm:h-auto sm:w-44 md:w-56 shrink-0">
+            <img
+              src={event.bannerUrl}
+              alt={event.name}
+              className="h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-transparent sm:bg-gradient-to-b sm:from-black/50 sm:to-transparent" />
+            <div className="absolute bottom-2 left-3 right-3 text-white sm:hidden">
+              <p className="text-sm font-semibold line-clamp-1">{event.name}</p>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-semibold">{event.name}</h2>
             {isDraft && <Badge variant="outline">Draft</Badge>}
@@ -161,7 +187,7 @@ export function EventCard({
                 className="bg-blue-600 text-white flex items-center gap-1"
               >
                 <UserCircle className="h-3 w-3" />
-                You are Lead
+                {isHosting ? "You are Lead" : "You are Group Lead"}
               </Badge>
             )}
             {isHosting && (
@@ -190,7 +216,6 @@ export function EventCard({
               <>
                 <span>•</span>
                 <div className="flex items-center gap-2">
-                  <span>Hosted by:</span>
                   <Avatar className="h-5 w-5">
                     <AvatarImage
                       src={creatorGroupInfo.logo}
@@ -206,8 +231,8 @@ export function EventCard({
               </>
             )}
           </div>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
+            </div>
+            <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
           {onToggleExpand && (
             <Button variant="ghost" size="icon" onClick={onToggleExpand}>
               {expanded ? (
@@ -257,11 +282,13 @@ export function EventCard({
               <span className="hidden sm:inline">Manage Participation</span>
             </Button>
           )}
+            </div>
+          </div>
         </div>
       </div>
 
       {expanded && subEvents.length > 0 && (
-        <div className="mt-6 space-y-4">
+        <div className="space-y-4 border-t px-4 pb-4 pt-4">
           <h3 className="text-lg font-semibold">Sub Events</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {subEvents.map((subEvent) => {
@@ -271,6 +298,7 @@ export function EventCard({
               const signupWithIssue = signupsWithIssues.find(
                 (s) => s.signup.subEventId === subEvent.subEventId
               );
+              const signup = signupWithIssue?.signup;
               const signupIssues = signupWithIssue?.issues;
               const hasSignupIssues = signupIssues?.hasIssues || false;
               const isThisSubEventMine =
@@ -279,11 +307,18 @@ export function EventCard({
                 subEvent.eventLead.toHexString() ===
                   currentUser.identity.toHexString();
               const hasNoLead = !subEvent.eventLead;
-              const leadUser = subEvent.eventLead
+              const subEventLeadUser = subEvent.eventLead
                 ? users.find(
                     (u) =>
                       u.identity.toHexString() ===
                       subEvent.eventLead.toHexString()
+                  )
+                : null;
+              const signupLeadUser = signup?.eventLead
+                ? users.find(
+                    (u) =>
+                      u.identity.toHexString() ===
+                      signup.eventLead!.toHexString()
                   )
                 : null;
 
@@ -310,8 +345,29 @@ export function EventCard({
                   </div>
                   <h4 className="font-medium">{subEvent.name}</h4>
 
-                  <div className="mt-1 mb-2 text-xs">
-                    {hasNoLead ? (
+                  <div className="mt-1 mb-2 text-xs space-y-1">
+                    {isAttending && isParticipating ? (
+                      <>
+                        <span
+                          className={`flex items-center gap-1 ${!signupLeadUser ? "text-amber-600 dark:text-amber-400 font-semibold" : signupLeadUser && currentUser && signupLeadUser.identity.toHexString() === currentUser.identity.toHexString() ? "text-blue-600 dark:text-blue-400 font-bold" : "text-muted-foreground"}`}
+                        >
+                          {!signupLeadUser ? (
+                            <AlertTriangle className="h-3 w-3" />
+                          ) : (
+                            <UserCircle className="h-3 w-3" />
+                          )}
+                          {signupLeadUser
+                            ? `Your Group Lead: ${signupLeadUser.displayName || "Unknown"}`
+                            : "Your Group Lead: Unassigned (required)"}
+                        </span>
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <UserCircle className="h-3 w-3" />
+                          {hasNoLead
+                            ? "Sub-event Lead: Unassigned"
+                            : `Sub-event Lead: ${subEventLeadUser?.displayName || "Unknown"}`}
+                        </span>
+                      </>
+                    ) : hasNoLead ? (
                       <span className="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">
                         <AlertTriangle className="h-3 w-3" /> No Lead Assigned
                       </span>
@@ -322,10 +378,59 @@ export function EventCard({
                         <UserCircle className="h-3 w-3" />
                         {isThisSubEventMine
                           ? "You are Leading"
-                          : `Lead: ${leadUser?.displayName || "Unknown"}`}
+                          : `Lead: ${subEventLeadUser?.displayName || "Unknown"}`}
                       </span>
                     )}
                   </div>
+
+                  {isAttending && (
+                    <div className="mb-2 rounded-md border bg-muted/30 p-2 text-xs">
+                      {isParticipating && signup ? (
+                        <div className="space-y-1 text-muted-foreground">
+                          <div>
+                            Callsign:{" "}
+                            <span className="font-medium text-foreground">
+                              {signup.callsign || "Missing"}
+                            </span>
+                          </div>
+                          <div>
+                            Aircraft:{" "}
+                            <span className="font-medium text-foreground">
+                              {signup.aircraftType || "Missing"}
+                            </span>
+                          </div>
+                          <div>
+                            Route:{" "}
+                            <span className="font-medium text-foreground">
+                              {signup.routeDetails || "Not set"}
+                            </span>
+                          </div>
+                          <div>
+                            Departure:{" "}
+                            <span className="font-medium text-foreground">
+                              {signup.departureIcao || "-"}
+                            </span>
+                            {signup.desiredDepartureTime
+                              ? ` at ${formatDateInTimezone(signup.desiredDepartureTime, userTimezone)} ${formatTimeInTimezone(signup.desiredDepartureTime, userTimezone)}`
+                              : " at Missing time"}
+                          </div>
+                          <div>
+                            Arrival:{" "}
+                            <span className="font-medium text-foreground">
+                              {signup.arrivalIcao || "-"}
+                            </span>
+                            {signup.desiredArrivalTime
+                              ? ` at ${formatDateInTimezone(signup.desiredArrivalTime, userTimezone)} ${formatTimeInTimezone(signup.desiredArrivalTime, userTimezone)}`
+                              : " at Missing time"}
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">
+                          Not signed up for this sub-event.
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {hasSignupIssues && signupIssues && isParticipating && (
                     <div className="mt-2 mb-2 p-2 bg-amber-500/10 rounded-md border border-amber-500/20">
@@ -335,32 +440,58 @@ export function EventCard({
                       </div>
                       <div className="flex flex-wrap gap-1 mt-1">
                         {signupIssues.missingCallsign && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Callsign
                           </Badge>
                         )}
+                        {signupIssues.missingGroupLead && (
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
+                            Group Lead
+                          </Badge>
+                        )}
                         {signupIssues.missingAircraftType && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Aircraft
                           </Badge>
                         )}
                         {signupIssues.missingDepartureTime && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Dep. Time
                           </Badge>
                         )}
                         {signupIssues.missingArrivalTime && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Arr. Time
                           </Badge>
                         )}
                         {signupIssues.missingDepartureIcao && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Dep. Airport
                           </Badge>
                         )}
                         {signupIssues.missingArrivalIcao && (
-                          <Badge variant="outline" className="text-xs border-amber-500/50 text-amber-600">
+                          <Badge
+                            variant="outline"
+                            className="text-xs border-amber-500/50 text-amber-600"
+                          >
                             Arr. Airport
                           </Badge>
                         )}

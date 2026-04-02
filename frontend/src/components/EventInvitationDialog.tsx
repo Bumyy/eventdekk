@@ -14,6 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import {
@@ -28,6 +35,7 @@ import {
 } from "lucide-react";
 import { SubEventType, Event, SubEvent } from "@/module_bindings/types";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
+import { useGroupLeadMembersForGroup } from "@/hooks/spacetimeHooks";
 
 interface GroupAvailabilityData {
   hostedEvents: Event[];
@@ -129,6 +137,7 @@ function checkSubEventConflicts(
 }
 
 interface FlightDetails {
+  eventLeadHex?: string;
   callsign?: string;
   aircraftType?: string;
   departureTime?: string;
@@ -166,6 +175,7 @@ export function EventInvitationDialog({
   invitation,
   events,
   subEvents,
+  groupId,
   onAccept,
   onDecline,
   preSelectedSubEvents = EMPTY_BIGINT_ARRAY,
@@ -173,6 +183,24 @@ export function EventInvitationDialog({
   availabilityData,
   currentEventId,
 }: EventInvitationDialogProps) {
+  const leadMembers = useGroupLeadMembersForGroup(groupId);
+
+  const eventLeadOptions = useMemo(
+    () =>
+      leadMembers.flatMap((member) => {
+        if (!member.user) return [];
+
+        return [
+          {
+            identityHex: member.user.identity.toHexString(),
+            displayName: member.user.displayName || "Unknown User",
+            callsignPrefix: member.user.ifcCallsignPrefix || undefined,
+          },
+        ];
+      }),
+    [leadMembers]
+  );
+
   // State for selected sub-events and flight details
   const [selectedSubEvents, setSelectedSubEvents] = useState<bigint[]>([]);
   const [flightDetails, setFlightDetails] = useState<
@@ -573,11 +601,49 @@ export function EventInvitationDialog({
 
                           {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
-                              <h4 className="text-sm font-medium">
-                                Flight Details
-                              </h4>
-
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div className="space-y-1 md:col-span-2">
+                                  <Label
+                                    htmlFor={`event-lead-${subEvent.subEventId}`}
+                                  >
+                                    Group Event Lead (Optional)
+                                  </Label>
+                                  <Select
+                                    value={
+                                      flightDetails[
+                                        subEvent.subEventId.toString()
+                                      ]?.eventLeadHex || "none"
+                                    }
+                                    onValueChange={(value) =>
+                                      updateFlightDetail(
+                                        subEvent.subEventId.toString(),
+                                        "eventLeadHex" as keyof FlightDetails,
+                                        value
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger
+                                      id={`event-lead-${subEvent.subEventId}`}
+                                      disabled={isProcessing}
+                                    >
+                                      <SelectValue placeholder="Select group lead" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="none">None</SelectItem>
+                                      {eventLeadOptions.map((member) => (
+                                        <SelectItem
+                                          key={member.identityHex}
+                                          value={member.identityHex}
+                                        >
+                                          {member.callsignPrefix
+                                            ? `[${member.callsignPrefix}] `
+                                            : ""}
+                                          {member.displayName}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
                                 <div className="space-y-1">
                                   <Label
                                     htmlFor={`callsign-${subEvent.subEventId}`}

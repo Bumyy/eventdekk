@@ -33,7 +33,9 @@ pub struct GroupApplication {
 
 #[table(name = group, public, index(name = idx_ceo, btree(columns = [ceo_identity])))]
 pub struct Group {
-    #[primary_key] #[auto_inc] pub group_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub group_id: u64,
     pub name: String,
     pub tag: String,
     pub description: String,
@@ -52,7 +54,9 @@ pub struct Group {
     index(name = idx_user_group, btree(columns = [user_identity, group_id]))
 )]
 pub struct GroupMembership {
-    #[primary_key] #[auto_inc] pub membership_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub membership_id: u64,
     pub user_identity: Identity,
     pub group_id: u64,
     pub permission_level: PermissionLevel,
@@ -60,7 +64,8 @@ pub struct GroupMembership {
 
 #[table(name = user, public, index(name = idx_callsign_prefix, btree(columns = [ifc_callsign_prefix])))]
 pub struct User {
-    #[primary_key] pub identity: Identity,
+    #[primary_key]
+    pub identity: Identity,
     pub display_name: Option<String>,
     pub ifc_profile_url: Option<String>,
     pub online: bool,
@@ -74,7 +79,9 @@ pub struct User {
     index(name = idx_status, btree(columns = [status]))
 )]
 pub struct Event {
-    #[primary_key] #[auto_inc] pub event_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub event_id: u64,
     pub creator_group_id: u64,
     pub name: String,
     pub description: String,
@@ -93,7 +100,9 @@ pub struct Event {
     index(name = idx_event_group, btree(columns = [event_id, group_id]))
 )]
 pub struct EventParticipant {
-    #[primary_key] #[auto_inc] pub participation_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub participation_id: u64,
     pub event_id: u64,
     pub group_id: u64,
     pub role: ParticipantRole,
@@ -106,7 +115,9 @@ pub struct EventParticipant {
     index(name = idx_start_time, btree(columns = [scheduled_start_time]))
 )]
 pub struct SubEvent {
-    #[primary_key] #[auto_inc] pub sub_event_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub sub_event_id: u64,
     pub event_id: u64,
     pub name: String,
     pub description: Option<String>,
@@ -142,7 +153,9 @@ pub struct SubEventData {
     index(name = idx_callsign, btree(columns = [callsign]))
 )]
 pub struct FlightSignup {
-    #[primary_key] #[auto_inc] pub signup_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub signup_id: u64,
     pub sub_event_id: u64,
     pub group_id: u64,
     pub departure_icao: String,
@@ -153,6 +166,8 @@ pub struct FlightSignup {
     pub desired_departure_time: Option<Timestamp>,
     pub desired_arrival_time: Option<Timestamp>,
     pub created_at: Timestamp,
+    #[default(None::<Identity>)]
+    pub event_lead: Option<Identity>,
 }
 
 #[table(name = live_flight, public,
@@ -160,7 +175,8 @@ pub struct FlightSignup {
     index(name = idx_sub_event, btree(columns = [sub_event_id])),
 )]
 pub struct LiveFlight {
-    #[primary_key] pub flight_id: String,
+    #[primary_key]
+    pub flight_id: String,
     pub event_id: Option<u64>,
     pub sub_event_id: Option<u64>,
     pub signup_id: Option<u64>,
@@ -193,7 +209,9 @@ pub struct LiveFlightData {
 
 #[table(name = live_chat_message, public, index(name = idx_event_id, btree(columns = [event_id])))]
 pub struct LiveChatMessage {
-    #[primary_key] #[auto_inc] pub message_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub message_id: u64,
     pub sender: Identity,
     pub group_id: u64,
     pub event_id: u64,
@@ -204,7 +222,8 @@ pub struct LiveChatMessage {
 #[table(name = discovery_event, public, index(name = idx_priority, btree(columns = [display_priority])))]
 #[derive(Clone)]
 pub struct DiscoveryEvent {
-    #[primary_key] pub event_id: u64,
+    #[primary_key]
+    pub event_id: u64,
     pub display_priority: u64,
     pub added_at: Timestamp,
 }
@@ -212,6 +231,8 @@ pub struct DiscoveryEvent {
 #[table(name = discovery_rotation_schedule, scheduled(crate::reducers::discovery::rotate_discovery_event))]
 #[derive(Clone, Copy)]
 pub struct DiscoveryRotationSchedule {
-    #[primary_key] #[auto_inc] pub scheduled_id: u64,
+    #[primary_key]
+    #[auto_inc]
+    pub scheduled_id: u64,
     pub scheduled_at: ScheduleAt,
 }

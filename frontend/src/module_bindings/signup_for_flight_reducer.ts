@@ -13,6 +13,7 @@ import {
 export default {
   subEventId: __t.u64(),
   groupId: __t.u64(),
+  eventLead: __t.option(__t.identity()),
   departureIcao: __t.string(),
   arrivalIcao: __t.string(),
   routeDetails: __t.option(__t.string()),

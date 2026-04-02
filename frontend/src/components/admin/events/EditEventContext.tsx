@@ -34,6 +34,8 @@ interface EditEventContextValue {
   groups: Group[];
   availableInviteGroups: Group[];
   memberOptions: MemberOption[];
+  selectedOwnGroupLeadHex: string;
+  setSelectedOwnGroupLeadHex: (value: string) => void;
 
   showAddSubEventDialog: boolean;
   setShowAddSubEventDialog: (open: boolean) => void;
