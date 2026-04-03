@@ -167,6 +167,50 @@ async function updateLiveFlights(req, res) {
 }
 
 /**
+ * Get airport status for a batch of ICAOs
+ * Query params:
+ * - icaos: comma separated ICAO list
+ * - forceRefresh: true|false
+ * - sessionId: optional IF session id
+ */
+async function getAirportStatusBatch(req, res) {
+  try {
+    const icaosRaw = req.query.icaos || "";
+    const icaos = icaosRaw
+      .split(",")
+      .map((icao) => icao.trim().toUpperCase())
+      .filter(Boolean);
+
+    if (icaos.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required query parameter: icaos",
+      });
+    }
+
+    const forceRefresh = req.query.forceRefresh === "true";
+    const sessionId = req.query.sessionId;
+
+    const data = await flightsService.getAirportStatuses(icaos, {
+      forceRefresh,
+      sessionId,
+    });
+
+    return res.status(200).json({
+      success: true,
+      data,
+    });
+  } catch (error) {
+    console.error("Error in getAirportStatusBatch controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve airport statuses",
+      error: error.message,
+    });
+  }
+}
+
+/**
  * Get status of service
  * @param {Object} req - Express request object
  * @param {Object} res - Express response object
@@ -190,6 +234,7 @@ module.exports = {
   getFlights,
   updateLiveFlights,
   getConnectionStatus,
+  getAirportStatusBatch,
   // Export for testing and explicit cleanup
   cleanupSessions,
 };

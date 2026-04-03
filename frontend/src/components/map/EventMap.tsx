@@ -13,12 +13,17 @@ import MapGL, {
   FullscreenControl,
 } from "react-map-gl/maplibre";
 import type { LayerProps } from "react-map-gl/maplibre";
-import "maplibre-gl/dist/maplibre-gl.css"; // Import MapLibre CSS
+import "maplibre-gl/dist/maplibre-gl.css";
 import { format } from "date-fns";
-import bbox from "@turf/bbox"; // For calculating bounding box
-import { WebMercatorViewport } from "@deck.gl/core"; // For fitting bounds
+import bbox from "@turf/bbox";
+import { WebMercatorViewport } from "@deck.gl/core";
 
-import { SubEventType, Group, FlightSignup, SubEvent } from "@/module_bindings/types";
+import {
+  SubEventType,
+  Group,
+  FlightSignup,
+  SubEvent,
+} from "@/module_bindings/types";
 import { Timestamp } from "spacetimedb";
 import { useTheme } from "../ThemeProvider";
 import { fetchAirportsByIcao } from "../../services/airportService";
@@ -36,7 +41,7 @@ interface EventMapProps {
 }
 
 const MAPTILER_API_KEY =
-  import.meta.env.VITE_MAPTILER_API_KEY || "YOUR_FALLBACK_MAPTILER_KEY"; // IMPORTANT: Add your Maptiler API key to .env
+  import.meta.env.VITE_MAPTILER_API_KEY || "YOUR_FALLBACK_MAPTILER_KEY";
 
 const EventMap: React.FC<EventMapProps> = ({
   subEvents,
@@ -69,7 +74,7 @@ const EventMap: React.FC<EventMapProps> = ({
   const [activePopupInfo, setActivePopupInfo] = useState<ActivePopupInfo>(null);
 
   const [initialViewState] = useState({
-    longitude: -98.5795, // Centered on US initially
+    longitude: -98.5795,
     latitude: 39.8283,
     zoom: 3,
     pitch: 0,
@@ -137,13 +142,13 @@ const EventMap: React.FC<EventMapProps> = ({
           [maxLng, maxLat],
         ],
         {
-          padding: 80, // Increased padding
+          padding: 80,
         }
       );
 
       mapRef.current.flyTo({
         center: [longitude, latitude],
-        zoom: Math.min(zoom, 15), // Cap max zoom
+        zoom: Math.min(zoom, 15),
         duration: 1000,
       });
     },
@@ -155,7 +160,6 @@ const EventMap: React.FC<EventMapProps> = ({
       setAirportData(new Map());
       setLoadingAirports(false);
       setAirportError(null);
-      // Optionally reset view or keep current
       return;
     }
     setLoadingAirports(true);
@@ -179,9 +183,8 @@ const EventMap: React.FC<EventMapProps> = ({
       }
     };
     fetchAndSetAirports();
-  }, [icaos, fitMapToData]); // Added flights to deps of fitMapToData if it's called from here
+  }, [icaos, fitMapToData]);
 
-  // Update map bounds when flights data changes significantly
   useEffect(() => {
     if (flights.length > 0 && airportData.size > 0) {
       // Could add logic to only fit if bounds change drastically
@@ -483,7 +486,7 @@ const EventMap: React.FC<EventMapProps> = ({
         style={{ width: "100%", height: "100%" }}
         mapStyle={mapStyleUrl}
         onClick={handleMapClick}
-        interactiveLayerIds={["group-flight-paths", "signup-flight-paths"]} // Make line layers clickable
+        interactiveLayerIds={["group-flight-paths", "signup-flight-paths"]}
       >
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />

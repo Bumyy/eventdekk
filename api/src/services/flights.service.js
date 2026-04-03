@@ -5,7 +5,11 @@ require("dotenv").config();
 const IF_API_URL =
   process.env.IF_API_URL || "https://api.infiniteflight.com/public/v2";
 const IF_API_KEY = process.env.IF_API_KEY;
+const IF_SESSION_ID =
+  process.env.IF_SESSION_ID || "ed323139-baa7-4834-b9d6-5fb9f19ff11e";
 const CACHE_TTL_MS = parseInt(process.env.FLIGHT_CACHE_TTL_MS, 10) || 5000; // 5 seconds by default
+const AIRPORT_STATUS_CACHE_TTL_MS =
+  parseInt(process.env.AIRPORT_STATUS_CACHE_TTL_MS, 10) || 15000;
 const INACTIVE_CLEANUP_MS = 10000; // 10 seconds with no clients before stopping updates
 
 // Cache state
@@ -16,6 +20,7 @@ let updateTimer = null;
 let updateInProgress = false;
 let lastClientActivityTime = Date.now();
 let inactivityTimer = null;
+const airportStatusCache = new Map();
 
 /**
  * Initialize inactivity timer to stop updates after extended period with no clients
@@ -135,7 +140,7 @@ async function fetchLiveFlights() {
     }
 
     const response = await axios.get(
-      `${IF_API_URL}/sessions/ed323139-baa7-4834-b9d6-5fb9f19ff11e/flights`,
+      `${IF_API_URL}/sessions/${IF_SESSION_ID}/flights`,
       {
         headers: {
           Authorization: `Bearer ${IF_API_KEY}`,
@@ -153,6 +158,98 @@ async function fetchLiveFlights() {
     console.error("Error fetching flights from IF API:", error);
     throw error;
   }
+}
+
+function isAirportStatusCacheStale(lastUpdated) {
+  if (!lastUpdated) return true;
+  return Date.now() - lastUpdated > AIRPORT_STATUS_CACHE_TTL_MS;
+}
+
+async function fetchAirportStatus(airportIcao, sessionId = IF_SESSION_ID) {
+  if (!IF_API_KEY) {
+    throw new Error("IF_API_KEY not configured");
+  }
+
+  const normalizedIcao = String(airportIcao || "").trim().toUpperCase();
+  if (!normalizedIcao) {
+    throw new Error("airportIcao is required");
+  }
+
+  const response = await axios.get(
+    `${IF_API_URL}/sessions/${sessionId}/airport/${normalizedIcao}/status`,
+    {
+      headers: {
+        Authorization: `Bearer ${IF_API_KEY}`,
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (response.status !== 200) {
+    throw new Error(`IF API returned status ${response.status}`);
+  }
+
+  const result = response.data?.result;
+  if (!result) {
+    throw new Error("Invalid airport status response from IF API");
+  }
+
+  return {
+    airportIcao: result.airportIcao,
+    airportName: result.airportName,
+    inboundFlightsCount: result.inboundFlightsCount || 0,
+    inboundFlights: Array.isArray(result.inboundFlights)
+      ? result.inboundFlights
+      : [],
+    outboundFlightsCount: result.outboundFlightsCount || 0,
+    outboundFlights: Array.isArray(result.outboundFlights)
+      ? result.outboundFlights
+      : [],
+    atcFacilities: Array.isArray(result.atcFacilities) ? result.atcFacilities : [],
+  };
+}
+
+async function getAirportStatuses(icaoCodes, options = {}) {
+  const forceRefresh = options.forceRefresh === true;
+  const sessionId = options.sessionId || IF_SESSION_ID;
+
+  const uniqueIcaos = [...new Set((icaoCodes || [])
+    .map((code) => String(code || "").trim().toUpperCase())
+    .filter((code) => code.length === 4))];
+
+  const statuses = {};
+  const errors = {};
+
+  await Promise.all(
+    uniqueIcaos.map(async (icao) => {
+      const cacheKey = `${sessionId}:${icao}`;
+      const cached = airportStatusCache.get(cacheKey);
+
+      if (!forceRefresh && cached && !isAirportStatusCacheStale(cached.lastUpdated)) {
+        statuses[icao] = cached.data;
+        return;
+      }
+
+      try {
+        const data = await fetchAirportStatus(icao, sessionId);
+        airportStatusCache.set(cacheKey, {
+          data,
+          lastUpdated: Date.now(),
+        });
+        statuses[icao] = data;
+      } catch (error) {
+        errors[icao] = error.message || "Failed to fetch airport status";
+      }
+    })
+  );
+
+  return {
+    sessionId,
+    statuses,
+    errors,
+    requestedCount: uniqueIcaos.length,
+    successCount: Object.keys(statuses).length,
+  };
 }
 
 /**
@@ -276,6 +373,7 @@ function cleanup() {
 
   activeClients = 0;
   flightCache = [];
+  airportStatusCache.clear();
   console.log("Flight service cleaned up");
 }
 
@@ -287,6 +385,7 @@ module.exports = {
   registerClient,
   unregisterClient,
   isCacheStale,
+  getAirportStatuses,
   cleanup, // Export cleanup function
   getActiveClients: () => activeClients, // Export active client count
   getLastActivity: () => lastClientActivityTime, // Export last activity time
