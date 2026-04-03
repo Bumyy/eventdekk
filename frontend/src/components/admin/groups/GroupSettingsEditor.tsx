@@ -13,7 +13,16 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ArrowLeft, Info, Link, Loader2, Palette, Upload } from "lucide-react";
+import {
+  ArrowLeft,
+  Info,
+  Link,
+  Loader2,
+  Palette,
+  Plus,
+  Trash2,
+  Upload,
+} from "lucide-react";
 
 type GroupSettingsEditorProps = {
   groupId: bigint | null;
@@ -45,6 +54,12 @@ export function GroupSettingsEditor({
     logoPreview,
     color,
     setColor,
+    callsignFilters,
+    newCallsignFilter,
+    setNewCallsignFilter,
+    isManagingCallsignFilter,
+    addCallsignFilter,
+    removeCallsignFilter,
     handleLogoFileChange,
     handleLogoUrlChange,
     handleSubmit,
@@ -66,6 +81,7 @@ export function GroupSettingsEditor({
         <TabsList>
           <TabsTrigger value="general">General Settings</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
+          <TabsTrigger value="callsign">Callsign Matching</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">
@@ -266,6 +282,66 @@ export function GroupSettingsEditor({
                 </Button>
               </div>
             </form>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="callsign" className="space-y-4">
+          <Card className="p-6 space-y-6">
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold">Callsign Formats</h3>
+              <p className="text-sm text-muted-foreground">
+                Add one format per line, like <code>Qatari VA</code> or <code>QR</code>.
+                A live callsign matches when it contains all words from one format.
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-2">
+              <Input
+                value={newCallsignFilter}
+                onChange={(e) => setNewCallsignFilter(e.target.value)}
+                placeholder="Example: Qatari VA"
+              />
+              <Button
+                type="button"
+                onClick={addCallsignFilter}
+                disabled={isManagingCallsignFilter || !newCallsignFilter.trim()}
+              >
+                {isManagingCallsignFilter ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add
+                  </>
+                )}
+              </Button>
+            </div>
+
+            <div className="space-y-2">
+              {callsignFilters.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No callsign formats configured yet.
+                </p>
+              ) : (
+                callsignFilters.map((filter) => (
+                  <div
+                    key={filter.filterId.toString()}
+                    className="flex items-center justify-between border rounded-md px-3 py-2"
+                  >
+                    <span className="font-mono text-sm">{filter.words}</span>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => removeCallsignFilter(filter.filterId)}
+                      disabled={isManagingCallsignFilter}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))
+              )}
+            </div>
           </Card>
         </TabsContent>
       </Tabs>

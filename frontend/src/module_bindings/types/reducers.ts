@@ -6,6 +6,7 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AddGroupCallsignFilterReducer from "../add_group_callsign_filter_reducer";
 import AddGroupMemberReducer from "../add_group_member_reducer";
 import AddLiveChatMessageReducer from "../add_live_chat_message_reducer";
 import AddSubEventReducer from "../add_sub_event_reducer";
@@ -21,6 +22,7 @@ import GrantSuperAdminReducer from "../grant_super_admin_reducer";
 import InviteGroupToEventReducer from "../invite_group_to_event_reducer";
 import RegisterGroupReducer from "../register_group_reducer";
 import RejectGroupApplicationReducer from "../reject_group_application_reducer";
+import RemoveGroupCallsignFilterReducer from "../remove_group_callsign_filter_reducer";
 import RemoveGroupMemberReducer from "../remove_group_member_reducer";
 import RespondToEventInvitationReducer from "../respond_to_event_invitation_reducer";
 import RevokeSuperAdminReducer from "../revoke_super_admin_reducer";
@@ -32,6 +34,7 @@ import UpdateGroupReducer from "../update_group_reducer";
 import UpdateLiveFlightsReducer from "../update_live_flights_reducer";
 import UpdateSubEventReducer from "../update_sub_event_reducer";
 
+export type AddGroupCallsignFilterParams = __Infer<typeof AddGroupCallsignFilterReducer>;
 export type AddGroupMemberParams = __Infer<typeof AddGroupMemberReducer>;
 export type AddLiveChatMessageParams = __Infer<typeof AddLiveChatMessageReducer>;
 export type AddSubEventParams = __Infer<typeof AddSubEventReducer>;
@@ -47,6 +50,7 @@ export type GrantSuperAdminParams = __Infer<typeof GrantSuperAdminReducer>;
 export type InviteGroupToEventParams = __Infer<typeof InviteGroupToEventReducer>;
 export type RegisterGroupParams = __Infer<typeof RegisterGroupReducer>;
 export type RejectGroupApplicationParams = __Infer<typeof RejectGroupApplicationReducer>;
+export type RemoveGroupCallsignFilterParams = __Infer<typeof RemoveGroupCallsignFilterReducer>;
 export type RemoveGroupMemberParams = __Infer<typeof RemoveGroupMemberReducer>;
 export type RespondToEventInvitationParams = __Infer<typeof RespondToEventInvitationReducer>;
 export type RevokeSuperAdminParams = __Infer<typeof RevokeSuperAdminReducer>;

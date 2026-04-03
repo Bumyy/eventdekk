@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AddGroupCallsignFilterReducer from "./add_group_callsign_filter_reducer";
 import AddGroupMemberReducer from "./add_group_member_reducer";
 import AddLiveChatMessageReducer from "./add_live_chat_message_reducer";
 import AddSubEventReducer from "./add_sub_event_reducer";
@@ -49,6 +50,7 @@ import GrantSuperAdminReducer from "./grant_super_admin_reducer";
 import InviteGroupToEventReducer from "./invite_group_to_event_reducer";
 import RegisterGroupReducer from "./register_group_reducer";
 import RejectGroupApplicationReducer from "./reject_group_application_reducer";
+import RemoveGroupCallsignFilterReducer from "./remove_group_callsign_filter_reducer";
 import RemoveGroupMemberReducer from "./remove_group_member_reducer";
 import RespondToEventInvitationReducer from "./respond_to_event_invitation_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
@@ -69,6 +71,7 @@ import EventParticipantRow from "./event_participant_table";
 import FlightSignupRow from "./flight_signup_table";
 import GroupRow from "./group_table";
 import GroupApplicationRow from "./group_application_table";
+import GroupCallsignFilterRow from "./group_callsign_filter_table";
 import GroupMembershipRow from "./group_membership_table";
 import LiveChatMessageRow from "./live_chat_message_table";
 import LiveFlightRow from "./live_flight_table";
@@ -186,6 +189,20 @@ const tablesSchema = __schema({
       { name: 'group_application_application_id_key', constraint: 'unique', columns: ['applicationId'] },
     ],
   }, GroupApplicationRow),
+  group_callsign_filter: __table({
+    name: 'group_callsign_filter',
+    indexes: [
+      { accessor: 'filter_id', name: 'group_callsign_filter_filter_id_idx_btree', algorithm: 'btree', columns: [
+        'filterId',
+      ] },
+      { accessor: 'idx_group', name: 'group_callsign_filter_group_id_idx_btree', algorithm: 'btree', columns: [
+        'groupId',
+      ] },
+    ],
+    constraints: [
+      { name: 'group_callsign_filter_filter_id_key', constraint: 'unique', columns: ['filterId'] },
+    ],
+  }, GroupCallsignFilterRow),
   group_membership: __table({
     name: 'group_membership',
     indexes: [
@@ -287,6 +304,7 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("add_group_callsign_filter", AddGroupCallsignFilterReducer),
   __reducerSchema("add_group_member", AddGroupMemberReducer),
   __reducerSchema("add_live_chat_message", AddLiveChatMessageReducer),
   __reducerSchema("add_sub_event", AddSubEventReducer),
@@ -302,6 +320,7 @@ const reducersSchema = __reducers(
   __reducerSchema("invite_group_to_event", InviteGroupToEventReducer),
   __reducerSchema("register_group", RegisterGroupReducer),
   __reducerSchema("reject_group_application", RejectGroupApplicationReducer),
+  __reducerSchema("remove_group_callsign_filter", RemoveGroupCallsignFilterReducer),
   __reducerSchema("remove_group_member", RemoveGroupMemberReducer),
   __reducerSchema("respond_to_event_invitation", RespondToEventInvitationReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),

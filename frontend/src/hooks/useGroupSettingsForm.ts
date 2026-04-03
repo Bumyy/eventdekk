@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { uploadImage } from "@/api/apiService";
-import { useGroups } from "@/hooks/spacetimeHooks";
+import { useGroupCallsignFilters, useGroups } from "@/hooks/spacetimeHooks";
 
 type UseGroupSettingsFormArgs = {
   groupId: bigint | null;
@@ -12,6 +12,7 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
   const { getConnection } = useSpacetimeDB();
   const connection = getConnection();
   const groups = useGroups();
+  const callsignFilters = useGroupCallsignFilters(groupId);
 
   const [isUploading, setIsUploading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -24,6 +25,8 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [color, setColor] = useState("#000000");
+  const [newCallsignFilter, setNewCallsignFilter] = useState("");
+  const [isManagingCallsignFilter, setIsManagingCallsignFilter] = useState(false);
 
   useEffect(() => {
     if (!groups || !groupId) return;
@@ -112,6 +115,49 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     }
   };
 
+  const addCallsignFilter = async () => {
+    if (!connection || !groupId) return;
+
+    const words = newCallsignFilter.trim();
+    if (!words) {
+      toast.error("Enter callsign words first");
+      return;
+    }
+
+    try {
+      setIsManagingCallsignFilter(true);
+      await connection.reducers.addGroupCallsignFilter({ groupId, words });
+      setNewCallsignFilter("");
+      toast.success("Callsign format added");
+    } catch (error) {
+      console.error("Error adding callsign format:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Failed to add callsign format"
+      );
+    } finally {
+      setIsManagingCallsignFilter(false);
+    }
+  };
+
+  const removeCallsignFilter = async (filterId: bigint) => {
+    if (!connection) return;
+
+    try {
+      setIsManagingCallsignFilter(true);
+      await connection.reducers.removeGroupCallsignFilter({ filterId });
+      toast.success("Callsign format removed");
+    } catch (error) {
+      console.error("Error removing callsign format:", error);
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove callsign format"
+      );
+    } finally {
+      setIsManagingCallsignFilter(false);
+    }
+  };
+
   return {
     isUploading,
     isSaving,
@@ -128,6 +174,12 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     logoPreview,
     color,
     setColor,
+    callsignFilters,
+    newCallsignFilter,
+    setNewCallsignFilter,
+    isManagingCallsignFilter,
+    addCallsignFilter,
+    removeCallsignFilter,
     handleLogoFileChange,
     handleLogoUrlChange,
     handleSubmit,

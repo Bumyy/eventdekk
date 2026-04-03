@@ -26,8 +26,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  useHasSuperAdmins,
   useGroupApplications,
   useGroups,
+  useIsSuperAdmin,
   useSuperAdmins,
   useUsers,
 } from "@/hooks/spacetimeHooks";
@@ -50,15 +52,14 @@ export default function SiteAdmin() {
   const applications = useGroupApplications();
   const superAdmins = useSuperAdmins();
   const users = useUsers();
+  const hasSuperAdmins = useHasSuperAdmins();
 
   const [reviewNotes, setReviewNotes] = useState<Record<string, string>>({});
   const [showGrantDialog, setShowGrantDialog] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const isSuperAdmin = !!identity && superAdmins.some(
-    (admin) => admin.identity.toHexString() === identity.toHexString()
-  );
+  const isSuperAdmin = useIsSuperAdmin();
 
   const pendingApplications = useMemo(
     () =>
@@ -158,6 +159,15 @@ export default function SiteAdmin() {
 
   return (
     <div className="space-y-8">
+      {!hasSuperAdmins && (
+        <Card className="p-4 border-yellow-500/40 bg-yellow-500/10">
+          <p className="text-sm">
+            Bootstrap mode: no super admins exist yet. The first super-admin action
+            performed here will initialize your account as super admin.
+          </p>
+        </Card>
+      )}
+
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-2">
           <Shield className="h-6 w-6" />

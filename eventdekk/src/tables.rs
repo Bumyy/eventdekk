@@ -62,6 +62,18 @@ pub struct GroupMembership {
     pub permission_level: PermissionLevel,
 }
 
+#[table(name = group_callsign_filter, public,
+    index(name = idx_group, btree(columns = [group_id]))
+)]
+pub struct GroupCallsignFilter {
+    #[primary_key]
+    #[auto_inc]
+    pub filter_id: u64,
+    pub group_id: u64,
+    pub words: String,
+    pub created_at: Timestamp,
+}
+
 #[table(name = user, public, index(name = idx_callsign_prefix, btree(columns = [ifc_callsign_prefix])))]
 pub struct User {
     #[primary_key]

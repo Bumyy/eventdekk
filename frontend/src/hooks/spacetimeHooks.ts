@@ -176,6 +176,23 @@ export const useSuperAdmins = () => {
   return rows;
 };
 
+export const useHasSuperAdmins = () => {
+  const superAdmins = useSuperAdmins();
+  return useMemo(() => superAdmins.length > 0, [superAdmins]);
+};
+
+export const useIsSuperAdmin = () => {
+  const { identity } = useSpacetimeDB();
+  const superAdmins = useSuperAdmins();
+
+  return useMemo(() => {
+    if (!identity) return false;
+    return superAdmins.some(
+      (admin) => admin.identity.toHexString() === identity.toHexString()
+    );
+  }, [identity, superAdmins]);
+};
+
 export const useGroupApplications = () => {
   const [rows] = useTable(tables.group_application);
   console.log(rows);
@@ -204,6 +221,25 @@ export const useGroupById = (groupId: bigint | null) => {
 export const useGroupMemberships = () => {
   const [rows] = useTable(tables.group_membership);
   return rows;
+};
+
+export const useGroupCallsignFilters = (groupId: bigint | null) => {
+  const query = useMemo(
+    () =>
+      groupId
+        ? tables.group_callsign_filter.where((r) => r.groupId.eq(groupId))
+        : tables.group_callsign_filter.where((r) => r.groupId.eq(0n)),
+    [groupId]
+  );
+
+  const [filters] = useTable(query);
+  // This line is needed due to a bug in SpacetimeDB react SDK, do not remove
+  const [allFilters] = useTable(tables.group_callsign_filter);
+
+  return useMemo(() => {
+    if (!filters) return [];
+    return [...filters].sort((a, b) => Number(a.filterId - b.filterId));
+  }, [filters]);
 };
 
 export const useUsers = () => {

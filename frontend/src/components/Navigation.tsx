@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import {
   useGroups,
   useCurrentUser,
-  useSuperAdmins,
+  useIsSuperAdmin,
 } from "@/hooks/spacetimeHooks";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -50,14 +50,9 @@ const Navigation = () => {
   const { isAuthenticated, logout, isLoading: isAuthLoading } = useAuth();
   const { identity, isActive: isConnected } = useSpacetimeDB();
   const groups = useGroups();
-  const superAdmins = useSuperAdmins();
 
   const currentUser = useCurrentUser();
-  const isSuperAdmin =
-    !!identity &&
-    superAdmins.some(
-      (admin) => admin.identity.toHexString() === identity.toHexString()
-    );
+  const isSuperAdmin = useIsSuperAdmin();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState(

@@ -5,7 +5,7 @@ import { Building2, FilePlus2 } from "lucide-react";
 import {
   useGroups,
   useGroupMemberships,
-  useSuperAdmins,
+  useIsSuperAdmin,
 } from "@/hooks/spacetimeHooks";
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
@@ -21,11 +21,7 @@ export default function AdminEntry() {
   const { identity } = useSpacetimeDB();
   const groups = useGroups();
   const memberships = useGroupMemberships();
-  const superAdmins = useSuperAdmins();
-
-  const isSuperAdmin = !!identity && superAdmins.some(
-    (admin) => admin.identity.toHexString() === identity.toHexString()
-  );
+  const isSuperAdmin = useIsSuperAdmin();
 
   // Filter and map groups to include role information
   const userGroups = groups

@@ -5,6 +5,20 @@ use log::{debug, info};
 use spacetimedb::{reducer, Identity, ReducerContext, Table, Timestamp};
 use std::collections::HashSet;
 
+fn find_group_by_callsign(ctx: &ReducerContext, callsign: &str) -> Option<u64> {
+    let callsign_upper = callsign.to_uppercase();
+    for filter in ctx.db.group_callsign_filter().iter() {
+        let words: Vec<&str> = filter.words.split_whitespace().collect();
+        if words
+            .iter()
+            .all(|word| callsign_upper.contains(&word.to_uppercase()))
+        {
+            return Some(filter.group_id);
+        }
+    }
+    None
+}
+
 #[reducer]
 pub fn signup_for_flight(
     ctx: &ReducerContext,
@@ -170,6 +184,9 @@ pub fn update_live_flights(
             .flight_id()
             .find(flight_data.flight_id.clone())
         {
+            let group_id = existing_flight
+                .group_id
+                .or_else(|| find_group_by_callsign(ctx, &flight_data.callsign));
             let updated_flight = LiveFlight {
                 flight_id: flight_data.flight_id,
                 callsign: flight_data.callsign,
@@ -181,17 +198,19 @@ pub fn update_live_flights(
                 heading: flight_data.heading,
                 ground_speed: flight_data.ground_speed,
                 last_updated: flight_data.last_updated,
+                group_id,
                 ..existing_flight
             };
             ctx.db.live_flight().flight_id().update(updated_flight);
         } else {
+            let group_id = find_group_by_callsign(ctx, &flight_data.callsign);
             let new_flight = LiveFlight {
                 flight_id: flight_data.flight_id,
                 event_id: None,
                 sub_event_id: None,
                 signup_id: None,
                 user_identity: None,
-                group_id: None,
+                group_id,
                 callsign: flight_data.callsign,
                 aircraft_id: flight_data.aircraft_id,
                 livery_id: flight_data.livery_id,

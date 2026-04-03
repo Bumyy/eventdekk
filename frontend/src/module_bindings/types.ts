@@ -121,6 +121,14 @@ export const GroupApplication = __t.object("GroupApplication", {
 });
 export type GroupApplication = __Infer<typeof GroupApplication>;
 
+export const GroupCallsignFilter = __t.object("GroupCallsignFilter", {
+  filterId: __t.u64(),
+  groupId: __t.u64(),
+  words: __t.string(),
+  createdAt: __t.timestamp(),
+});
+export type GroupCallsignFilter = __Infer<typeof GroupCallsignFilter>;
+
 export const GroupMembership = __t.object("GroupMembership", {
   membershipId: __t.u64(),
   userIdentity: __t.identity(),

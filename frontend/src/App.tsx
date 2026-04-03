@@ -39,6 +39,7 @@ import EditEvent from "./pages/admin/EditEvent";
 import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
 import GroupPlanner from "@/pages/admin/GroupPlanner";
 import ApplyForGroup from "@/pages/admin/ApplyForGroup";
+import SuperAdminRoute from "@/pages/admin/SuperAdminRoute";
 
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   const { sdbToken, isLoading, logout } = useAuth();
@@ -225,9 +226,30 @@ function App() {
                   >
                     <Route index element={<AdminEntry />} />
                     <Route path="apply-group" element={<ApplyForGroup />} />
-                    <Route path="site" element={<SiteAdmin />} />
-                    <Route path="site/group/create" element={<CreateGroup />} />
-                    <Route path="groups/:groupId/edit" element={<EditGroup />} />
+                    <Route
+                      path="site"
+                      element={
+                        <SuperAdminRoute>
+                          <SiteAdmin />
+                        </SuperAdminRoute>
+                      }
+                    />
+                    <Route
+                      path="site/group/create"
+                      element={
+                        <SuperAdminRoute>
+                          <CreateGroup />
+                        </SuperAdminRoute>
+                      }
+                    />
+                    <Route
+                      path="groups/:groupId/edit"
+                      element={
+                        <SuperAdminRoute>
+                          <EditGroup />
+                        </SuperAdminRoute>
+                      }
+                    />
                     <Route
                       path="dashboard/:groupId"
                       element={<AdminDashboard />}

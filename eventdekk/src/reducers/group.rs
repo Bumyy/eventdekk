@@ -1,7 +1,7 @@
 use crate::enums::{ApplicationStatus, PermissionLevel};
 use crate::tables::{
-    group, group_application, group_membership, super_admin, user, Group, GroupApplication,
-    GroupMembership, SuperAdmin,
+    group, group_application, group_callsign_filter, group_membership, super_admin, user, Group,
+    GroupApplication, GroupCallsignFilter, GroupMembership, SuperAdmin,
 };
 use crate::utils::{check_permission, find_group_or_err};
 use log::info;
@@ -432,4 +432,53 @@ pub fn remove_group_member(
             user_identity, group_id
         ))
     }
+}
+
+#[reducer]
+pub fn add_group_callsign_filter(
+    ctx: &ReducerContext,
+    group_id: u64,
+    words: String,
+) -> Result<(), String> {
+    let sender_is_super_admin = is_super_admin(ctx, ctx.sender);
+    if !sender_is_super_admin {
+        check_permission(ctx, group_id, PermissionLevel::Staff)?;
+    }
+
+    let trimmed = words.trim();
+    if trimmed.is_empty() {
+        return Err("Callsign filter words cannot be empty.".to_string());
+    }
+
+    let filter = GroupCallsignFilter {
+        filter_id: 0,
+        group_id,
+        words: trimmed.to_string(),
+        created_at: ctx.timestamp,
+    };
+    ctx.db.group_callsign_filter().insert(filter);
+    info!("Callsign filter '{}' added to group {}", trimmed, group_id);
+    Ok(())
+}
+
+#[reducer]
+pub fn remove_group_callsign_filter(ctx: &ReducerContext, filter_id: u64) -> Result<(), String> {
+    let filter = ctx
+        .db
+        .group_callsign_filter()
+        .filter_id()
+        .find(filter_id)
+        .ok_or_else(|| format!("Callsign filter {} not found.", filter_id))?;
+
+    let sender_is_super_admin = is_super_admin(ctx, ctx.sender);
+    if !sender_is_super_admin {
+        check_permission(ctx, filter.group_id, PermissionLevel::Staff)?;
+    }
+
+    ctx.db.group_callsign_filter().filter_id().delete(filter_id);
+    info!(
+        "Callsign filter {} removed from group {}",
+        filter_id, filter.group_id
+    );
+    Ok(())
 }
