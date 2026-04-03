@@ -6,8 +6,6 @@ import React, {
   useCallback,
 } from "react";
 import MapGL, {
-  Marker,
-  Popup,
   Source,
   Layer,
   MapRef,
@@ -20,136 +18,22 @@ import { format } from "date-fns";
 import bbox from "@turf/bbox"; // For calculating bounding box
 import { WebMercatorViewport } from "@deck.gl/core"; // For fitting bounds
 
-import {
-  SubEventType,
-  Group,
-  FlightSignup,
-  SubEvent,
-} from "@/module_bindings/types";
+import { SubEventType, Group, FlightSignup, SubEvent } from "@/module_bindings/types";
 import { Timestamp } from "spacetimedb";
 import { useTheme } from "../ThemeProvider";
 import { fetchAirportsByIcao } from "../../services/airportService";
-
-interface Airport {
-  id: number;
-  icao: string;
-  name: string;
-  city: string;
-  country: string;
-  latitude: number;
-  longitude: number;
-}
-interface Flight {
-  flight_id: string;
-  callsign: string;
-  aircraft_id?: string;
-  livery_id?: string;
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  ground_speed: number;
-  heading: number;
-  last_updated: string;
-}
+import { AirportMarkers, FlightMarkers } from "./event-map/MapMarkers";
+import { MapPopup } from "./event-map/MapPopup";
+import { ActivePopupInfo, Airport, EventMapFlight } from "./event-map/types";
 interface EventMapProps {
   subEvents: SubEvent[];
   flightSignups: FlightSignup[];
   eventId?: string;
   creatorGroupId?: bigint;
   groupMap: Map<string, Group>;
-  flights?: Flight[];
+  flights?: EventMapFlight[];
   className?: string;
 }
-
-// Helper for custom SVG Marker Icons (similar to Leaflet days)
-const createMarkerIconStyle = (
-  color: string,
-  resolvedTheme: "light" | "dark",
-  isHub: boolean = false,
-  sizeOverride?: number
-): React.CSSProperties => {
-  const baseSize = isHub ? 18 : 14;
-  const size = sizeOverride || baseSize;
-  // The SVG will be a child, this style is for the container div of the Marker
-  return {
-    width: `${size}px`,
-    height: `${size}px`,
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
-    // transform: 'translate(-50%, -50%)' // Marker component handles anchoring
-  };
-};
-
-const AirportSVGIcon: React.FC<{
-  color: string;
-  resolvedTheme: "light" | "dark";
-  isHub?: boolean;
-  size?: number;
-}> = ({ color, resolvedTheme, isHub = false, size: customSize }) => {
-  const baseSize = isHub ? 18 : 14;
-  const size = customSize || baseSize;
-  const strokeColor = resolvedTheme === "dark" ? "#FFFFFF" : "#000000";
-  const strokeWidth = 1.5;
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox={`0 0 ${size} ${size}`}
-      xmlns="http://www.w3.org/2000/svg"
-      style={{ overflow: "visible" }}
-    >
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={(size - strokeWidth) / 2}
-        fill={color}
-        stroke={strokeColor}
-        strokeWidth={strokeWidth}
-      />
-      {isHub && (
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={(size - strokeWidth) / 4}
-          fill={strokeColor}
-        />
-      )}
-    </svg>
-  );
-};
-
-const AircraftSVGIcon: React.FC<{
-  heading: number;
-  color?: string;
-  stroke?: string;
-  size?: number;
-}> = ({ heading, color = "white", stroke = "black", size = 22 }) => {
-  return (
-    <div
-      style={{
-        transform: `rotate(${heading}deg)`,
-        width: `${size}px`,
-        height: `${size}px`,
-      }}
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        width={size}
-        height={size}
-      >
-        <path
-          d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"
-          fill={color}
-          stroke={stroke}
-          strokeWidth={0.5}
-        />
-      </svg>
-    </div>
-  );
-};
 
 const MAPTILER_API_KEY =
   import.meta.env.VITE_MAPTILER_API_KEY || "YOUR_FALLBACK_MAPTILER_KEY"; // IMPORTANT: Add your Maptiler API key to .env
@@ -182,12 +66,7 @@ const EventMap: React.FC<EventMapProps> = ({
   const [loadingAirports, setLoadingAirports] = useState(true);
   const [airportError, setAirportError] = useState<string | null>(null);
 
-  const [activePopupInfo, setActivePopupInfo] = useState<{
-    type: "airport" | "flight" | "route";
-    data: any;
-    longitude: number;
-    latitude: number;
-  } | null>(null);
+  const [activePopupInfo, setActivePopupInfo] = useState<ActivePopupInfo>(null);
 
   const [initialViewState] = useState({
     longitude: -98.5795, // Centered on US initially
@@ -221,7 +100,7 @@ const EventMap: React.FC<EventMapProps> = ({
   }, [subEvents, flightSignups]);
 
   const fitMapToData = useCallback(
-    (airportsToFit: Airport[], flightsToFit: Flight[]) => {
+    (airportsToFit: Airport[], flightsToFit: EventMapFlight[]) => {
       if (
         !mapRef.current ||
         (airportsToFit.length === 0 && flightsToFit.length === 0)
@@ -328,14 +207,17 @@ const EventMap: React.FC<EventMapProps> = ({
     currentResolvedTheme === "dark" ? "#4299E1" : "#3182CE";
   const defaultSignupFlightColor =
     currentResolvedTheme === "dark" ? "#ED8936" : "#DD6B20";
-  const aircraftMarkerColor =
-    currentResolvedTheme === "dark" ? "#CBD5E0" : "#4A5568"; // For plane icon
   const aircraftMarkerStroke =
     currentResolvedTheme === "dark" ? "#2D3748" : "#E2E8F0";
 
-  // Airport Markers
   const airportMarkers = useMemo(() => {
-    const markers: JSX.Element[] = [];
+    const markers: Array<{
+      key: string;
+      airport: Airport;
+      color: string;
+      isHub: boolean;
+      onClick: () => void;
+    }> = [];
     const renderedIcaos = new Set<string>();
     subEvents.forEach((subEvent) => {
       const hostGroup = groupMap.get(creatorGroupId?.toString() || "");
@@ -345,36 +227,19 @@ const EventMap: React.FC<EventMapProps> = ({
         if (!icao || renderedIcaos.has(icao)) return;
         const airport = getAirport(icao);
         if (airport) {
-          markers.push(
-            <Marker
-              key={`airport-${airport.icao}`}
-              longitude={airport.longitude}
-              latitude={airport.latitude}
-              anchor="center"
-            >
-              <div
-                style={createMarkerIconStyle(
-                  baseColor,
-                  currentResolvedTheme,
-                  isHub
-                )}
-                onClick={() =>
-                  setActivePopupInfo({
-                    type: "airport",
-                    data: { airport, subEvent, isHub },
-                    longitude: airport.longitude,
-                    latitude: airport.latitude,
-                  })
-                }
-              >
-                <AirportSVGIcon
-                  color={baseColor}
-                  resolvedTheme={currentResolvedTheme}
-                  isHub={isHub}
-                />
-              </div>
-            </Marker>
-          );
+          markers.push({
+            key: `airport-${airport.icao}`,
+            airport,
+            color: baseColor,
+            isHub,
+            onClick: () =>
+              setActivePopupInfo({
+                type: "airport",
+                data: { airport, subEvent, isHub },
+                longitude: airport.longitude,
+                latitude: airport.latitude,
+              }),
+          });
           renderedIcaos.add(icao);
         }
       };
@@ -394,45 +259,7 @@ const EventMap: React.FC<EventMapProps> = ({
     airportData,
     groupMap,
     creatorGroupId,
-    currentResolvedTheme,
     defaultGroupFlightColor,
-  ]);
-
-  // Flight Markers
-  const flightMarkers = useMemo(() => {
-    return flights.map((flight) => (
-      <Marker
-        key={`flight-${flight.flight_id}`}
-        longitude={flight.longitude}
-        latitude={flight.latitude}
-        anchor="center"
-      >
-        <div
-          onClick={() =>
-            setActivePopupInfo({
-              type: "flight",
-              data: flight,
-              longitude: flight.longitude,
-              latitude: flight.latitude,
-            })
-          }
-          style={{ cursor: "pointer", transition: "transform 0.3s linear" }}
-        >
-          {" "}
-          {/* Transition for position changes if map re-renders marker */}
-          <AircraftSVGIcon
-            heading={flight.heading}
-            color={aircraftMarkerColor}
-            stroke={aircraftMarkerStroke}
-          />
-        </div>
-      </Marker>
-    ));
-  }, [
-    flights,
-    currentResolvedTheme,
-    aircraftMarkerColor,
-    aircraftMarkerStroke,
   ]);
 
   // Flight Path Lines (GeoJSON for Source/Layer) - Split into solid and dashed
@@ -597,128 +424,6 @@ const EventMap: React.FC<EventMapProps> = ({
     return `https://api.maptiler.com/maps/${styleName}/style.json?key=${MAPTILER_API_KEY}`;
   }, [currentResolvedTheme]);
 
-  const renderPopup = () => {
-    if (!activePopupInfo) return null;
-    const { type, data, longitude, latitude } = activePopupInfo;
-
-    const popupStyle: React.CSSProperties = {
-      /* Shadcn-like style */ backgroundColor: "hsl(var(--background))",
-      color: "hsl(var(--foreground))",
-      border: `1px solid hsl(var(--border))`,
-      borderRadius: "var(--radius, 0.5rem)",
-      padding: "0.75rem 1rem",
-      maxWidth: "300px",
-      fontSize: "0.875rem",
-      boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-      lineHeight: "1.4",
-    };
-    const PopupContainer: React.FC<{
-      title: string;
-      children: React.ReactNode;
-    }> = ({ title, children }) => (
-      <div style={popupStyle}>
-        {" "}
-        <h3 className="font-semibold text-base mb-2">{title}</h3>{" "}
-        {children}{" "}
-      </div>
-    );
-
-    let content = null;
-    switch (type) {
-      case "airport":
-        const { airport, subEvent, isHub } = data;
-        const typeLabel = isHub
-          ? subEvent.subEventType.tag === SubEventType.FlyIn.tag
-            ? "Fly-In Hub"
-            : "Fly-Out Hub"
-          : "Airport";
-        content = (
-          <PopupContainer title={`${airport.name} (${airport.icao})`}>
-            <p>
-              {typeLabel} for: {subEvent.name}
-            </p>
-            <p>
-              Time:{" "}
-              {formatTimeRange(
-                subEvent.scheduledStartTime,
-                subEvent.scheduledEndTime
-              )}
-            </p>
-            {subEvent.notes && (
-              <p className="text-xs mt-1 opacity-80">Notes: {subEvent.notes}</p>
-            )}
-          </PopupContainer>
-        );
-        break;
-      case "flight":
-        const flight = data as Flight;
-        content = (
-          <PopupContainer title={flight.callsign}>
-            <p>Altitude: {Math.round(flight.altitude)} ft</p>
-            <p>Speed: {Math.round(flight.ground_speed)} kts</p>
-            <p>Heading: {Math.round(flight.heading)}°</p>
-            <p className="text-xs mt-1 opacity-70">
-              Updated: {new Date(flight.last_updated).toLocaleTimeString()}
-            </p>
-          </PopupContainer>
-        );
-        break;
-      case "route":
-        const routeSubEventId = data.subEventId as string;
-        const depIcao = data.depIcao as string;
-        const arrIcao = data.arrIcao as string;
-        const signupId = data.signupId as string | undefined;
-        const groupId = data.groupId as string | undefined;
-
-        const routeSubEvent = subEvents.find(
-          (se) => se.subEventId.toString() === routeSubEventId
-        );
-        const routeDepAirport = getAirport(depIcao);
-        const routeArrAirport = getAirport(arrIcao);
-        const routeSignup = signupId
-          ? flightSignups.find((fs) => fs.signupId.toString() === signupId)
-          : null;
-        const routeGroup = groupId ? groupMap.get(groupId) : null;
-
-        if (!routeSubEvent || !routeDepAirport || !routeArrAirport) {
-          return null;
-        }
-
-        const routeTitle = routeSignup
-          ? `${routeGroup?.name || "Signup"} Flight`
-          : `${routeSubEvent.name} (Group Flight)`;
-        content = (
-          <PopupContainer title={routeTitle}>
-            <p>
-              Route: {routeDepAirport.icao} → {routeArrAirport.icao}
-            </p>
-            {routeSignup?.callsign && <p>Callsign: {routeSignup.callsign}</p>}
-            <p>
-              Time:{" "}
-              {formatTimeRange(
-                routeSubEvent.scheduledStartTime,
-                routeSubEvent.scheduledEndTime
-              )}
-            </p>
-          </PopupContainer>
-        );
-        break;
-    }
-    if (!content) return null;
-    return (
-      <Popup
-        longitude={longitude}
-        latitude={latitude}
-        anchor="bottom"
-        onClose={() => setActivePopupInfo(null)}
-        closeOnClick={false}
-        offset={15}
-      >
-        {content}
-      </Popup>
-    );
-  };
-
   if (!MAPTILER_API_KEY || MAPTILER_API_KEY === "FALLBACK_MAPTILER_KEY") {
     return (
       <div
@@ -783,8 +488,22 @@ const EventMap: React.FC<EventMapProps> = ({
         <NavigationControl position="top-right" />
         <FullscreenControl position="top-right" />
 
-        {airportMarkers}
-        {flightMarkers}
+        <AirportMarkers
+          markers={airportMarkers}
+          resolvedTheme={currentResolvedTheme}
+        />
+        <FlightMarkers
+          flights={flights}
+          defaultStroke={aircraftMarkerStroke}
+          onFlightClick={(flight) =>
+            setActivePopupInfo({
+              type: "flight",
+              data: flight,
+              longitude: flight.longitude,
+              latitude: flight.latitude,
+            })
+          }
+        />
 
         <Source
           id="group-flight-paths-source"
@@ -802,7 +521,17 @@ const EventMap: React.FC<EventMapProps> = ({
           <Layer {...signupFlightLayerStyle} />
         </Source>
 
-        {renderPopup()}
+        <MapPopup
+          activePopupInfo={activePopupInfo}
+          setActivePopupInfo={setActivePopupInfo}
+          context={{
+            subEvents,
+            flightSignups,
+            groupMap,
+            getAirport,
+            formatTimeRange,
+          }}
+        />
       </MapGL>
     </div>
   );

@@ -242,6 +242,11 @@ export const useGroupCallsignFilters = (groupId: bigint | null) => {
   }, [filters]);
 };
 
+export const useAllGroupCallsignFilters = () => {
+  const [rows] = useTable(tables.group_callsign_filter);
+  return rows;
+};
+
 export const useUsers = () => {
   const [rows] = useTable(tables.user);
   return rows;

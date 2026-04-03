@@ -2,16 +2,13 @@ import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { useParams } from "react-router-dom";
 import { Infer } from "spacetimedb";
-import { LiveChatMessage, Group } from "@/module_bindings";
+import { LiveChatMessage } from "@/module_bindings";
 import { useSpacetimeDB } from "spacetimedb/react";
 import {
-  useEvents,
   useLiveChatMessages,
   useUsers,
   useGroups,
   useGroupMemberships,
-  useSubEvents,
-  useFlightSignups,
 } from "@/hooks/spacetimeHooks";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -26,37 +23,23 @@ import {
 import { format } from "date-fns";
 import { Pencil, Trash2, Crown } from "lucide-react";
 import EventMap from "@/components/map/EventMap";
+import {
+  ApiFlight,
+  useEventFlightFiltering,
+} from "@/hooks/useEventFlightFiltering";
 import "leaflet/dist/leaflet.css";
 import { useUserTimezone, formatInTimezone } from "@/utils/timezoneUtils";
 
 type LiveChatMessage = Infer<typeof LiveChatMessage>;
-type Group = Infer<typeof Group>;
-
-// Flight type definition
-interface Flight {
-  flight_id: string;
-  callsign: string;
-  aircraft_id: string;
-  livery_id: string;
-  latitude: number;
-  longitude: number;
-  altitude: number;
-  heading: number;
-  ground_speed: number;
-  last_updated: string;
-}
 
 const LiveEvent = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const { identity, getConnection } = useSpacetimeDB();
   const connection = getConnection();
-  const events = useEvents();
   const chatMessages = useLiveChatMessages();
   const users = useUsers();
   const groups = useGroups();
   const groupMembers = useGroupMemberships();
-  const allSubEvents = useSubEvents();
-  const allFlightSignups = useFlightSignups();
   const userTimezone = useUserTimezone();
 
   const [newMessage, setNewMessage] = useState("");
@@ -66,7 +49,7 @@ const LiveEvent = () => {
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const [flights, setFlights] = useState<Flight[]>([]);
+  const [flights, setFlights] = useState<ApiFlight[]>([]);
   const [flightLoadingError, setFlightLoadingError] = useState<string | null>(
     null
   );
@@ -199,24 +182,13 @@ const LiveEvent = () => {
     }
   }, [isMobile, sheetHeight, SHEET_HEIGHTS]);
 
-  // Find the current event
-  const event = events.find((e) => e.eventId.toString() === eventId);
-
-  // Filter subEvents related to this event
-  const subEvents = useMemo(() => {
-    if (!eventId) return [];
-    return allSubEvents.filter(
-      (subEvent) => subEvent.eventId.toString() === eventId
-    );
-  }, [allSubEvents, eventId]);
-
-  // Filter flight signups related to this event's subEvents
-  const flightSignups = useMemo(() => {
-    const subEventIds = subEvents.map((se) => se.subEventId);
-    return allFlightSignups.filter((signup) =>
-      subEventIds.includes(signup.subEventId)
-    );
-  }, [allFlightSignups, subEvents]);
+  const {
+    event,
+    eventSubEvents,
+    eventFlightSignups,
+    groupMap,
+    filteredFlights,
+  } = useEventFlightFiltering(eventId, flights);
 
   // Get user's groups and check if they're part of the host group
   const userGroups = useMemo(() => {
@@ -264,15 +236,6 @@ const LiveEvent = () => {
         }
       : null;
   }, [selectedGroupId, groups]);
-
-  // Create a map of group IDs to group info for efficient lookup
-  const groupMap = useMemo(() => {
-    const map = new Map<string, Group>(); // Store the full Group object
-    groups.forEach((group) => {
-      map.set(group.groupId.toString(), group);
-    });
-    return map;
-  }, [groups]);
 
   // Filter messages for this event and sort by timestamp
   const eventMessages = useMemo(() => {
@@ -720,12 +683,12 @@ const LiveEvent = () => {
 
           <div className="flex-1 bg-gray-50 dark:bg-background">
             <EventMap
-              subEvents={subEvents}
-              flightSignups={flightSignups}
+              subEvents={eventSubEvents}
+              flightSignups={eventFlightSignups}
               eventId={eventId}
               creatorGroupId={event.creatorGroupId}
               groupMap={groupMap}
-              flights={flights}
+              flights={filteredFlights}
               className="w-full h-full z-0"
             />
           </div>
@@ -742,12 +705,12 @@ const LiveEvent = () => {
         {/* Full-screen Map */}
         <div className="absolute inset-0 bg-gray-50 dark:bg-background">
           <EventMap
-            subEvents={subEvents}
-            flightSignups={flightSignups}
+            subEvents={eventSubEvents}
+            flightSignups={eventFlightSignups}
             eventId={eventId}
             creatorGroupId={event.creatorGroupId}
             groupMap={groupMap}
-            flights={flights}
+            flights={filteredFlights}
             className="w-full h-full"
           />
         </div>
