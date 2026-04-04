@@ -291,6 +291,33 @@ export const useSubEvents = () => {
 };
 
 /**
+ * Sub-events for a specific event
+ * Uses server-side subscription with .where() for efficient filtering
+ */
+export const useSubEventsForEvent = (eventId: bigint | null) => {
+  const query = useMemo(
+    () =>
+      eventId
+        ? tables.sub_event.where((se) => se.eventId.eq(eventId))
+        : tables.sub_event.where((se) => se.eventId.eq(0n)),
+    [eventId]
+  );
+
+  const [rows] = useTable(query);
+  // This line is needed due to a bug in SpacetimeDB react SDK, do not remove
+  const [allSubEvents] = useTable(tables.sub_event);
+
+  return useMemo(() => {
+    if (!rows) return [];
+    return [...rows].sort(
+      (a, b) =>
+        a.scheduledStartTime.toDate().getTime() -
+        b.scheduledStartTime.toDate().getTime()
+    );
+  }, [rows]);
+};
+
+/**
  * Sub-events for events hosted by a specific group
  * Uses server-side subscription with .where() for efficient filtering
  * First filters events by creatorGroupId, then gets sub_events for those events
@@ -349,6 +376,36 @@ export const useSubEventsForEvents = (eventIds: bigint[]) => {
 export const useFlightSignups = () => {
   const [rows] = useTable(tables.flight_signup);
   return rows;
+};
+
+/**
+ * Flight signups for a specific event
+ * Uses server-side typed join filtering via sub_event.eventId
+ */
+export const useFlightSignupsForEvent = (eventId: bigint | null) => {
+  const signupsQuery = useMemo(
+    () => {
+      if (!eventId) {
+        return tables.flight_signup.where((fs) => fs.groupId.eq(0n));
+      }
+
+      return tables.sub_event
+        .where((se) => se.eventId.eq(eventId))
+        .rightSemijoin(tables.flight_signup, (se, fs) =>
+          se.subEventId.eq(fs.subEventId)
+        );
+    },
+    [eventId]
+  );
+
+  const [rows] = useTable(signupsQuery);
+  // This line is needed due to a bug in SpacetimeDB react SDK, do not remove
+  const [allSignups] = useTable(tables.flight_signup);
+
+  return useMemo(() => {
+    if (!rows) return [];
+    return [...rows];
+  }, [rows]);
 };
 
 /**

@@ -54,10 +54,11 @@ const LiveEvent = () => {
     null
   );
   const [sheetHeight, setSheetHeight] = useState<number | null>(null);
-  const [mobileViewportHeight, setMobileViewportHeight] = useState<number>(() =>
-    typeof window !== "undefined"
-      ? (window.visualViewport?.height ?? window.innerHeight)
-      : 0
+  const [mobileViewportHeight, setMobileViewportHeight] = useState<number>(
+    () =>
+      typeof window !== "undefined"
+        ? (window.visualViewport?.height ?? window.innerHeight)
+        : 0
   );
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [isDragging, setIsDragging] = useState(false);
@@ -137,7 +138,8 @@ const LiveEvent = () => {
     if (!isMobile) return;
 
     const updateMobileViewportMetrics = () => {
-      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const viewportHeight =
+        window.visualViewport?.height ?? window.innerHeight;
       const viewportOffsetTop = window.visualViewport?.offsetTop ?? 0;
       const nextKeyboardInset = Math.max(
         0,
@@ -152,12 +154,21 @@ const LiveEvent = () => {
 
     window.addEventListener("resize", updateMobileViewportMetrics);
     window.addEventListener("orientationchange", updateMobileViewportMetrics);
-    window.visualViewport?.addEventListener("resize", updateMobileViewportMetrics);
-    window.visualViewport?.addEventListener("scroll", updateMobileViewportMetrics);
+    window.visualViewport?.addEventListener(
+      "resize",
+      updateMobileViewportMetrics
+    );
+    window.visualViewport?.addEventListener(
+      "scroll",
+      updateMobileViewportMetrics
+    );
 
     return () => {
       window.removeEventListener("resize", updateMobileViewportMetrics);
-      window.removeEventListener("orientationchange", updateMobileViewportMetrics);
+      window.removeEventListener(
+        "orientationchange",
+        updateMobileViewportMetrics
+      );
       window.visualViewport?.removeEventListener(
         "resize",
         updateMobileViewportMetrics
@@ -695,9 +706,7 @@ const LiveEvent = () => {
         </div>
 
         {/* Right side - Chat Section */}
-        <div className="w-1/3 flex flex-col h-full">
-          {renderChatContent()}
-        </div>
+        <div className="w-1/3 flex flex-col h-full">{renderChatContent()}</div>
       </div>
 
       {/* Mobile Layout */}

@@ -19,6 +19,7 @@ export default {
   routeDetails: __t.option(__t.string()),
   callsign: __t.option(__t.string()),
   aircraftType: __t.option(__t.string()),
+  liveryId: __t.option(__t.string()),
   desiredDepartureTime: __t.option(__t.timestamp()),
   desiredArrivalTime: __t.option(__t.timestamp()),
 };

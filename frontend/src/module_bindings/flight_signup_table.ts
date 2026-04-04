@@ -23,4 +23,5 @@ export default __t.row({
   desiredArrivalTime: __t.option(__t.timestamp()).name("desired_arrival_time"),
   createdAt: __t.timestamp().name("created_at"),
   eventLead: __t.option(__t.identity()).name("event_lead"),
+  liveryId: __t.option(__t.string()).name("livery_id"),
 });

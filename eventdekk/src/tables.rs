@@ -180,6 +180,8 @@ pub struct FlightSignup {
     pub created_at: Timestamp,
     #[default(None::<Identity>)]
     pub event_lead: Option<Identity>,
+    #[default(None::<String>)]
+    pub livery_id: Option<String>,
 }
 
 #[table(name = live_flight, public,

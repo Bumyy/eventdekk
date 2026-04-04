@@ -128,6 +128,31 @@ export default function EditEvent() {
 
   const limitIcaoLength = (icao: string) => icao.slice(0, 4);
 
+  const isSchemaDeserializeError = (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error || "");
+    return message.includes("Can't deserialize") || message.includes("deserialize");
+  };
+
+  const signupForFlightCompat = async (payload: any) => {
+    try {
+      await (connection?.reducers as any).signupForFlight(payload);
+    } catch (error) {
+      if (!isSchemaDeserializeError(error)) throw error;
+      const { liveryId, ...fallbackPayload } = payload;
+      await (connection?.reducers as any).signupForFlight(fallbackPayload);
+    }
+  };
+
+  const updateFlightSignupCompat = async (payload: any) => {
+    try {
+      await (connection?.reducers as any).updateFlightSignup(payload);
+    } catch (error) {
+      if (!isSchemaDeserializeError(error)) throw error;
+      const { liveryId, ...fallbackPayload } = payload;
+      await (connection?.reducers as any).updateFlightSignup(fallbackPayload);
+    }
+  };
+
   const isIcaoLengthValid = (icao?: string) => {
     if (!icao) return true;
     return icao.trim().length === 4;
@@ -265,6 +290,7 @@ export default function EditEvent() {
               : "none",
             callsign: signup.callsign || "",
             aircraftType: signup.aircraftType || "",
+            liveryId: signup.liveryId || "",
             departureTime: signup.desiredDepartureTime
             ? format(signup.desiredDepartureTime.toDate(), "yyyy-MM-dd'T'HH:mm")
             : "",
@@ -302,6 +328,7 @@ export default function EditEvent() {
             eventLeadHex: "none",
             callsign: "",
             aircraftType: "",
+            liveryId: "",
             route: "",
             customDepartureIcao: "",
             customArrivalIcao: "",
@@ -335,6 +362,16 @@ export default function EditEvent() {
   // Submit own flight signups
   const handleSubmitOwnFlights = async () => {
     if (!connection || !eventId || !groupId) return;
+
+    const hasMissingCallsign = selectedOwnSubEvents.some((subEventId) => {
+      const details = ownFlightDetails[subEventId.toString()];
+      return !details?.callsign || details.callsign.trim().length === 0;
+    });
+
+    if (hasMissingCallsign) {
+      toast.error("Callsign is required for all selected sub-events.");
+      return;
+    }
 
     const hasInvalidIcaoLength = selectedOwnSubEvents.some((subEventId) => {
       const subEvent = subEvents.find((se) => se.subEventId === subEventId);
@@ -450,13 +487,14 @@ export default function EditEvent() {
         if (existingSignup) {
           // Update existing signup
           try {
-            await connection.reducers.updateFlightSignup({
+            await updateFlightSignupCompat({
               signupId: existingSignup.signupId,
               departureIcao: departureIcao,
               arrivalIcao: arrivalIcao,
               routeDetails: details.route || undefined,
               callsign: details.callsign || null,
               aircraftType: details.aircraftType || null,
+              liveryId: details.liveryId || null,
               eventLead: selectedEventLead,
               desiredDepartureTime: departureTime || undefined,
               desiredArrivalTime: arrivalTime || undefined,
@@ -475,7 +513,7 @@ export default function EditEvent() {
         } else {
           // Add new signup
           try {
-            await connection.reducers.signupForFlight({
+            await signupForFlightCompat({
               subEventId: subEventId,
               groupId: BigInt(groupId),
               eventLead: selectedEventLead,
@@ -484,6 +522,7 @@ export default function EditEvent() {
               routeDetails: details.route || undefined,
               callsign: details.callsign || null,
               aircraftType: details.aircraftType || null,
+              liveryId: details.liveryId || null,
               desiredDepartureTime: departureTime || undefined,
               desiredArrivalTime: arrivalTime || undefined,
             });

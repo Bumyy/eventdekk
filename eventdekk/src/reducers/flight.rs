@@ -30,6 +30,7 @@ pub fn signup_for_flight(
     route_details: Option<String>,
     callsign: Option<String>,
     aircraft_type: Option<String>,
+    livery_id: Option<String>,
     desired_departure_time: Option<Timestamp>,
     desired_arrival_time: Option<Timestamp>,
 ) -> Result<(), String> {
@@ -86,6 +87,7 @@ pub fn signup_for_flight(
         desired_departure_time,
         desired_arrival_time,
         created_at: ctx.timestamp,
+        livery_id,
     };
     ctx.db.flight_signup().insert(new_signup);
     info!("Group {} signed up for SubEvent {}", group_id, sub_event_id);
@@ -101,6 +103,7 @@ pub fn update_flight_signup(
     route_details: Option<String>,
     callsign: Option<String>,
     aircraft_type: Option<String>,
+    livery_id: Option<String>,
     event_lead: Option<Identity>,
     desired_departure_time: Option<Timestamp>,
     desired_arrival_time: Option<Timestamp>,
@@ -130,6 +133,7 @@ pub fn update_flight_signup(
         aircraft_type,
         desired_departure_time,
         desired_arrival_time,
+        livery_id,
         ..signup
     };
     ctx.db.flight_signup().signup_id().update(updated_signup);

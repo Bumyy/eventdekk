@@ -1,5 +1,11 @@
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
@@ -20,7 +26,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatDateInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
+import {
+  formatDateInTimezone,
+  formatTimeInTimezone,
+} from "@/utils/timezoneUtils";
 import {
   Calendar as CalendarIcon2,
   CheckCircle2,
@@ -30,6 +39,11 @@ import {
 } from "lucide-react";
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
 import { useEditEventContext } from "./EditEventContext";
+import { useEffect, useState } from "react";
+import {
+  AircraftLiveryPicker,
+  type AircraftLiveryValue,
+} from "@/components/AircraftLiveryPicker";
 
 const limitIcaoLength = (icao: string) => icao.slice(0, 4);
 
@@ -50,6 +64,11 @@ export function ManageOwnFlightsCard() {
     handleSubmitOwnFlights,
   } = useEditEventContext();
 
+  const hasMissingSelectedCallsign = selectedOwnSubEvents.some((subEventId) => {
+    const details = ownFlightDetails[subEventId.toString()];
+    return !details?.callsign || details.callsign.trim().length === 0;
+  });
+
   return (
     <Card className="py-4">
       <CardHeader className="flex flex-row items-center justify-between">
@@ -59,7 +78,10 @@ export function ManageOwnFlightsCard() {
             Sign up your own group for the event&apos;s sub-events
           </CardDescription>
         </div>
-        <Dialog open={showManageOwnFlightsDialog} onOpenChange={setShowManageOwnFlightsDialog}>
+        <Dialog
+          open={showManageOwnFlightsDialog}
+          onOpenChange={setShowManageOwnFlightsDialog}
+        >
           <DialogTrigger asChild>
             <Button className="flex items-center gap-1">
               <Plane className="h-4 w-4 mr-1" />
@@ -79,7 +101,9 @@ export function ManageOwnFlightsCard() {
             <ScrollArea className="pr-4">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <h3 className="text-lg font-medium">Select Sub-Events to Join</h3>
+                  <h3 className="text-lg font-medium">
+                    Select Sub-Events to Join
+                  </h3>
                   <p className="text-sm text-muted-foreground">
                     Choose which sub-events your group will participate in and
                     provide the necessary flight details.
@@ -87,7 +111,9 @@ export function ManageOwnFlightsCard() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="own-group-event-lead">Group Event Lead (Optional)</Label>
+                  <Label htmlFor="own-group-event-lead">
+                    Group Event Lead (Optional)
+                  </Label>
                   <Select
                     value={selectedOwnGroupLeadHex}
                     onValueChange={setSelectedOwnGroupLeadHex}
@@ -98,15 +124,21 @@ export function ManageOwnFlightsCard() {
                     <SelectContent>
                       <SelectItem value="none">None</SelectItem>
                       {memberOptions.map((member) => (
-                        <SelectItem key={member.identityHex} value={member.identityHex}>
-                          {member.callsignPrefix ? `[${member.callsignPrefix}] ` : ""}
+                        <SelectItem
+                          key={member.identityHex}
+                          value={member.identityHex}
+                        >
+                          {member.callsignPrefix
+                            ? `[${member.callsignPrefix}] `
+                            : ""}
                           {member.displayName}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   <p className="text-xs text-muted-foreground">
-                    Applies to all selected signups for this group in this event.
+                    Applies to all selected signups for this group in this
+                    event.
                   </p>
                 </div>
 
@@ -114,9 +146,17 @@ export function ManageOwnFlightsCard() {
                   const isSelected = selectedOwnSubEvents.some(
                     (id) => id === subEvent.subEventId
                   );
-                  const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
+                  const isGroupFlight =
+                    subEvent.subEventType.tag === "GroupFlight";
                   const isFlyIn = subEvent.subEventType.tag === "FlyIn";
                   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
+                  const callsignValue =
+                    ownFlightDetails[subEvent.subEventId.toString()]?.callsign ||
+                    "";
+                  const callsignError =
+                    callsignValue.trim().length === 0
+                      ? "Callsign is required."
+                      : undefined;
 
                   return (
                     <Card key={subEvent.subEventId.toString()} className="p-4">
@@ -124,7 +164,9 @@ export function ManageOwnFlightsCard() {
                         <Checkbox
                           id={`own-subevent-${subEvent.subEventId}`}
                           checked={isSelected}
-                          onCheckedChange={() => handleToggleOwnSubEvent(subEvent.subEventId)}
+                          onCheckedChange={() =>
+                            handleToggleOwnSubEvent(subEvent.subEventId)
+                          }
                           className="mt-1"
                         />
                         <div className="flex-1">
@@ -174,17 +216,23 @@ export function ManageOwnFlightsCard() {
 
                           {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
-                              <h4 className="text-sm font-medium">Flight Details</h4>
+                              <h4 className="text-sm font-medium">
+                                Flight Details
+                              </h4>
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-callsign-${subEvent.subEventId}`}>
+                                  <Label
+                                    htmlFor={`own-callsign-${subEvent.subEventId}`}
+                                  >
                                     Callsign
                                   </Label>
                                   <Input
                                     id={`own-callsign-${subEvent.subEventId}`}
                                     value={
-                                      ownFlightDetails[subEvent.subEventId.toString()]?.callsign || ""
+                                      ownFlightDetails[
+                                        subEvent.subEventId.toString()
+                                      ]?.callsign || ""
                                     }
                                     onChange={(e) =>
                                       updateOwnFlightDetail(
@@ -195,26 +243,40 @@ export function ManageOwnFlightsCard() {
                                     }
                                     placeholder="e.g. QFA123"
                                     disabled={isSubmittingFlights}
+                                    aria-invalid={!!callsignError}
                                   />
+                                  {callsignError && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      {callsignError}
+                                    </p>
+                                  )}
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-aircraft-${subEvent.subEventId}`}>
-                                    Aircraft Type
-                                  </Label>
-                                  <Input
+                                  <AircraftLiveryPicker
                                     id={`own-aircraft-${subEvent.subEventId}`}
-                                    value={
-                                      ownFlightDetails[subEvent.subEventId.toString()]?.aircraftType || ""
-                                    }
-                                    onChange={(e) =>
+                                    value={{
+                                      aircraftName:
+                                        ownFlightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.aircraftType || "",
+                                      liveryId:
+                                        ownFlightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.liveryId || "",
+                                    }}
+                                    onChange={(value) => {
                                       updateOwnFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "aircraftType",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="e.g. A320"
+                                        value.aircraftName
+                                      );
+                                      updateOwnFlightDetail(
+                                        subEvent.subEventId.toString(),
+                                        "liveryId",
+                                        value.liveryId
+                                      );
+                                    }}
                                     disabled={isSubmittingFlights}
                                   />
                                 </div>
@@ -222,7 +284,9 @@ export function ManageOwnFlightsCard() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-departure-icao-${subEvent.subEventId}`}>
+                                  <Label
+                                    htmlFor={`own-departure-icao-${subEvent.subEventId}`}
+                                  >
                                     {isGroupFlight
                                       ? "Departure Airport (Fixed)"
                                       : isFlyOut
@@ -233,10 +297,13 @@ export function ManageOwnFlightsCard() {
                                     id={`own-departure-icao-${subEvent.subEventId}`}
                                     value={
                                       isGroupFlight
-                                        ? subEvent.groupFlightDepartureIcao || ""
+                                        ? subEvent.groupFlightDepartureIcao ||
+                                          ""
                                         : isFlyOut
                                           ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[subEvent.subEventId.toString()]?.customDepartureIcao || ""
+                                          : ownFlightDetails[
+                                              subEvent.subEventId.toString()
+                                            ]?.customDepartureIcao || ""
                                     }
                                     onChange={(e) =>
                                       updateOwnFlightDetail(
@@ -248,16 +315,22 @@ export function ManageOwnFlightsCard() {
                                     placeholder={
                                       isGroupFlight || isFlyOut
                                         ? isGroupFlight
-                                          ? subEvent.groupFlightDepartureIcao || "Fixed departure"
-                                          : subEvent.hubIcao || "Fixed hub departure"
+                                          ? subEvent.groupFlightDepartureIcao ||
+                                            "Fixed departure"
+                                          : subEvent.hubIcao ||
+                                            "Fixed hub departure"
                                         : "Enter departure ICAO"
                                     }
-                                    disabled={isSubmittingFlights || isGroupFlight || isFlyOut}
+                                    disabled={
+                                      isSubmittingFlights ||
+                                      isGroupFlight ||
+                                      isFlyOut
+                                    }
                                     maxLength={4}
                                   />
                                   {(isGroupFlight || isFlyOut) && (
                                     <p className="text-xs text-muted-foreground mt-1">
-                                      Departure is fixed to: {" "}
+                                      Departure is fixed to:{" "}
                                       {isGroupFlight
                                         ? subEvent.groupFlightDepartureIcao
                                         : subEvent.hubIcao}
@@ -266,7 +339,9 @@ export function ManageOwnFlightsCard() {
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-arrival-icao-${subEvent.subEventId}`}>
+                                  <Label
+                                    htmlFor={`own-arrival-icao-${subEvent.subEventId}`}
+                                  >
                                     {isGroupFlight
                                       ? "Arrival Airport (Fixed)"
                                       : isFlyIn
@@ -280,7 +355,9 @@ export function ManageOwnFlightsCard() {
                                         ? subEvent.groupFlightArrivalIcao || ""
                                         : isFlyIn
                                           ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[subEvent.subEventId.toString()]?.customArrivalIcao || ""
+                                          : ownFlightDetails[
+                                              subEvent.subEventId.toString()
+                                            ]?.customArrivalIcao || ""
                                     }
                                     onChange={(e) =>
                                       updateOwnFlightDetail(
@@ -292,16 +369,22 @@ export function ManageOwnFlightsCard() {
                                     placeholder={
                                       isGroupFlight || isFlyIn
                                         ? isGroupFlight
-                                          ? subEvent.groupFlightArrivalIcao || "Fixed arrival"
-                                          : subEvent.hubIcao || "Fixed hub arrival"
+                                          ? subEvent.groupFlightArrivalIcao ||
+                                            "Fixed arrival"
+                                          : subEvent.hubIcao ||
+                                            "Fixed hub arrival"
                                         : "Enter arrival ICAO"
                                     }
-                                    disabled={isSubmittingFlights || isGroupFlight || isFlyIn}
+                                    disabled={
+                                      isSubmittingFlights ||
+                                      isGroupFlight ||
+                                      isFlyIn
+                                    }
                                     maxLength={4}
                                   />
                                   {(isGroupFlight || isFlyIn) && (
                                     <p className="text-xs text-muted-foreground mt-1">
-                                      Arrival is fixed to: {" "}
+                                      Arrival is fixed to:{" "}
                                       {isGroupFlight
                                         ? subEvent.groupFlightArrivalIcao
                                         : subEvent.hubIcao}
@@ -311,14 +394,20 @@ export function ManageOwnFlightsCard() {
                               </div>
 
                               <div className="space-y-1">
-                                <Label htmlFor={`own-route-${subEvent.subEventId}`}>
+                                <Label
+                                  htmlFor={`own-route-${subEvent.subEventId}`}
+                                >
                                   {isGroupFlight
                                     ? "Route (Based on group flight)"
                                     : "Your Flight Route"}
                                 </Label>
                                 <Input
                                   id={`own-route-${subEvent.subEventId}`}
-                                  value={ownFlightDetails[subEvent.subEventId.toString()]?.route || ""}
+                                  value={
+                                    ownFlightDetails[
+                                      subEvent.subEventId.toString()
+                                    ]?.route || ""
+                                  }
                                   onChange={(e) =>
                                     updateOwnFlightDetail(
                                       subEvent.subEventId.toString(),
@@ -328,7 +417,8 @@ export function ManageOwnFlightsCard() {
                                   }
                                   placeholder={
                                     isGroupFlight
-                                      ? subEvent.groupFlightRoute || "Using planned group flight route"
+                                      ? subEvent.groupFlightRoute ||
+                                        "Using planned group flight route"
                                       : "Enter your flight route"
                                   }
                                   disabled={isSubmittingFlights}
@@ -342,14 +432,18 @@ export function ManageOwnFlightsCard() {
 
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-departure-${subEvent.subEventId}`}>
+                                  <Label
+                                    htmlFor={`own-departure-${subEvent.subEventId}`}
+                                  >
                                     Planned Departure Time
                                   </Label>
                                   <Input
                                     id={`own-departure-${subEvent.subEventId}`}
                                     type="datetime-local"
                                     value={
-                                      ownFlightDetails[subEvent.subEventId.toString()]?.departureTime || ""
+                                      ownFlightDetails[
+                                        subEvent.subEventId.toString()
+                                      ]?.departureTime || ""
                                     }
                                     onChange={(e) =>
                                       updateOwnFlightDetail(
@@ -363,14 +457,18 @@ export function ManageOwnFlightsCard() {
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label htmlFor={`own-arrival-${subEvent.subEventId}`}>
+                                  <Label
+                                    htmlFor={`own-arrival-${subEvent.subEventId}`}
+                                  >
                                     Planned Arrival Time
                                   </Label>
                                   <Input
                                     id={`own-arrival-${subEvent.subEventId}`}
                                     type="datetime-local"
                                     value={
-                                      ownFlightDetails[subEvent.subEventId.toString()]?.arrivalTime || ""
+                                      ownFlightDetails[
+                                        subEvent.subEventId.toString()
+                                      ]?.arrivalTime || ""
                                     }
                                     onChange={(e) =>
                                       updateOwnFlightDetail(
@@ -405,18 +503,22 @@ export function ManageOwnFlightsCard() {
             </ScrollArea>
 
             <DialogFooter className="flex gap-2 justify-between sm:justify-end mt-4">
-                <Button
-                  variant="outline"
-                  onClick={() => setShowManageOwnFlightsDialog(false)}
-                  disabled={isSubmittingFlights}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="default"
-                  onClick={handleSubmitOwnFlights}
-                  disabled={selectedOwnSubEvents.length === 0 || isSubmittingFlights}
-                >
+              <Button
+                variant="outline"
+                onClick={() => setShowManageOwnFlightsDialog(false)}
+                disabled={isSubmittingFlights}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleSubmitOwnFlights}
+                disabled={
+                  selectedOwnSubEvents.length === 0 ||
+                  isSubmittingFlights ||
+                  hasMissingSelectedCallsign
+                }
+              >
                 {isSubmittingFlights ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -439,7 +541,8 @@ export function ManageOwnFlightsCard() {
             </div>
             <div>
               <p className="text-sm font-medium">
-                Your group has signed up for {selectedOwnSubEvents.length} sub-event(s)
+                Your group has signed up for {selectedOwnSubEvents.length}{" "}
+                sub-event(s)
               </p>
               <p className="text-xs text-muted-foreground mt-1">
                 Click "Edit Flight Details" to modify your participation.

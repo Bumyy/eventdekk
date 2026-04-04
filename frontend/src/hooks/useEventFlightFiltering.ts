@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from "react";
 import {
   useEvents,
   useEventParticipants,
-  useFlightSignups,
+  useFlightSignupsForEvent,
   useGroups,
-  useSubEvents,
+  useSubEventsForEvent,
   useAllGroupCallsignFilters,
 } from "@/hooks/spacetimeHooks";
 import { fetchAirportStatusBatch } from "@/services/flightStatusService";
@@ -41,13 +41,26 @@ export const useEventFlightFiltering = (
   eventId: string | undefined,
   flights: ApiFlight[]
 ) => {
+  const eventIdBigInt = useMemo(() => {
+    if (!eventId) return null;
+    try {
+      return BigInt(eventId);
+    } catch {
+      return null;
+    }
+  }, [eventId]);
+
   const events = useEvents();
   const eventParticipants = useEventParticipants();
   const groups = useGroups();
-  const subEvents = useSubEvents();
-  const flightSignups = useFlightSignups();
+  const eventSubEvents = useSubEventsForEvent(eventIdBigInt);
+  console.log(eventSubEvents);
+  const eventFlightSignups = useFlightSignupsForEvent(eventIdBigInt);
+  console.log(eventFlightSignups);
   const callsignFilters = useAllGroupCallsignFilters();
-  const [candidateFlightIds, setCandidateFlightIds] = useState<Set<string>>(new Set());
+  const [candidateFlightIds, setCandidateFlightIds] = useState<Set<string>>(
+    new Set()
+  );
   const [airportStatuses, setAirportStatuses] = useState<
     Record<
       string,
@@ -63,24 +76,6 @@ export const useEventFlightFiltering = (
     [events, eventId]
   );
 
-  const eventSubEvents = useMemo(() => {
-    if (!eventId) return [];
-    return subEvents.filter((se) => se.eventId.toString() === eventId);
-  }, [subEvents, eventId]);
-
-  const eventSubEventIdSet = useMemo(
-    () => new Set(eventSubEvents.map((se) => se.subEventId.toString())),
-    [eventSubEvents]
-  );
-
-  const eventFlightSignups = useMemo(
-    () =>
-      flightSignups.filter((signup) =>
-        eventSubEventIdSet.has(signup.subEventId.toString())
-      ),
-    [flightSignups, eventSubEventIdSet]
-  );
-
   const relevantIcaos = useMemo(() => {
     const set = new Set<string>();
 
@@ -89,7 +84,8 @@ export const useEventFlightFiltering = (
       if (se.groupFlightDepartureIcao) {
         set.add(se.groupFlightDepartureIcao.toUpperCase());
       }
-      if (se.groupFlightArrivalIcao) set.add(se.groupFlightArrivalIcao.toUpperCase());
+      if (se.groupFlightArrivalIcao)
+        set.add(se.groupFlightArrivalIcao.toUpperCase());
     });
 
     eventFlightSignups.forEach((signup) => {
@@ -158,7 +154,9 @@ export const useEventFlightFiltering = (
 
     const getOutbound = (icao?: string | null): Set<string> => {
       if (!icao) return new Set();
-      return new Set(airportStatuses[icao.toUpperCase()]?.outboundFlights || []);
+      return new Set(
+        airportStatuses[icao.toUpperCase()]?.outboundFlights || []
+      );
     };
 
     const intersection = (a: Set<string>, b: Set<string>): Set<string> => {
@@ -174,6 +172,12 @@ export const useEventFlightFiltering = (
 
     const nextIds = new Set<string>();
 
+    const routePairs = new Set<string>();
+    const addRoutePair = (depIcao?: string | null, arrIcao?: string | null) => {
+      if (!depIcao || !arrIcao) return;
+      routePairs.add(`${depIcao.toUpperCase()}->${arrIcao.toUpperCase()}`);
+    };
+
     eventSubEvents.forEach((subEvent) => {
       const signupsForSubEvent = eventFlightSignups.filter(
         (signup) => signup.subEventId === subEvent.subEventId
@@ -184,9 +188,10 @@ export const useEventFlightFiltering = (
         subEvent.groupFlightDepartureIcao &&
         subEvent.groupFlightArrivalIcao
       ) {
-        const outbound = getOutbound(subEvent.groupFlightDepartureIcao);
-        const inbound = getInbound(subEvent.groupFlightArrivalIcao);
-        intersection(outbound, inbound).forEach((id) => nextIds.add(id));
+        addRoutePair(
+          subEvent.groupFlightDepartureIcao,
+          subEvent.groupFlightArrivalIcao
+        );
         return;
       }
 
@@ -194,21 +199,9 @@ export const useEventFlightFiltering = (
         subEvent.subEventType.tag === SubEventType.FlyIn.tag &&
         subEvent.hubIcao
       ) {
-        if (signupsForSubEvent.length === 0) {
-          getInbound(subEvent.hubIcao).forEach((id) => nextIds.add(id));
-          return;
-        }
-
+        // For Fly-In, only show traffic for explicit signup routes.
         signupsForSubEvent.forEach((signup) => {
-          const depIcao = signup.departureIcao;
-          if (!depIcao) {
-            getInbound(subEvent.hubIcao).forEach((id) => nextIds.add(id));
-            return;
-          }
-
-          const outbound = getOutbound(depIcao);
-          const inbound = getInbound(subEvent.hubIcao);
-          intersection(outbound, inbound).forEach((id) => nextIds.add(id));
+          addRoutePair(signup.departureIcao, subEvent.hubIcao);
         });
         return;
       }
@@ -223,17 +216,16 @@ export const useEventFlightFiltering = (
         }
 
         signupsForSubEvent.forEach((signup) => {
-          const arrIcao = signup.arrivalIcao;
-          if (!arrIcao) {
-            getOutbound(subEvent.hubIcao).forEach((id) => nextIds.add(id));
-            return;
-          }
-
-          const outbound = getOutbound(subEvent.hubIcao);
-          const inbound = getInbound(arrIcao);
-          intersection(outbound, inbound).forEach((id) => nextIds.add(id));
+          addRoutePair(subEvent.hubIcao, signup.arrivalIcao);
         });
       }
+    });
+
+    routePairs.forEach((routeKey) => {
+      const [depIcao, arrIcao] = routeKey.split("->");
+      const outbound = getOutbound(depIcao);
+      const inbound = getInbound(arrIcao);
+      intersection(outbound, inbound).forEach((id) => nextIds.add(id));
     });
 
     setCandidateFlightIds(nextIds);
@@ -281,7 +273,12 @@ export const useEventFlightFiltering = (
   }, [groups]);
 
   const filteredFlights = useMemo(() => {
-    const results: Array<ApiFlight & { matchedGroupId: bigint; matchedColor: string }> = [];
+    const results: Array<
+      ApiFlight & {
+        matchedGroupId?: bigint;
+        matchedColor: string;
+      }
+    > = [];
 
     const requiresAirportFilter = relevantIcaos.length > 0;
     const candidateFilteredFlights = requiresAirportFilter
@@ -290,30 +287,40 @@ export const useEventFlightFiltering = (
         )
       : [];
 
+    const defaultUnmatchedColor = "#7A828D";
+
     for (const flight of candidateFilteredFlights) {
       let matchedGroupId: bigint | null = null;
-      let matchedColor = "#4A5568";
+      let matchedColor = defaultUnmatchedColor;
 
       for (const [groupId, filters] of callsignFiltersByGroup.entries()) {
-        if (filters.some((filter) => callsignMatchesFilter(flight.callsign, filter))) {
+        if (
+          filters.some((filter) =>
+            callsignMatchesFilter(flight.callsign, filter)
+          )
+        ) {
           const group = groupMap.get(groupId);
           matchedGroupId = group?.groupId || null;
-          matchedColor = group?.color || "#4A5568";
+          matchedColor = group?.color || defaultUnmatchedColor;
           break;
         }
       }
 
-      if (matchedGroupId) {
-        results.push({
-          ...flight,
-          matchedGroupId,
-          matchedColor,
-        });
-      }
+      results.push({
+        ...flight,
+        matchedGroupId: matchedGroupId || undefined,
+        matchedColor,
+      });
     }
 
     return results;
-  }, [flights, callsignFiltersByGroup, groupMap, candidateFlightIds, relevantIcaos]);
+  }, [
+    flights,
+    callsignFiltersByGroup,
+    groupMap,
+    candidateFlightIds,
+    relevantIcaos,
+  ]);
 
   return {
     event,

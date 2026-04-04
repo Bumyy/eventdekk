@@ -56,7 +56,10 @@ export default function AdminEvents() {
     const parsedStart = new Date(prefillStart);
     const parsedEnd = new Date(prefillEnd);
 
-    if (Number.isNaN(parsedStart.getTime()) || Number.isNaN(parsedEnd.getTime())) {
+    if (
+      Number.isNaN(parsedStart.getTime()) ||
+      Number.isNaN(parsedEnd.getTime())
+    ) {
       return;
     }
 
@@ -154,6 +157,34 @@ export default function AdminEvents() {
     Record<string, any>
   >({});
 
+  const isSchemaDeserializeError = (error: unknown) => {
+    const message =
+      error instanceof Error ? error.message : String(error || "");
+    return (
+      message.includes("Can't deserialize") || message.includes("deserialize")
+    );
+  };
+
+  const signupForFlightCompat = async (payload: any) => {
+    try {
+      await (connection?.reducers as any).signupForFlight(payload);
+    } catch (error) {
+      if (!isSchemaDeserializeError(error)) throw error;
+      const { liveryId, ...fallbackPayload } = payload;
+      await (connection?.reducers as any).signupForFlight(fallbackPayload);
+    }
+  };
+
+  const updateFlightSignupCompat = async (payload: any) => {
+    try {
+      await (connection?.reducers as any).updateFlightSignup(payload);
+    } catch (error) {
+      if (!isSchemaDeserializeError(error)) throw error;
+      const { liveryId, ...fallbackPayload } = payload;
+      await (connection?.reducers as any).updateFlightSignup(fallbackPayload);
+    }
+  };
+
   const handleCreateEvent = async (eventData: {
     name: string;
     description: string;
@@ -231,18 +262,25 @@ export default function AdminEvents() {
           .find((e) => !beforeEventIds.has(e.eventId.toString()));
 
         if (createdEvent) {
-          navigate(`/admin/groups/${groupId}/events/${createdEvent.eventId}/edit`);
+          navigate(
+            `/admin/groups/${groupId}/events/${createdEvent.eventId}/edit`
+          );
           return;
         }
       }
 
       const fallbackEvent = eventsRef.current
         .filter((e) => e.creatorGroupId === groupIdBigInt)
-        .sort((a, b) => b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime())
+        .sort(
+          (a, b) =>
+            b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime()
+        )
         .find((e) => !beforeEventIds.has(e.eventId.toString()));
 
       if (fallbackEvent) {
-        navigate(`/admin/groups/${groupId}/events/${fallbackEvent.eventId}/edit`);
+        navigate(
+          `/admin/groups/${groupId}/events/${fallbackEvent.eventId}/edit`
+        );
       }
     } catch (error) {
       console.error("Error creating event:", error);
@@ -294,9 +332,12 @@ export default function AdminEvents() {
 
     relevantSignups.forEach((signup) => {
       flightDetailsFromSignups[signup.subEventId.toString()] = {
-        eventLeadHex: signup.eventLead ? signup.eventLead.toHexString() : "none",
+        eventLeadHex: signup.eventLead
+          ? signup.eventLead.toHexString()
+          : "none",
         callsign: signup.callsign || "",
         aircraftType: signup.aircraftType || "",
+        liveryId: signup.liveryId || "",
         route: signup.routeDetails || "",
         departureTime: signup.desiredDepartureTime
           ? format(signup.desiredDepartureTime.toDate(), "yyyy-MM-dd'T'HH:mm")
@@ -383,6 +424,7 @@ export default function AdminEvents() {
         eventLeadHex?: string;
         callsign?: string;
         aircraftType?: string;
+        liveryId?: string;
         departureTime?: string;
         arrivalTime?: string;
         route?: string;
@@ -454,7 +496,7 @@ export default function AdminEvents() {
 
         try {
           // Create flight signup using direct await
-          await connection.reducers.signupForFlight({
+          await signupForFlightCompat({
             subEventId: subEventId,
             groupId: groupIdBigInt!,
             eventLead: selectedEventLead,
@@ -463,6 +505,7 @@ export default function AdminEvents() {
             routeDetails: details.route || "",
             callsign: details.callsign,
             aircraftType: details.aircraftType,
+            liveryId: details.liveryId,
             desiredDepartureTime: departureTime,
             desiredArrivalTime: arrivalTime,
           });
@@ -551,6 +594,7 @@ export default function AdminEvents() {
       {
         callsign?: string;
         aircraftType?: string;
+        liveryId?: string;
         departureTime?: string;
         arrivalTime?: string;
         route?: string;
@@ -650,13 +694,14 @@ export default function AdminEvents() {
         try {
           if (existingSignup) {
             // Update existing signup - using direct await
-            await connection.reducers.updateFlightSignup({
+            await updateFlightSignupCompat({
               signupId: existingSignup.signupId,
               departureIcao: departureIcao,
               arrivalIcao: arrivalIcao,
               routeDetails: details.route || "",
               callsign: details.callsign,
               aircraftType: details.aircraftType,
+              liveryId: details.liveryId,
               eventLead: selectedEventLead,
               desiredDepartureTime: departureTime,
               desiredArrivalTime: arrivalTime,
@@ -664,7 +709,7 @@ export default function AdminEvents() {
             updatedCount++;
           } else {
             // Create new signup - using direct await
-            await connection.reducers.signupForFlight({
+            await signupForFlightCompat({
               subEventId: subEventId,
               groupId: groupIdBigInt!,
               eventLead: selectedEventLead,
@@ -673,6 +718,7 @@ export default function AdminEvents() {
               routeDetails: details.route || "",
               callsign: details.callsign,
               aircraftType: details.aircraftType,
+              liveryId: details.liveryId,
               desiredDepartureTime: departureTime,
               desiredArrivalTime: arrivalTime,
             });

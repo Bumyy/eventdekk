@@ -367,6 +367,7 @@ const EventMap: React.FC<EventMapProps> = ({
     creatorGroupId,
     defaultGroupFlightColor,
     defaultSignupFlightColor,
+    getAirport,
   ]);
 
   const groupFlightLayerStyle: LayerProps = {

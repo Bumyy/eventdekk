@@ -210,6 +210,60 @@ async function getAirportStatusBatch(req, res) {
   }
 }
 
+async function getAircraft(req, res) {
+  try {
+    const forceRefresh = req.query.forceRefresh === "true";
+    const data = await flightsService.getAircraft(forceRefresh);
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Error in getAircraft controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve aircraft",
+      error: error.message,
+    });
+  }
+}
+
+async function getAllLiveries(req, res) {
+  try {
+    const forceRefresh = req.query.forceRefresh === "true";
+    const data = await flightsService.getAllLiveries(forceRefresh);
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Error in getAllLiveries controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve liveries",
+      error: error.message,
+    });
+  }
+}
+
+async function getAircraftLiveries(req, res) {
+  try {
+    const aircraftId = req.params.aircraftId;
+    const forceRefresh = req.query.forceRefresh === "true";
+
+    if (!aircraftId) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing aircraftId parameter",
+      });
+    }
+
+    const data = await flightsService.getAircraftLiveries(aircraftId, forceRefresh);
+    return res.status(200).json({ success: true, data });
+  } catch (error) {
+    console.error("Error in getAircraftLiveries controller:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Failed to retrieve aircraft liveries",
+      error: error.message,
+    });
+  }
+}
+
 /**
  * Get status of service
  * @param {Object} req - Express request object
@@ -235,6 +289,9 @@ module.exports = {
   updateLiveFlights,
   getConnectionStatus,
   getAirportStatusBatch,
+  getAircraft,
+  getAllLiveries,
+  getAircraftLiveries,
   // Export for testing and explicit cleanup
   cleanupSessions,
 };

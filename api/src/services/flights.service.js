@@ -10,6 +10,8 @@ const IF_SESSION_ID =
 const CACHE_TTL_MS = parseInt(process.env.FLIGHT_CACHE_TTL_MS, 10) || 5000; // 5 seconds by default
 const AIRPORT_STATUS_CACHE_TTL_MS =
   parseInt(process.env.AIRPORT_STATUS_CACHE_TTL_MS, 10) || 15000;
+const AIRCRAFT_CACHE_TTL_MS =
+  parseInt(process.env.AIRCRAFT_CACHE_TTL_MS, 10) || 24 * 60 * 60 * 1000;
 const INACTIVE_CLEANUP_MS = 10000; // 10 seconds with no clients before stopping updates
 
 // Cache state
@@ -21,6 +23,8 @@ let updateInProgress = false;
 let lastClientActivityTime = Date.now();
 let inactivityTimer = null;
 const airportStatusCache = new Map();
+let aircraftCache = { data: [], lastUpdated: 0 };
+const liveryCache = new Map();
 
 /**
  * Initialize inactivity timer to stop updates after extended period with no clients
@@ -252,6 +256,123 @@ async function getAirportStatuses(icaoCodes, options = {}) {
   };
 }
 
+function isTimedCacheStale(lastUpdated, ttlMs) {
+  if (!lastUpdated) return true;
+  return Date.now() - lastUpdated > ttlMs;
+}
+
+async function fetchAircraft() {
+  if (!IF_API_KEY) {
+    throw new Error("IF_API_KEY not configured");
+  }
+
+  const response = await axios.get(`${IF_API_URL}/aircraft`, {
+    headers: {
+      Authorization: `Bearer ${IF_API_KEY}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`IF API returned status ${response.status}`);
+  }
+
+  return Array.isArray(response.data?.result) ? response.data.result : [];
+}
+
+async function fetchAllLiveries() {
+  if (!IF_API_KEY) {
+    throw new Error("IF_API_KEY not configured");
+  }
+
+  const response = await axios.get(`${IF_API_URL}/aircraft/liveries`, {
+    headers: {
+      Authorization: `Bearer ${IF_API_KEY}`,
+      Accept: "application/json",
+    },
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`IF API returned status ${response.status}`);
+  }
+
+  return Array.isArray(response.data?.result) ? response.data.result : [];
+}
+
+async function fetchAircraftLiveries(aircraftId) {
+  if (!IF_API_KEY) {
+    throw new Error("IF_API_KEY not configured");
+  }
+
+  const response = await axios.get(
+    `${IF_API_URL}/aircraft/${aircraftId}/liveries`,
+    {
+      headers: {
+        Authorization: `Bearer ${IF_API_KEY}`,
+        Accept: "application/json",
+      },
+    }
+  );
+
+  if (response.status !== 200) {
+    throw new Error(`IF API returned status ${response.status}`);
+  }
+
+  return Array.isArray(response.data?.result) ? response.data.result : [];
+}
+
+async function getAircraft(forceRefresh = false) {
+  if (!forceRefresh && !isTimedCacheStale(aircraftCache.lastUpdated, AIRCRAFT_CACHE_TTL_MS)) {
+    return aircraftCache.data;
+  }
+
+  const aircraft = await fetchAircraft();
+  aircraftCache = {
+    data: aircraft,
+    lastUpdated: Date.now(),
+  };
+  return aircraft;
+}
+
+async function getAllLiveries(forceRefresh = false) {
+  const cacheKey = "all";
+  const cached = liveryCache.get(cacheKey);
+
+  if (
+    !forceRefresh &&
+    cached &&
+    !isTimedCacheStale(cached.lastUpdated, AIRCRAFT_CACHE_TTL_MS)
+  ) {
+    return cached.data;
+  }
+
+  const liveries = await fetchAllLiveries();
+  liveryCache.set(cacheKey, { data: liveries, lastUpdated: Date.now() });
+  return liveries;
+}
+
+async function getAircraftLiveries(aircraftId, forceRefresh = false) {
+  const normalizedAircraftId = String(aircraftId || "").trim();
+  if (!normalizedAircraftId) {
+    throw new Error("aircraftId is required");
+  }
+
+  const cacheKey = `aircraft:${normalizedAircraftId}`;
+  const cached = liveryCache.get(cacheKey);
+
+  if (
+    !forceRefresh &&
+    cached &&
+    !isTimedCacheStale(cached.lastUpdated, AIRCRAFT_CACHE_TTL_MS)
+  ) {
+    return cached.data;
+  }
+
+  const liveries = await fetchAircraftLiveries(normalizedAircraftId);
+  liveryCache.set(cacheKey, { data: liveries, lastUpdated: Date.now() });
+  return liveries;
+}
+
 /**
  * Transform IF API flight data to a simpler format
  * @param {Array} flights - Raw flight data from IF API
@@ -374,6 +495,8 @@ function cleanup() {
   activeClients = 0;
   flightCache = [];
   airportStatusCache.clear();
+  aircraftCache = { data: [], lastUpdated: 0 };
+  liveryCache.clear();
   console.log("Flight service cleaned up");
 }
 
@@ -386,6 +509,9 @@ module.exports = {
   unregisterClient,
   isCacheStale,
   getAirportStatuses,
+  getAircraft,
+  getAllLiveries,
+  getAircraftLiveries,
   cleanup, // Export cleanup function
   getActiveClients: () => activeClients, // Export active client count
   getLastActivity: () => lastClientActivityTime, // Export last activity time

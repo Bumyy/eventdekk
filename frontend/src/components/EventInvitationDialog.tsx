@@ -36,6 +36,10 @@ import {
 import { SubEventType, Event, SubEvent } from "@/module_bindings/types";
 import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useGroupLeadMembersForGroup } from "@/hooks/spacetimeHooks";
+import {
+  AircraftLiveryPicker,
+  type AircraftLiveryValue,
+} from "@/components/AircraftLiveryPicker";
 
 interface GroupAvailabilityData {
   hostedEvents: Event[];
@@ -46,7 +50,13 @@ interface GroupAvailabilityData {
 interface ConflictInfo {
   hasConflict: boolean;
   sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[];
-  overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[];
+  overlappingEvents: {
+    name: string;
+    start: Date;
+    end: Date;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[];
   isFree: boolean;
 }
 
@@ -65,8 +75,18 @@ function checkSubEventConflicts(
     ...availabilityData.attendingEvents.map((e) => ({ ...e, isHosted: false })),
   ].filter((e) => !excludeEventId || e.eventId !== excludeEventId);
 
-  const sameDayEvents: { name: string; isHosted: boolean; isInternal: boolean }[] = [];
-  const overlappingEvents: { name: string; start: Date; end: Date; isHosted: boolean; isInternal: boolean }[] = [];
+  const sameDayEvents: {
+    name: string;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[] = [];
+  const overlappingEvents: {
+    name: string;
+    start: Date;
+    end: Date;
+    isHosted: boolean;
+    isInternal: boolean;
+  }[] = [];
 
   const allSubEvents = availabilityData.hostedSubEvents.filter(
     (se) => !excludeEventId || se.eventId !== excludeEventId
@@ -80,15 +100,19 @@ function checkSubEventConflicts(
 
     if (existingDay.getTime() === subEventDay.getTime()) {
       const parentEvent = allEvents.find((e) => e.eventId === subEv.eventId);
-      if (parentEvent && !sameDayEvents.some((e) => e.name === parentEvent.name)) {
-        sameDayEvents.push({ 
-          name: parentEvent.name, 
-          isHosted: parentEvent.isHosted, 
-          isInternal: parentEvent.isInternal 
+      if (
+        parentEvent &&
+        !sameDayEvents.some((e) => e.name === parentEvent.name)
+      ) {
+        sameDayEvents.push({
+          name: parentEvent.name,
+          isHosted: parentEvent.isHosted,
+          isInternal: parentEvent.isInternal,
         });
       }
 
-      const hasOverlap = subEventStart < existingEnd && subEventEnd > existingStart;
+      const hasOverlap =
+        subEventStart < existingEnd && subEventEnd > existingStart;
       if (hasOverlap) {
         overlappingEvents.push({
           name: `${subEv.name} (${parentEvent?.name || "Unknown"})`,
@@ -109,7 +133,11 @@ function checkSubEventConflicts(
 
     if (eventDay.getTime() === subEventDay.getTime()) {
       if (!sameDayEvents.some((e) => e.name === event.name)) {
-        sameDayEvents.push({ name: event.name, isHosted: event.isHosted, isInternal: event.isInternal });
+        sameDayEvents.push({
+          name: event.name,
+          isHosted: event.isHosted,
+          isInternal: event.isInternal,
+        });
       }
 
       const hasOverlap = subEventStart < eventEnd && subEventEnd > eventStart;
@@ -140,6 +168,7 @@ interface FlightDetails {
   eventLeadHex?: string;
   callsign?: string;
   aircraftType?: string;
+  liveryId?: string;
   departureTime?: string;
   arrivalTime?: string;
   route?: string;
@@ -248,6 +277,7 @@ export function EventInvitationDialog({
           const details: FlightDetails = {
             callsign: "",
             aircraftType: "",
+            liveryId: "",
             route: "",
             customDepartureIcao: "",
             customArrivalIcao: "",
@@ -277,6 +307,11 @@ export function EventInvitationDialog({
       : "ICAO must be exactly 4 characters.";
   };
 
+  const getCallsignError = (callsign?: string) => {
+    if ((callsign || "").trim().length > 0) return undefined;
+    return "Callsign is required.";
+  };
+
   const updateFlightDetail = (
     subEventId: string,
     field: keyof FlightDetails,
@@ -299,6 +334,15 @@ export function EventInvitationDialog({
   const handleAcceptInvitation = async () => {
     if (!invitation) return;
 
+    const hasMissingCallsign = selectedSubEvents.some((subEventId) => {
+      const details = flightDetails[subEventId.toString()];
+      return !details?.callsign || details.callsign.trim().length === 0;
+    });
+    if (hasMissingCallsign) {
+      toast.error("Callsign is required for all selected sub-events.");
+      return;
+    }
+
     const hasInvalidIcaoLength = selectedSubEvents.some((subEventId) => {
       const selectedSubEvent = invitationSubEvents.find(
         (se) => se.subEventId === subEventId
@@ -310,11 +354,19 @@ export function EventInvitationDialog({
       const isFlyIn = selectedSubEvent.subEventType.tag === "FlyIn";
       const isFlyOut = selectedSubEvent.subEventType.tag === "FlyOut";
 
-      if (!isGroupFlight && !isFlyOut && !isIcaoLengthValid(details?.customDepartureIcao)) {
+      if (
+        !isGroupFlight &&
+        !isFlyOut &&
+        !isIcaoLengthValid(details?.customDepartureIcao)
+      ) {
         return true;
       }
 
-      if (!isGroupFlight && !isFlyIn && !isIcaoLengthValid(details?.customArrivalIcao)) {
+      if (
+        !isGroupFlight &&
+        !isFlyIn &&
+        !isIcaoLengthValid(details?.customArrivalIcao)
+      ) {
         return true;
       }
 
@@ -384,12 +436,22 @@ export function EventInvitationDialog({
   const subEventConflicts = useMemo(() => {
     if (!availabilityData) return new Map<bigint, ConflictInfo>();
     const conflicts = new Map<bigint, ConflictInfo>();
-    const eventIdToExclude = currentEventId || (isManagingExisting ? invitation?.eventId : undefined);
+    const eventIdToExclude =
+      currentEventId || (isManagingExisting ? invitation?.eventId : undefined);
     for (const subEvent of invitationSubEvents) {
-      conflicts.set(subEvent.subEventId, checkSubEventConflicts(subEvent, availabilityData, eventIdToExclude));
+      conflicts.set(
+        subEvent.subEventId,
+        checkSubEventConflicts(subEvent, availabilityData, eventIdToExclude)
+      );
     }
     return conflicts;
-  }, [availabilityData, invitationSubEvents, currentEventId, isManagingExisting, invitation?.eventId]);
+  }, [
+    availabilityData,
+    invitationSubEvents,
+    currentEventId,
+    isManagingExisting,
+    invitation?.eventId,
+  ]);
 
   const hasInvalidSelectedIcao = useMemo(() => {
     return selectedSubEvents.some((subEventId) => {
@@ -403,17 +465,32 @@ export function EventInvitationDialog({
       const isFlyIn = selectedSubEvent.subEventType.tag === "FlyIn";
       const isFlyOut = selectedSubEvent.subEventType.tag === "FlyOut";
 
-      if (!isGroupFlight && !isFlyOut && !isIcaoLengthValid(details?.customDepartureIcao)) {
+      if (
+        !isGroupFlight &&
+        !isFlyOut &&
+        !isIcaoLengthValid(details?.customDepartureIcao)
+      ) {
         return true;
       }
 
-      if (!isGroupFlight && !isFlyIn && !isIcaoLengthValid(details?.customArrivalIcao)) {
+      if (
+        !isGroupFlight &&
+        !isFlyIn &&
+        !isIcaoLengthValid(details?.customArrivalIcao)
+      ) {
         return true;
       }
 
       return false;
     });
   }, [selectedSubEvents, invitationSubEvents, flightDetails]);
+
+  const hasMissingSelectedCallsign = useMemo(() => {
+    return selectedSubEvents.some((subEventId) => {
+      const details = flightDetails[subEventId.toString()];
+      return !details?.callsign || details.callsign.trim().length === 0;
+    });
+  }, [selectedSubEvents, flightDetails]);
 
   return (
     <>
@@ -464,6 +541,9 @@ export function EventInvitationDialog({
                     subEventFlightDetails?.customDepartureIcao || "";
                   const customArrivalIcao =
                     subEventFlightDetails?.customArrivalIcao || "";
+                  const callsignError = getCallsignError(
+                    subEventFlightDetails?.callsign
+                  );
                   const departureIcaoError =
                     !isGroupFlight && !isFlyOut
                       ? getIcaoLengthError(customDepartureIcao)
@@ -529,75 +609,90 @@ export function EventInvitationDialog({
                             )}
                           </div>
 
-                          {availabilityData && subEventConflicts && (() => {
-                            const conflict = subEventConflicts.get(subEvent.subEventId);
-                            if (!conflict) return null;
-                            
-                            if (conflict.isFree) {
-                              return (
-                                <div className="flex items-center gap-2 mb-2 p-2 bg-green-500/10 rounded-md border border-green-500/20">
-                                  <CheckCircle2 className="h-4 w-4 text-green-500" />
-                                  <span className="text-sm text-green-700 dark:text-green-400">
-                                    Group is free on this day
-                                  </span>
-                                </div>
+                          {availabilityData &&
+                            subEventConflicts &&
+                            (() => {
+                              const conflict = subEventConflicts.get(
+                                subEvent.subEventId
                               );
-                            }
-                            
-                            if (conflict.hasConflict) {
-                              return (
-                                <div className="space-y-2 mb-2 p-2 bg-red-500/10 rounded-md border border-red-500/20">
-                                  <div className="flex items-center gap-2">
-                                    <AlertTriangle className="h-4 w-4 text-red-500" />
-                                    <span className="text-sm text-red-700 dark:text-red-400 font-medium">
-                                      Time conflict with another event
+                              if (!conflict) return null;
+
+                              if (conflict.isFree) {
+                                return (
+                                  <div className="flex items-center gap-2 mb-2 p-2 bg-green-500/10 rounded-md border border-green-500/20">
+                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                    <span className="text-sm text-green-700 dark:text-green-400">
+                                      Group is free on this day
                                     </span>
                                   </div>
-                                  {conflict.overlappingEvents.length > 0 && (
-                                    <div className="text-xs text-red-600 dark:text-red-400 ml-6">
-                                      {conflict.overlappingEvents.map((e, i) => (
-                                        <div key={i} className="flex items-center gap-1">
+                                );
+                              }
+
+                              if (conflict.hasConflict) {
+                                return (
+                                  <div className="space-y-2 mb-2 p-2 bg-red-500/10 rounded-md border border-red-500/20">
+                                    <div className="flex items-center gap-2">
+                                      <AlertTriangle className="h-4 w-4 text-red-500" />
+                                      <span className="text-sm text-red-700 dark:text-red-400 font-medium">
+                                        Time conflict with another event
+                                      </span>
+                                    </div>
+                                    {conflict.overlappingEvents.length > 0 && (
+                                      <div className="text-xs text-red-600 dark:text-red-400 ml-6">
+                                        {conflict.overlappingEvents.map(
+                                          (e, i) => (
+                                            <div
+                                              key={i}
+                                              className="flex items-center gap-1"
+                                            >
+                                              <span>•</span>
+                                              <span>
+                                                {e.name} ({format(e.start, "p")}{" "}
+                                                - {format(e.end, "p")})
+                                                {e.isHosted && " [hosted]"}
+                                                {e.isInternal && " [internal]"}
+                                              </span>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              }
+
+                              if (conflict.sameDayEvents.length > 0) {
+                                return (
+                                  <div className="mb-2 p-2 bg-yellow-500/10 rounded-md border border-yellow-500/20">
+                                    <div className="flex items-center gap-2">
+                                      <CalendarX className="h-4 w-4 text-yellow-500" />
+                                      <span className="text-sm text-yellow-700 dark:text-yellow-400">
+                                        Group has{" "}
+                                        {conflict.sameDayEvents.length} event(s)
+                                        on this day
+                                      </span>
+                                    </div>
+                                    <div className="text-xs text-yellow-600 dark:text-yellow-400 ml-6 mt-1">
+                                      {conflict.sameDayEvents.map((e, i) => (
+                                        <div
+                                          key={i}
+                                          className="flex items-center gap-1"
+                                        >
                                           <span>•</span>
                                           <span>
-                                            {e.name} ({format(e.start, "p")} - {format(e.end, "p")})
+                                            {e.name}
                                             {e.isHosted && " [hosted]"}
                                             {e.isInternal && " [internal]"}
                                           </span>
                                         </div>
                                       ))}
                                     </div>
-                                  )}
-                                </div>
-                              );
-                            }
-                            
-                            if (conflict.sameDayEvents.length > 0) {
-                              return (
-                                <div className="mb-2 p-2 bg-yellow-500/10 rounded-md border border-yellow-500/20">
-                                  <div className="flex items-center gap-2">
-                                    <CalendarX className="h-4 w-4 text-yellow-500" />
-                                    <span className="text-sm text-yellow-700 dark:text-yellow-400">
-                                      Group has {conflict.sameDayEvents.length} event(s) on this day
-                                    </span>
                                   </div>
-                                  <div className="text-xs text-yellow-600 dark:text-yellow-400 ml-6 mt-1">
-                                    {conflict.sameDayEvents.map((e, i) => (
-                                      <div key={i} className="flex items-center gap-1">
-                                        <span>•</span>
-                                        <span>
-                                          {e.name}
-                                          {e.isHosted && " [hosted]"}
-                                          {e.isInternal && " [internal]"}
-                                        </span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              );
-                            }
-                            
-                            return null;
-                          })()}
+                                );
+                              }
+
+                              return null;
+                            })()}
 
                           {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
@@ -666,30 +761,40 @@ export function EventInvitationDialog({
                                     }
                                     placeholder="e.g. QFA123"
                                     disabled={isProcessing}
+                                    aria-invalid={!!callsignError}
                                   />
+                                  {callsignError && (
+                                    <p className="text-xs text-destructive mt-1">
+                                      {callsignError}
+                                    </p>
+                                  )}
                                 </div>
 
                                 <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`aircraft-${subEvent.subEventId}`}
-                                  >
-                                    Aircraft Type
-                                  </Label>
-                                  <Input
+                                  <AircraftLiveryPicker
                                     id={`aircraft-${subEvent.subEventId}`}
-                                    value={
-                                      flightDetails[
-                                        subEvent.subEventId.toString()
-                                      ]?.aircraftType || ""
-                                    }
-                                    onChange={(e) =>
+                                    value={{
+                                      aircraftName:
+                                        flightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.aircraftType || "",
+                                      liveryId:
+                                        flightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.liveryId || "",
+                                    }}
+                                    onChange={(value) => {
                                       updateFlightDetail(
                                         subEvent.subEventId.toString(),
                                         "aircraftType",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="e.g. A320"
+                                        value.aircraftName
+                                      );
+                                      updateFlightDetail(
+                                        subEvent.subEventId.toString(),
+                                        "liveryId",
+                                        value.liveryId
+                                      );
+                                    }}
                                     disabled={isProcessing}
                                   />
                                 </div>
@@ -930,7 +1035,8 @@ export function EventInvitationDialog({
               disabled={
                 selectedSubEvents.length === 0 ||
                 isProcessing ||
-                hasInvalidSelectedIcao
+                hasInvalidSelectedIcao ||
+                hasMissingSelectedCallsign
               }
             >
               {isProcessing ? (
