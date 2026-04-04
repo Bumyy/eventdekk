@@ -8,12 +8,14 @@ interface PastEventsSectionProps {
   pastEvents: Event[];
   subEvents: SubEvent[];
   userTimezone: string;
+  onEventClick?: (event: Event) => void;
 }
 
 export function PastEventsSection({
   pastEvents,
   subEvents,
   userTimezone,
+  onEventClick,
 }: PastEventsSectionProps) {
   return (
     <div className="space-y-4">
@@ -25,7 +27,8 @@ export function PastEventsSection({
           return (
             <div
               key={event.eventId.toString()}
-              className="p-4 border rounded-lg bg-card"
+              className="p-4 border rounded-lg bg-card cursor-pointer"
+              onClick={() => onEventClick?.(event)}
             >
               <div className="flex items-start justify-between">
                 <div className="space-y-2">

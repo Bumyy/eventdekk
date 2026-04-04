@@ -27,6 +27,7 @@ import { Identity, Timestamp, SenderError } from "spacetimedb";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { toast } from "sonner";
 import { EventInvitationDialog } from "@/components/EventInvitationDialog";
+import EventDialog from "@/components/EventDialog";
 import { format } from "date-fns";
 import {
   UpcomingEventsSection,
@@ -37,6 +38,8 @@ import {
 export default function AdminEvents() {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [expandedEvents, setExpandedEvents] = useState<string[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showEventDialog, setShowEventDialog] = useState(false);
   const { getConnection, identity } = useSpacetimeDB();
   const connection = getConnection();
   const { groupId } = useParams();
@@ -300,8 +303,7 @@ export default function AdminEvents() {
     navigate(`/admin/groups/${groupId}/events/${eventId}/edit`);
   };
 
-  const handleManageParticipation = (event: Event) => {
-    // Create a synthetic invitation object that matches the structure expected by the dialog
+const handleManageParticipation = (event: Event) => {
     const invitationData = {
       eventId: event.eventId,
       groupId: groupIdBigInt,
@@ -309,12 +311,10 @@ export default function AdminEvents() {
       status: { tag: "Accepted" },
     };
 
-    // Get all sub-events for this event
     const eventSubEvents = relevantSubEvents.filter(
       (se) => se.eventId === event.eventId
     );
 
-    // Get all flight signups for this group and event's sub-events
     const relevantSignups =
       flightSignups?.filter(
         (signup) =>
@@ -322,12 +322,10 @@ export default function AdminEvents() {
           eventSubEvents.some((se) => se.subEventId === signup.subEventId)
       ) || [];
 
-    // Create an array of subEventIds that the group is signed up for
     const signedUpSubEventIds = relevantSignups.map(
       (signup) => signup.subEventId
     );
 
-    // Prepare flight details from existing signups
     const flightDetailsFromSignups: Record<string, any> = {};
 
     relevantSignups.forEach((signup) => {
@@ -350,11 +348,15 @@ export default function AdminEvents() {
       };
     });
 
-    // Set pre-selected data
     setPreSelectedSubEvents(signedUpSubEventIds);
     setPreFilledFlightDetails(flightDetailsFromSignups);
     setSelectedEventForManagement(invitationData);
     setShowManagementDialog(true);
+};
+
+  const handleEventClick = (event: Event) => {
+    setSelectedEvent(event);
+    setShowEventDialog(true);
   };
 
   // Reset pre-selections when dialog closes
@@ -814,6 +816,7 @@ export default function AdminEvents() {
             canPublishEvents={canPublishEvents}
             currentUser={currentUser}
             users={users || []}
+            onEventClick={handleEventClick}
           />
         </TabsContent>
 
@@ -825,6 +828,7 @@ export default function AdminEvents() {
             groups={groups || []}
             availabilityData={groupAvailabilityData}
             onRespond={handleOpenResponseDialog}
+            onEventClick={handleEventClick}
           />
         </TabsContent>
 
@@ -833,6 +837,7 @@ export default function AdminEvents() {
             pastEvents={pastEvents || []}
             subEvents={[...subEvents]}
             userTimezone={userTimezone}
+            onEventClick={handleEventClick}
           />
         </TabsContent>
       </Tabs>
@@ -874,6 +879,14 @@ export default function AdminEvents() {
         availabilityData={groupAvailabilityData}
         currentEventId={selectedEventForManagement?.eventId}
       />
+
+      {selectedEvent && (
+        <EventDialog
+          event={selectedEvent}
+          open={showEventDialog}
+          onOpenChange={setShowEventDialog}
+        />
+      )}
     </div>
   );
 }

@@ -165,6 +165,7 @@ interface EventInvitationsSectionProps {
   groups: Group[];
   availabilityData?: GroupAvailabilityData;
   onRespond: (event: Event) => void;
+  onEventClick?: (event: Event) => void;
 }
 
 export function EventInvitationsSection({
@@ -174,6 +175,7 @@ export function EventInvitationsSection({
   groups,
   availabilityData,
   onRespond,
+  onEventClick,
 }: EventInvitationsSectionProps) {
   const getGroupInfo = (groupId: bigint) => {
     const group = groups?.find((g) => g.groupId === groupId);
@@ -200,7 +202,7 @@ export function EventInvitationsSection({
             );
 
             return (
-              <Card key={event.eventId.toString()} className="overflow-hidden p-0">
+              <Card key={event.eventId.toString()} className={`overflow-hidden p-0${onEventClick ? " cursor-pointer" : ""}`} onClick={() => onEventClick?.(event)}>
                 <div className="flex flex-col sm:flex-row">
                   {event.bannerUrl && (
                     <div className="relative h-32 sm:h-auto sm:w-44 md:w-56 shrink-0">
@@ -277,7 +279,7 @@ export function EventInvitationsSection({
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" onClick={() => onRespond(event)}>
+                        <Button variant="outline" onClick={(e) => {e.stopPropagation(); onRespond(event);}}>
                           Respond
                         </Button>
                       </div>

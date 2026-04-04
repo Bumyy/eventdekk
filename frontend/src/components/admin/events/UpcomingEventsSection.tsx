@@ -18,6 +18,7 @@ interface UpcomingEventsSectionProps {
   onManageParticipation: (event: Event) => void;
   onPublishEvent?: (eventId: bigint) => void;
   canPublishEvents?: boolean;
+  onEventClick?: (event: Event) => void;
 }
 
 function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): boolean {
@@ -126,6 +127,7 @@ export function UpcomingEventsSection({
   onManageParticipation,
   onPublishEvent,
   canPublishEvents = true,
+  onEventClick,
 }: UpcomingEventsSectionProps) {
   const getGroupInfo = (groupId: bigint) => {
     const group = groups?.find((g) => g.groupId === groupId);
@@ -147,7 +149,7 @@ export function UpcomingEventsSection({
               const eventSubEvents = subEvents.filter(
                 (se) => se.eventId === event.eventId
               );
-              return (
+return (
                 <EventCard
                   key={event.eventId.toString()}
                   event={event}
@@ -168,6 +170,7 @@ export function UpcomingEventsSection({
                       ? () => onPublishEvent?.(event.eventId)
                       : undefined
                   }
+                  onEventClick={() => onEventClick?.(event)}
                 />
               );
             })}
@@ -221,7 +224,7 @@ export function UpcomingEventsSection({
                 };
               });
 
-              return (
+return (
                 <EventCard
                   key={event.eventId.toString()}
                   event={event}
@@ -242,6 +245,7 @@ export function UpcomingEventsSection({
                   flightSignups={groupSignupsForEvent}
                   hasIncompleteInfo={hasIncompleteInfo}
                   signupsWithIssues={signupsWithIssues}
+                  onEventClick={() => onEventClick?.(event)}
                 />
               );
             })}
