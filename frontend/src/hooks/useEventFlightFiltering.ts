@@ -54,9 +54,7 @@ export const useEventFlightFiltering = (
   const eventParticipants = useEventParticipants();
   const groups = useGroups();
   const eventSubEvents = useSubEventsForEvent(eventIdBigInt);
-  console.log(eventSubEvents);
   const eventFlightSignups = useFlightSignupsForEvent(eventIdBigInt);
-  console.log(eventFlightSignups);
   const callsignFilters = useAllGroupCallsignFilters();
   const [candidateFlightIds, setCandidateFlightIds] = useState<Set<string>>(
     new Set()

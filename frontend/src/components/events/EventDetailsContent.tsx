@@ -7,6 +7,7 @@ import {
   useGroups,
   useSubEvents,
 } from "@/hooks/spacetimeHooks";
+import EventBaseMap from "@/components/map/EventBaseMap";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -50,6 +51,14 @@ export function EventDetailsContent({
     () => groups.find((g) => g.groupId === event.creatorGroupId) || null,
     [groups, event.creatorGroupId]
   );
+
+  const groupMap = useMemo(() => {
+    const map = new Map<string, (typeof groups)[number]>();
+    groups.forEach((group) => {
+      map.set(group.groupId.toString(), group);
+    });
+    return map;
+  }, [groups]);
 
   const eventSubEvents = useMemo(
     () => subEvents.filter((subEvent) => subEvent.eventId === event.eventId),
@@ -126,7 +135,7 @@ export function EventDetailsContent({
       <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
         <EventBanner event={event} hostGroup={hostGroup} />
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_280px]">
+        <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[6fr_4fr]">
           <div className="min-h-0 border-r flex flex-col">
             <ScrollArea className="min-h-0 flex-1 p-3 sm:p-4">
               <EventDateTimeInfo
@@ -137,6 +146,17 @@ export function EventDetailsContent({
                 signupCount={totalSignups}
                 groupColor={hostGroup?.color || undefined}
               />
+
+              <div className="h-48 sm:h-56 lg:hidden rounded-lg overflow-hidden border mt-2.5 sm:mt-3">
+                <EventBaseMap
+                  subEvents={eventSubEvents}
+                  flightSignups={subEventSignups}
+                  creatorGroupId={event.creatorGroupId}
+                  groupMap={groupMap}
+                  className="w-full h-full"
+                  showSignupRoutes={true}
+                />
+              </div>
 
               <div className="mt-2.5 sm:mt-3">
                 <SubEventDetails
@@ -149,7 +169,19 @@ export function EventDetailsContent({
             </ScrollArea>
           </div>
 
-          <EventSidebar
+          <div className="hidden lg:flex min-h-0 flex-col">
+            <div className="flex-1 min-h-0 border-b">
+              <EventBaseMap
+                subEvents={eventSubEvents}
+                flightSignups={subEventSignups}
+                creatorGroupId={event.creatorGroupId}
+                groupMap={groupMap}
+                className="w-full h-full"
+                showSignupRoutes={true}
+              />
+            </div>
+
+<EventSidebar
             eventId={event.eventId}
             subEventCount={1}
             totalSignups={totalSignups}
@@ -160,14 +192,27 @@ export function EventDetailsContent({
           />
         </div>
       </div>
-    );
-  }
+
+      <div className="lg:hidden border-t">
+        <EventSidebar
+          eventId={event.eventId}
+          subEventCount={1}
+          totalSignups={totalSignups}
+          participantGroups={uniqueParticipantGroups}
+          ifcEventLink={event.ifcEventLink}
+          canRegister={canRegister}
+          onRegister={onRegister}
+        />
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
       <EventBanner event={event} hostGroup={hostGroup} />
 
-      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[1fr_280px]">
+      <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[6fr_4fr]">
         <div className="min-h-0 border-r flex flex-col">
           <Tabs
             value={activeTab}
@@ -194,6 +239,19 @@ export function EventDetailsContent({
                   signupCount={totalSignups}
                   groupColor={hostGroup?.color || undefined}
                 />
+
+                <div className="h-48 sm:h-56 lg:hidden rounded-lg overflow-hidden border">
+                  <EventBaseMap
+                    subEvents={eventSubEvents}
+                    flightSignups={Array.from(
+                      signupsBySubEvent.values()
+                    ).flat()}
+                    creatorGroupId={event.creatorGroupId}
+                    groupMap={groupMap}
+                    className="w-full h-full"
+                    showSignupRoutes={true}
+                  />
+                </div>
 
                 <div className="space-y-2.5 sm:space-y-3">
                   {eventSubEvents.map((subEvent) => {
@@ -256,6 +314,31 @@ export function EventDetailsContent({
           </Tabs>
         </div>
 
+        <div className="hidden lg:flex min-h-0 flex-col">
+          <div className="flex-1 min-h-0 border-b">
+            <EventBaseMap
+              subEvents={eventSubEvents}
+              flightSignups={Array.from(signupsBySubEvent.values()).flat()}
+              creatorGroupId={event.creatorGroupId}
+              groupMap={groupMap}
+              className="w-full h-full"
+              showSignupRoutes={true}
+            />
+          </div>
+
+          <EventSidebar
+            eventId={event.eventId}
+            subEventCount={eventSubEvents.length}
+            totalSignups={totalSignups}
+            participantGroups={uniqueParticipantGroups}
+            ifcEventLink={event.ifcEventLink}
+            canRegister={canRegister}
+            onRegister={onRegister}
+          />
+        </div>
+      </div>
+
+      <div className="lg:hidden border-t">
         <EventSidebar
           eventId={event.eventId}
           subEventCount={eventSubEvents.length}

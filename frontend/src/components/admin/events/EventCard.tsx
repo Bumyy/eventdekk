@@ -71,6 +71,7 @@ interface EventCardProps {
   onDelete?: () => void;
   onManageParticipation?: () => void;
   onPublish?: () => void;
+  onEventClick?: () => void;
   hasIncompleteInfo?: boolean;
   signupsWithIssues?: SignupWithIssues[];
 }
@@ -118,6 +119,7 @@ export function EventCard({
   onDelete,
   onManageParticipation,
   onPublish,
+  onEventClick,
   hasIncompleteInfo = false,
   signupsWithIssues = [],
 }: EventCardProps) {
@@ -143,9 +145,10 @@ export function EventCard({
         )
     : false;
 
-  return (
+return (
     <Card
-      className={`overflow-hidden p-0 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}`}
+      className={`overflow-hidden p-0 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}${onEventClick ? " cursor-pointer" : ""}`}
+      onClick={onEventClick}
     >
       <div className="flex flex-col sm:flex-row">
         {hasBannerImage && (
@@ -233,8 +236,8 @@ export function EventCard({
           </div>
             </div>
             <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
-          {onToggleExpand && (
-            <Button variant="ghost" size="icon" onClick={onToggleExpand}>
+{onToggleExpand && (
+            <Button variant="ghost" size="icon" onClick={(e) => {e.stopPropagation(); onToggleExpand();}}>
               {expanded ? (
                 <ChevronUp className="h-4 w-4" />
               ) : (
@@ -245,7 +248,7 @@ export function EventCard({
           {isHosting && (
             <>
               {isDraft && onPublish && (
-                <Button variant="default" onClick={onPublish}>
+                <Button variant="default" onClick={(e) => {e.stopPropagation(); onPublish();}}>
                   <Send className="h-4 w-4 mr-1" />
                   Publish
                 </Button>
@@ -253,7 +256,7 @@ export function EventCard({
               {onManage && (
                 <Button
                   variant="outline"
-                  onClick={onManage}
+                  onClick={(e) => {e.stopPropagation(); onManage();}}
                   aria-label="Manage event"
                 >
                   <Settings className="h-4 w-4 sm:hidden" />
@@ -263,7 +266,7 @@ export function EventCard({
               {onDelete && (
                 <Button
                   variant="destructive"
-                  onClick={onDelete}
+                  onClick={(e) => {e.stopPropagation(); onDelete();}}
                   aria-label="Delete event"
                 >
                   <Trash2 className="h-4 w-4 sm:hidden" />
@@ -275,7 +278,7 @@ export function EventCard({
           {isAttending && onManageParticipation && (
             <Button
               variant="outline"
-              onClick={onManageParticipation}
+              onClick={(e) => {e.stopPropagation(); onManageParticipation();}}
               aria-label="Manage participation"
             >
               <Settings className="h-4 w-4 sm:hidden" />
