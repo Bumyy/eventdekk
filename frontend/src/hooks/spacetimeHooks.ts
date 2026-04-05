@@ -670,3 +670,45 @@ export const useGroupAvailabilityData = (
     [hostedEvents, attendingEvents, hostedSubEvents]
   );
 };
+
+export const useOnlineAttendingUsers = (eventId: bigint | null) => {
+  const events = useEvents();
+  const eventParticipants = useEventParticipants();
+  const groupMembers = useGroupMemberships();
+  const users = useUsers();
+
+  return useMemo(() => {
+    if (!eventId) return { count: 0, users: [] };
+
+    const event = events.find((e) => e.eventId === eventId);
+    if (!event) return { count: 0, users: [] };
+
+    const attendingGroupIds = new Set<bigint>([event.creatorGroupId]);
+
+    eventParticipants
+      .filter(
+        (ep) =>
+          ep.eventId === eventId &&
+          ep.status.tag === "Accepted"
+      )
+      .forEach((ep) => attendingGroupIds.add(ep.groupId));
+
+    const memberUserIdentities = new Set<string>();
+    groupMembers
+      .filter((gm) => attendingGroupIds.has(gm.groupId))
+      .forEach((gm) =>
+        memberUserIdentities.add(gm.userIdentity.toHexString())
+      );
+
+    const onlineUsers = users.filter(
+      (u) =>
+        u.online &&
+        memberUserIdentities.has(u.identity.toHexString())
+    );
+
+    return {
+      count: onlineUsers.length,
+      users: onlineUsers,
+    };
+  }, [eventId, events, eventParticipants, groupMembers, users]);
+};

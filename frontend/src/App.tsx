@@ -2,8 +2,10 @@ import React, { useMemo, useState, useEffect, useRef, useCallback } from "react"
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { LiveEventProvider } from "@/contexts/LiveEventContext";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
+import { LiveChatWidget } from "@/components/live-chat";
 
 // --- SpacetimeDB Imports ---
 import { SpacetimeDBProvider } from "spacetimedb/react";
@@ -171,7 +173,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
 
   const showBanner = isConnecting && hasConnected && !isConnected;
 
-  return (
+return (
     <SpacetimeDBProvider
       key={reconnectNonce}
       connectionBuilder={connectionBuilder}
@@ -182,7 +184,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
         </div>
       )}
 
-      {children}
+      <LiveEventProvider>{children}</LiveEventProvider>
     </SpacetimeDBProvider>
   );
 };
@@ -195,7 +197,7 @@ function App() {
           <SpacetimeWrapper>
             <Toaster richColors />
 
-            <div className="relative isolate min-h-screen bg-background text-foreground">
+<div className="relative isolate min-h-screen bg-background text-foreground">
               <AppBackground />
               <Navigation />
 
@@ -278,6 +280,8 @@ function App() {
                   />
                 </Routes>
               </main>
+
+              <LiveChatWidget />
             </div>
           </SpacetimeWrapper>
         </AuthProvider>
