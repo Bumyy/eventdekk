@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import MapGL, {
   Source,
   Layer,
@@ -87,8 +87,10 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
         }
       });
     }
-    return Array.from(codeSet).filter(Boolean);
+    return Array.from(codeSet).filter(Boolean).sort();
   }, [subEvents, flightSignups, showSignupRoutes]);
+
+  const prevIcaosRef = useRef<string[]>([]);
 
   const fitMapToData = useCallback(
     (airportsToFit: Airport[]) => {
@@ -135,6 +137,13 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
   );
 
   useEffect(() => {
+    const sortedPrev = prevIcaosRef.current;
+    const changed = icaos.length !== sortedPrev.length ||
+      icaos.some((icao, i) => icao !== sortedPrev[i]);
+    
+    if (!changed) return;
+    prevIcaosRef.current = icaos;
+
     if (icaos.length === 0) {
       setAirportData(new Map());
       setLoadingAirports(false);
@@ -668,4 +677,36 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
   );
 };
 
-export default EventBaseMap;
+const arraysEqual = <T,>(a: T[], b: T[]): boolean => {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) return false;
+  }
+  return true;
+};
+
+const groupMapsEqual = (
+  a: Map<string, Group>,
+  b: Map<string, Group>
+): boolean => {
+  if (a.size !== b.size) return false;
+  for (const [key, value] of a) {
+    if (b.get(key) !== value) return false;
+  }
+  return true;
+};
+
+const EventBaseMapMemo = memo(EventBaseMap, (prevProps, nextProps) => {
+  if (prevProps.className !== nextProps.className) return false;
+  if (prevProps.showSignupRoutes !== nextProps.showSignupRoutes) return false;
+  if (prevProps.creatorGroupId !== nextProps.creatorGroupId) return false;
+  if (prevProps.children !== nextProps.children) return false;
+
+  if (!arraysEqual(prevProps.subEvents, nextProps.subEvents)) return false;
+  if (!arraysEqual(prevProps.flightSignups, nextProps.flightSignups)) return false;
+  if (!groupMapsEqual(prevProps.groupMap, nextProps.groupMap)) return false;
+
+  return true;
+});
+
+export default EventBaseMapMemo;

@@ -89,6 +89,11 @@ export function EventDetailsContent({
     [signupsBySubEvent]
   );
 
+  const allFlightSignups = useMemo(
+    () => Array.from(signupsBySubEvent.values()).flat(),
+    [signupsBySubEvent]
+  );
+
   const uniqueParticipantGroups = useMemo(() => {
     const acceptedGroups = eventParticipants
       .filter((participant) => participant.eventId === event.eventId)
@@ -243,9 +248,7 @@ export function EventDetailsContent({
                 <div className="h-48 sm:h-56 lg:hidden rounded-lg overflow-hidden border">
                   <EventBaseMap
                     subEvents={eventSubEvents}
-                    flightSignups={Array.from(
-                      signupsBySubEvent.values()
-                    ).flat()}
+                    flightSignups={allFlightSignups}
                     creatorGroupId={event.creatorGroupId}
                     groupMap={groupMap}
                     className="w-full h-full"
@@ -318,7 +321,7 @@ export function EventDetailsContent({
           <div className="flex-1 min-h-0 border-b">
             <EventBaseMap
               subEvents={eventSubEvents}
-              flightSignups={Array.from(signupsBySubEvent.values()).flat()}
+              flightSignups={allFlightSignups}
               creatorGroupId={event.creatorGroupId}
               groupMap={groupMap}
               className="w-full h-full"
