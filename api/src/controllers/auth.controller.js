@@ -24,17 +24,33 @@ class AuthController {
   // Provider redirects back here after user authorizes/denies
   googleCallback = (req, res, next) => {
     // Helper to build callback URL
-    const getCallbackUrl = (tokenOrError, type = "token") => {
+    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false) => {
       const baseUrl =
         process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
       const callbackPath = baseUrl.includes("/auth/callback")
         ? ""
         : "/auth/callback";
-      const param =
-        type === "token"
-          ? `token=${encodeURIComponent(tokenOrError)}`
-          : `error=${tokenOrError}`;
-      return `${baseUrl}${callbackPath}?${param}`;
+
+      if (type === "error") {
+        const param = `error=${tokenOrError}`;
+        return `${baseUrl}${callbackPath}?${param}`;
+      }
+
+      // Build URL with token and optional profile data
+      let url = `${baseUrl}${callbackPath}?token=${encodeURIComponent(tokenOrError)}`;
+
+      url += `&isNewUser=${isNewUser}`;
+
+      if (profileData) {
+        if (profileData.displayName) {
+          url += `&displayName=${encodeURIComponent(profileData.displayName)}`;
+        }
+        if (profileData.profilePicture) {
+          url += `&profilePicture=${encodeURIComponent(profileData.profilePicture)}`;
+        }
+      }
+
+      return url;
     };
 
     passport.authenticate(
@@ -57,24 +73,47 @@ class AuthController {
         }
 
         console.log("Google Auth Success. Redirecting with token.");
-        res.redirect(getCallbackUrl(data.sdbToken, "token"));
+        res.redirect(
+          getCallbackUrl(
+            data.sdbToken,
+            "token",
+            data.profileData,
+            data.isNewUser
+          )
+        );
       }
     )(req, res, next);
   };
 
   discordCallback = (req, res, next) => {
     // Helper to build callback URL
-    const getCallbackUrl = (tokenOrError, type = "token") => {
+    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false) => {
       const baseUrl =
         process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
       const callbackPath = baseUrl.includes("/auth/callback")
         ? ""
         : "/auth/callback";
-      const param =
-        type === "token"
-          ? `token=${encodeURIComponent(tokenOrError)}`
-          : `error=${tokenOrError}`;
-      return `${baseUrl}${callbackPath}?${param}`;
+
+      if (type === "error") {
+        const param = `error=${tokenOrError}`;
+        return `${baseUrl}${callbackPath}?${param}`;
+      }
+
+      // Build URL with token and optional profile data
+      let url = `${baseUrl}${callbackPath}?token=${encodeURIComponent(tokenOrError)}`;
+
+      url += `&isNewUser=${isNewUser}`;
+
+      if (profileData) {
+        if (profileData.displayName) {
+          url += `&displayName=${encodeURIComponent(profileData.displayName)}`;
+        }
+        if (profileData.profilePicture) {
+          url += `&profilePicture=${encodeURIComponent(profileData.profilePicture)}`;
+        }
+      }
+
+      return url;
     };
 
     passport.authenticate(
@@ -96,7 +135,14 @@ class AuthController {
           return res.redirect(getCallbackUrl("discord_failed", "error"));
         }
         console.log("Discord Auth Success. Redirecting with token.");
-        res.redirect(getCallbackUrl(data.sdbToken, "token"));
+        res.redirect(
+          getCallbackUrl(
+            data.sdbToken,
+            "token",
+            data.profileData,
+            data.isNewUser
+          )
+        );
       }
     )(req, res, next);
   };

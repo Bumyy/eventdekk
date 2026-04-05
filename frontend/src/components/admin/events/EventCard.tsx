@@ -357,14 +357,34 @@ return (
                           {!signupLeadUser ? (
                             <AlertTriangle className="h-3 w-3" />
                           ) : (
-                            <UserCircle className="h-3 w-3" />
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage
+                                src={signupLeadUser.ifcProfileUrl || undefined}
+                                alt={signupLeadUser.displayName || "Lead"}
+                              />
+                              <AvatarFallback className="text-[8px]">
+                                {signupLeadUser.displayName?.substring(0, 2).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
                           )}
                           {signupLeadUser
                             ? `Your Group Lead: ${signupLeadUser.displayName || "Unknown"}`
                             : "Your Group Lead: Unassigned (required)"}
                         </span>
                         <span className="flex items-center gap-1 text-muted-foreground">
-                          <UserCircle className="h-3 w-3" />
+                          {hasNoLead ? (
+                            <UserCircle className="h-3 w-3" />
+                          ) : (
+                            <Avatar className="h-4 w-4">
+                              <AvatarImage
+                                src={subEventLeadUser?.ifcProfileUrl || undefined}
+                                alt={subEventLeadUser?.displayName || "Lead"}
+                              />
+                              <AvatarFallback className="text-[8px]">
+                                {subEventLeadUser?.displayName?.substring(0, 2).toUpperCase() || "?"}
+                              </AvatarFallback>
+                            </Avatar>
+                          )}
                           {hasNoLead
                             ? "Sub-event Lead: Unassigned"
                             : `Sub-event Lead: ${subEventLeadUser?.displayName || "Unknown"}`}
@@ -378,7 +398,19 @@ return (
                       <span
                         className={`flex items-center gap-1 ${isThisSubEventMine ? "text-blue-600 dark:text-blue-400 font-bold" : "text-muted-foreground"}`}
                       >
-                        <UserCircle className="h-3 w-3" />
+                        {isThisSubEventMine ? (
+                          <UserCircle className="h-3 w-3" />
+                        ) : (
+                          <Avatar className="h-4 w-4">
+                            <AvatarImage
+                              src={subEventLeadUser?.ifcProfileUrl || undefined}
+                              alt={subEventLeadUser?.displayName || "Lead"}
+                            />
+                            <AvatarFallback className="text-[8px]">
+                              {subEventLeadUser?.displayName?.substring(0, 2).toUpperCase() || "?"}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         {isThisSubEventMine
                           ? "You are Leading"
                           : `Lead: ${subEventLeadUser?.displayName || "Unknown"}`}

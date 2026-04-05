@@ -6,6 +6,7 @@ import { LiveEventProvider } from "@/contexts/LiveEventContext";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { LiveChatWidget } from "@/components/live-chat";
+import { OAuthProfileSync } from "@/components/OAuthProfileSync";
 
 // --- SpacetimeDB Imports ---
 import { SpacetimeDBProvider } from "spacetimedb/react";
@@ -23,8 +24,8 @@ import Home from "@/pages/Home";
 import CalendarView from "./pages/CalendarView";
 import EventPage from "./pages/EventPage";
 import LoginPage from "./pages/LoginPage";
-import AuthCallbackPage from "./pages/AuthCallbackPage";
-import ProtectedRoute from "./pages/ProtectedRoute";
+import AuthCallbackPage from "@/pages/AuthCallbackPage";
+import ProtectedRoute from "@/pages/ProtectedRoute";
 import LiveEvent from "@/pages/LiveEvent";
 import Profile from "@/pages/Profile";
 
@@ -37,8 +38,8 @@ import AdminMembers from "@/pages/admin/AdminMembers";
 import SiteAdmin from "@/pages/admin/SiteAdmin";
 import CreateGroup from "./pages/admin/CreateGroup";
 import EditGroup from "@/pages/admin/EditGroup";
-import EditEvent from "./pages/admin/EditEvent";
-import AdminGroupSettings from "./pages/admin/AdminGroupSettings";
+import EditEvent from "@/pages/admin/EditEvent";
+import AdminGroupSettings from "@/pages/admin/AdminGroupSettings";
 import GroupPlanner from "@/pages/admin/GroupPlanner";
 import ApplyForGroup from "@/pages/admin/ApplyForGroup";
 import SuperAdminRoute from "@/pages/admin/SuperAdminRoute";
@@ -55,6 +56,9 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   const timerRef = useRef<number | null>(null);
   const activeNonceRef = useRef(reconnectNonce);
   activeNonceRef.current = reconnectNonce;
+
+  // Use auth token if available, otherwise fall back to anonymous token
+  const effectiveToken = sdbToken || sessionStorage.getItem("eventdekk_anonymous_token");
 
   const clearTimer = () => {
     if (timerRef.current !== null) {
@@ -113,7 +117,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
     };
   }, [triggerReconnect]);
 
-  const connectionBuilder = useMemo(() => {
+const connectionBuilder = useMemo(() => {
     const instanceNonce = reconnectNonce;
     const url = new URL(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000");
     url.searchParams.set("reconnect", String(instanceNonce));
@@ -121,7 +125,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
     return DbConnection.builder()
       .withUri(url)
       .withDatabaseName("eventdekk")
-      .withToken(sdbToken || undefined)
+      .withToken(effectiveToken || undefined)
       .onConnect((conn: DbConnection, identity: Identity, token: string) => {
         if (activeNonceRef.current !== instanceNonce) return;
 
@@ -131,10 +135,6 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
         setHasConnected(true);
         setIsConnecting(false);
         console.log("Connected to STDB with identity:", identity.toHexString());
-
-        if (!sdbToken) {
-          localStorage.setItem("eventdekk_auth_token", token);
-        }
       })
       .onDisconnect(() => {
         if (activeNonceRef.current !== instanceNonce) return;
@@ -158,6 +158,7 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
           errorMessage.includes("Unauthorized")
         ) {
           console.warn("Invalid or expired token detected. Forcing logout...");
+          sessionStorage.removeItem("eventdekk_anonymous_token");
           toast.error("Your session has expired. Please log in again.");
           logout(true);
           return;
@@ -165,26 +166,28 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
 
         triggerReconnect(3000);
       });
-  }, [sdbToken, reconnectNonce, logout, triggerReconnect]);
+  }, [effectiveToken, reconnectNonce, logout, triggerReconnect]);
 
-  if (isLoading) {
+if (isLoading) {
     return <AuthLoading />;
   }
 
   const showBanner = isConnecting && hasConnected && !isConnected;
 
-return (
+  return (
     <SpacetimeDBProvider
-      key={reconnectNonce}
+      key={`${reconnectNonce}-${effectiveToken || 'anon'}`}
       connectionBuilder={connectionBuilder}
     >
-      {showBanner && (
-        <div className="fixed top-0 left-0 w-full bg-yellow-500 text-black text-center py-1 z-50 text-sm font-semibold">
-          Reconnecting to server...
-        </div>
-      )}
+      <OAuthProfileSync>
+        {showBanner && (
+          <div className="fixed top-0 left-0 w-full bg-yellow-500 text-black text-center py-1 z-50 text-sm font-semibold">
+            Reconnecting to server...
+          </div>
+        )}
 
-      <LiveEventProvider>{children}</LiveEventProvider>
+        <LiveEventProvider>{children}</LiveEventProvider>
+      </OAuthProfileSync>
     </SpacetimeDBProvider>
   );
 };

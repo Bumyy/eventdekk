@@ -1,12 +1,20 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useEvents, useLiveChatMessages, useUsers } from "@/hooks/spacetimeHooks";
+import { useEvents, useLiveChatMessages, useUsers, useGroupMemberships, useAllActiveEvents } from "@/hooks/spacetimeHooks";
 import { MessageCircle, X } from "lucide-react";
 import { useLiveEventContext } from "@/contexts/LiveEventContext";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { LiveChatPanel } from "./LiveChatPanel";
+import { toUserTimezoneDate } from "@/utils/timezoneUtils";
 
 const STORAGE_KEY_PREFIX = "eventdekk_chat_seen_";
+
+const isEventLive = (event: { startTime: { toDate: () => Date }; endTime: { toDate: () => Date } }) => {
+  const now = new Date();
+  const startDate = toUserTimezoneDate(event.startTime);
+  const endDate = toUserTimezoneDate(event.endTime);
+  return now >= startDate && now < endDate;
+};
 
 export const LiveChatWidget = () => {
   const location = useLocation();
@@ -15,9 +23,26 @@ export const LiveChatWidget = () => {
   const events = useEvents();
   const users = useUsers();
   const chatMessages = useLiveChatMessages();
+  const memberships = useGroupMemberships();
+  const activeEvents = useAllActiveEvents();
   const [unreadCount, setUnreadCount] = useState(0);
   const lastSeenRef = useRef<number>(0);
   const isInitializedRef = useRef(false);
+
+  const userGroupIds = useMemo(() => {
+    if (!identity) return new Set<bigint>();
+    return new Set(
+      memberships
+        .filter((m) => m.userIdentity.toHexString() === identity.toHexString())
+        .map((m) => m.groupId)
+    );
+  }, [identity, memberships]);
+
+  const hasLiveEventInUsersGroup = useMemo(() => {
+    if (!identity || userGroupIds.size === 0) return false;
+    const liveEvents = activeEvents.filter(isEventLive);
+    return liveEvents.some((event) => userGroupIds.has(event.creatorGroupId));
+  }, [identity, userGroupIds, activeEvents]);
 
   const currentEvent = useMemo(
     () => events.find((e) => e.eventId.toString() === currentEventId),
@@ -104,7 +129,7 @@ export const LiveChatWidget = () => {
 
   const isOnLiveEventPage = location.pathname.startsWith("/live-event/");
 
-  if (!currentEventId || isEventFinished || isOnLiveEventPage) return null;
+  if (!identity ||!hasLiveEventInUsersGroup || !currentEventId || isEventFinished || isOnLiveEventPage) return null;
 
   return (
     <>

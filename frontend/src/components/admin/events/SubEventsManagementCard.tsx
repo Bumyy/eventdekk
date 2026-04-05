@@ -49,15 +49,12 @@ export function SubEventsManagementCard() {
     handleDeleteSubEvent,
     subEventForm,
     editSubEventForm,
-    toSubEventFormState,
-    updateFirstSubEventFromForm,
-    name,
-    description,
+    firstWaveForm,
+    setFirstWaveForm,
   } = useEditEventContext();
 
   const [addFormDraft, setAddFormDraft] = useState<SubEventFormState>(subEventForm);
   const [editFormDraft, setEditFormDraft] = useState<SubEventFormState>(editSubEventForm);
-  const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(null);
   const wasAddDialogOpen = useRef(false);
   const wasEditDialogOpen = useRef(false);
 
@@ -74,17 +71,6 @@ export function SubEventsManagementCard() {
     }
     wasEditDialogOpen.current = showEditSubEventDialog;
   }, [showEditSubEventDialog, editSubEventForm]);
-
-  useEffect(() => {
-    if (eventSubEvents.length > 0 && !isAdvancedSubEventsMode) {
-      const firstSubEvent = eventSubEvents[0];
-      setFirstWaveForm(toSubEventFormState(firstSubEvent as any));
-    }
-  }, [eventSubEvents, isAdvancedSubEventsMode, toSubEventFormState]);
-
-  const handleFirstWaveFormChange = (form: SubEventFormState) => {
-    setFirstWaveForm(form);
-  };
 
   const handleAddNewWave = () => {
     setIsAdvancedSubEventsMode(true);
@@ -431,7 +417,7 @@ export function SubEventsManagementCard() {
             <SubEventDialogForm
               mode="edit"
               form={firstWaveForm}
-              setForm={handleFirstWaveFormChange}
+              setForm={setFirstWaveForm}
               userTimezone={userTimezone}
               members={memberOptions}
               showTypeField

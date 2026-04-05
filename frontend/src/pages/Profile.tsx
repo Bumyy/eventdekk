@@ -49,6 +49,8 @@ const Profile = () => {
 
   // Track if we've populated form data from currentUser
   const hasPopulatedFromUser = useRef(false);
+  // Track if we've synced OAuth data into form
+  const hasSyncedOAuthData = useRef(false);
 
   // Effect to populate form data when currentUser is loaded (only once when identity is stable)
   useEffect(() => {
@@ -66,6 +68,23 @@ const Profile = () => {
       hasPopulatedFromUser.current = true;
     }
   }, [currentUser?.identity, identity, currentUser]);
+
+  // Update form when OAuth sync populates user data (displayName/photo) for the first time
+  useEffect(() => {
+    if (
+      currentUser &&
+      hasPopulatedFromUser.current &&
+      !hasSyncedOAuthData.current &&
+      currentUser.displayName
+    ) {
+      hasSyncedOAuthData.current = true;
+      setFormData((prev) => ({
+        ...prev,
+        displayName: currentUser.displayName || "",
+        ifcProfileUrl: currentUser.ifcProfileUrl || "",
+      }));
+    }
+  }, [currentUser]);
 
   // Effect to create/revoke preview URL
   useEffect(() => {

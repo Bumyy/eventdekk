@@ -52,7 +52,7 @@ class AuthService {
         }
         const user = await UserModel.findById(authMethod.user_id); // Get user info if needed elsewhere
         console.log(`User ${user.id} logged in via ${methodType}.`);
-        return { user, sdbToken };
+        return { user, sdbToken, isNewUser: false };
       } else {
         // 2b. Not found: Create a new user and link this method
         console.log(`Creating new user via ${methodType} login...`);
@@ -74,7 +74,7 @@ class AuthService {
           `New user ${newUser.id} created and linked via ${methodType}.`
         );
 
-        return { user: newUser, sdbToken: newSdbToken };
+        return { user: newUser, sdbToken: newSdbToken, isNewUser: true };
       }
     } catch (error) {
       console.error(

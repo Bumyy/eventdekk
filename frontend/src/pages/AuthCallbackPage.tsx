@@ -1,25 +1,17 @@
-import React, { useEffect } from "react";
+import React from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Loader2 } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
 
 const AuthCallbackPage: React.FC = () => {
-  // We don't need to call handleOAuthCallback directly if AuthProvider handles it via useEffect
   const { isLoading, isAuthenticated } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
 
-  useEffect(() => {
-    // If authentication is successful (handled by AuthProvider's effect), redirect away
-    if (!isLoading && isAuthenticated) {
-      const from = location.state?.from?.pathname || "/";
-      navigate(from, { replace: true });
-    }
-    // If loading finishes but authentication failed (also handled by AuthProvider), redirect to login
-    else if (!isLoading && !isAuthenticated) {
-      navigate("/login", { replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate, location.state]);
+  if (!isLoading && !isAuthenticated) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-5rem)]">
+        <p className="text-lg text-muted-foreground">Authentication failed. Redirecting...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-5rem)]">

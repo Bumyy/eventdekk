@@ -22,20 +22,45 @@ passport.use(
         const providerId = profile.id;
         const methodType = "google";
 
+        // Extract profile data from Google
+        const googleDisplayName =
+          profile.displayName ||
+          [profile.name?.givenName, profile.name?.familyName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          profile.name?.givenName ||
+          (profile.emails && profile.emails[0]?.value
+            ? profile.emails[0].value.split("@")[0]
+            : null);
+
+        const googleProfilePicture =
+          (profile.photos && profile.photos.length > 0
+            ? profile.photos[0].value
+            : null) ||
+          profile._json?.picture ||
+          null;
+
+        const profileData = {
+          displayName: googleDisplayName,
+          profilePicture: googleProfilePicture,
+        };
+
         // Try find or create user based on this Google login
         // The service function handles linking or new account creation
-        const { user, sdbToken } = await authService.findOrCreateUserByProvider(
-          methodType,
-          providerId,
-          issuer
-        );
+        const { user, sdbToken, isNewUser } =
+          await authService.findOrCreateUserByProvider(
+            methodType,
+            providerId,
+            issuer
+          );
 
         if (!user || !sdbToken) {
           return done(new Error("Could not find or create user."), null);
         }
 
-        // Pass the sdbToken to the callback (we'll send this to the client)
-        return done(null, { sdbToken }); // Pass relevant info needed after login
+        // Pass the sdbToken and profile data to the callback
+        return done(null, { sdbToken, profileData, isNewUser });
       } catch (err) {
         return done(err, null);
       }
@@ -62,18 +87,39 @@ passport.use(
         const providerId = profile.id;
         const methodType = "discord";
 
-        const { user, sdbToken } = await authService.findOrCreateUserByProvider(
-          methodType,
-          providerId,
-          issuer
-        );
+        // Extract profile data from Discord
+        // Use global_name (display name) if available, fallback to username
+        const displayName = profile.global_name || profile.username || null;
+
+        // Construct avatar URL
+        let profilePicture = null;
+        if (profile.avatar) {
+          // User has custom avatar
+          profilePicture = `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`;
+        } else if (profile.discriminator) {
+          // Default avatar based on discriminator (legacy discriminator system)
+          const defaultAvatarIndex = parseInt(profile.discriminator) % 5;
+          profilePicture = `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
+        } else {
+          // New username system without discriminator - use avatar index 0
+          profilePicture = `https://cdn.discordapp.com/embed/avatars/0.png`;
+        }
+
+        const profileData = { displayName, profilePicture };
+
+        const { user, sdbToken, isNewUser } =
+          await authService.findOrCreateUserByProvider(
+            methodType,
+            providerId,
+            issuer
+          );
 
         if (!user || !sdbToken) {
           return done(new Error("Could not find or create user."), null);
         }
 
-        // Pass the sdbToken to the callback
-        return done(null, { sdbToken });
+        // Pass the sdbToken and profile data to the callback
+        return done(null, { sdbToken, profileData, isNewUser });
       } catch (err) {
         return done(err, null);
       }

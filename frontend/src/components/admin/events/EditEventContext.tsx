@@ -51,6 +51,8 @@ interface EditEventContextValue {
   handleDeleteSubEvent: (subEventId: bigint) => void | Promise<void>;
   toSubEventFormState: (subEvent: SubEvent) => SubEventFormState;
   updateFirstSubEventFromForm: (formState: SubEventFormState) => void | Promise<void>;
+  firstWaveForm: SubEventFormState | null;
+  setFirstWaveForm: (form: SubEventFormState | null) => void;
 
   showInviteGroupsDialog: boolean;
   setShowInviteGroupsDialog: (open: boolean) => void;

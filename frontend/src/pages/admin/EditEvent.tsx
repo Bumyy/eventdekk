@@ -109,8 +109,9 @@ export default function EditEvent() {
   const [editingSubEventId, setEditingSubEventId] = useState<bigint | null>(
     null
   );
-  const [editSubEventForm, setEditSubEventForm] =
+const [editSubEventForm, setEditSubEventForm] =
     useState<SubEventFormState>(initialSubEventForm);
+  const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(null);
 
   // New state for managing own flights dialog
   const [showManageOwnFlightsDialog, setShowManageOwnFlightsDialog] =
@@ -232,6 +233,29 @@ export default function EditEvent() {
       setIsAdvancedSubEventsMode(true);
     }
   }, [eventSubEvents.length]);
+
+  // Initialize firstWaveForm from first sub-event in simple mode
+  useEffect(() => {
+    if (eventSubEvents.length > 0 && !isAdvancedSubEventsMode) {
+      const firstSubEvent = eventSubEvents[0];
+      const formState: SubEventFormState = {
+        name: firstSubEvent.name,
+        description: firstSubEvent.description || "",
+        type: firstSubEvent.subEventType.tag as "GroupFlight" | "FlyIn" | "FlyOut",
+        startTime: firstSubEvent.scheduledStartTime.toDate(),
+        endTime: firstSubEvent.scheduledEndTime.toDate(),
+        hubIcao: firstSubEvent.hubIcao || "",
+        departureIcao: firstSubEvent.groupFlightDepartureIcao || "",
+        arrivalIcao: firstSubEvent.groupFlightArrivalIcao || "",
+        route: firstSubEvent.groupFlightRoute || "",
+        notes: firstSubEvent.notes || "",
+        eventLeadHex: firstSubEvent.eventLead
+          ? firstSubEvent.eventLead.toHexString()
+          : "none",
+      };
+      setFirstWaveForm(formState);
+    }
+  }, [eventSubEvents, isAdvancedSubEventsMode]);
 
   // Get signups related to this event's sub-events
   const eventSignups = useMemo(
@@ -622,6 +646,11 @@ export default function EditEvent() {
         status: newStatus,
         isInternal: isInternal,
       });
+
+      // If in simple mode (single sub-event), update the sub-event too
+      if (!isAdvancedSubEventsMode && eventSubEvents.length === 1 && firstWaveForm) {
+        await updateFirstSubEventFromForm(firstWaveForm);
+      }
 
       // Update local state with the new banner URL and status
       setBannerUrl(finalBannerUrl);
@@ -1087,6 +1116,8 @@ return (
         handleDeleteSubEvent,
         toSubEventFormState,
         updateFirstSubEventFromForm,
+        firstWaveForm,
+        setFirstWaveForm,
         showInviteGroupsDialog,
         setShowInviteGroupsDialog,
         selectedGroups,
