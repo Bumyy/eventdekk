@@ -10,9 +10,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
 
-function getRoleLabel(role: { tag: "CEO" | "Staff" | "Member" }, isCeo: boolean) {
+function getRoleLabel(role: { tag: "Ceo" | "Staff" | "Member" }, isCeo: boolean) {
   if (isCeo) return "CEO";
-  if (role.tag === "CEO") return "Admin";
+  if (role.tag === "Ceo") return "Admin";
   return role.tag;
 }
 
@@ -48,15 +48,15 @@ export default function AdminEntry() {
       return {
         ...group,
         role: isCEO
-          ? { tag: "CEO" as const }
+          ? { tag: "Ceo" as const }
           : membership?.permissionLevel || { tag: "Member" as const },
         memberCount: memberships.filter((m) => m.groupId === group.groupId)
           .length,
       };
     });
 
-  const canManageGroup = (role: { tag: "CEO" | "Staff" | "Member" }) => {
-    return role.tag === "CEO" || role.tag === "Staff";
+  const canManageGroup = (role: { tag: "Ceo" | "Staff" | "Member" }) => {
+    return role.tag === "Ceo" || role.tag === "Staff";
   };
 
   return (

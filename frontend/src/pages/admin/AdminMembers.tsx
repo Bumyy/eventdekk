@@ -34,13 +34,13 @@ type PermissionLevel = Infer<typeof PermissionLevel>;
 
 function getPermissionLabel(member: {
   isCeo: boolean;
-  permissionLevel: { tag: "CEO" | "Staff" | "Member" };
+  permissionLevel: { tag: "Ceo" | "Staff" | "Member" };
 }) {
   if (member.isCeo) {
     return "CEO";
   }
 
-  if (member.permissionLevel.tag === "CEO") {
+  if (member.permissionLevel.tag === "Ceo") {
     return "Admin";
   }
 
@@ -86,7 +86,7 @@ export default function AdminMembers() {
         membershipId: BigInt(0),
         groupId: currentGroup.groupId,
         userIdentity: currentGroup.ceoIdentity,
-        permissionLevel: { tag: "CEO" as const },
+        permissionLevel: { tag: "Ceo" as const },
         user: users?.find(
           (u) =>
             u.identity.toHexString() === currentGroup.ceoIdentity.toHexString()
@@ -209,7 +209,7 @@ export default function AdminMembers() {
                     value={newMemberPermission.tag}
                     onValueChange={(value) =>
                       setNewMemberPermission({
-                        tag: value as "CEO" | "Staff" | "Member",
+                        tag: value as "Ceo" | "Staff" | "Member",
                       })
                     }
                   >
@@ -217,7 +217,7 @@ export default function AdminMembers() {
                       <SelectValue placeholder="Select permission level" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="CEO">Admin</SelectItem>
+                      <SelectItem value="Ceo">Admin</SelectItem>
                       <SelectItem value="Staff">Staff</SelectItem>
                       <SelectItem value="Member">Member</SelectItem>
                     </SelectContent>
@@ -262,7 +262,7 @@ export default function AdminMembers() {
                     </h3>
                     <Badge
                       variant={
-                        member.permissionLevel.tag === "CEO"
+                        member.permissionLevel.tag === "Ceo"
                           ? "default"
                           : "secondary"
                       }

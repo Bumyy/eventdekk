@@ -138,7 +138,7 @@ export function EventDetailsContent({
 
     return (
       <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
-        <EventBanner event={event} hostGroup={hostGroup} />
+        <EventBanner event={event} hostGroup={hostGroup} eventParticipants={eventParticipants} groups={groups} />
 
         <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[6fr_4fr]">
           <div className="min-h-0 border-r flex flex-col">
@@ -215,7 +215,7 @@ export function EventDetailsContent({
 
   return (
     <div className={`flex h-full min-h-0 flex-col ${className || ""}`}>
-      <EventBanner event={event} hostGroup={hostGroup} />
+      <EventBanner event={event} hostGroup={hostGroup} eventParticipants={eventParticipants} groups={groups} />
 
       <div className="grid min-h-0 flex-1 grid-cols-1 lg:grid-cols-[6fr_4fr]">
         <div className="min-h-0 border-r flex flex-col">

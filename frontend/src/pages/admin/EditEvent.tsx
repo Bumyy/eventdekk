@@ -15,7 +15,7 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Identity, SenderError, Timestamp } from "spacetimedb";
-import { EventStatus, Event, SubEventType } from "@/module_bindings/types";
+import { EventStatus, Event, SubEventType, ParticipantRole } from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { useUserTimezone } from "@/utils/timezoneUtils";
@@ -24,6 +24,7 @@ import {
   EventDetailsFormCard,
   InviteGroupsCard,
   ManageOwnFlightsCard,
+  ManageParticipantsCard,
   SubEventsManagementCard,
   type SubEventFormState,
 } from "@/components/admin/events";
@@ -61,7 +62,7 @@ export default function EditEvent() {
         m.userIdentity.toHexString() === identity.toHexString()
     );
 
-    return membership?.permissionLevel.tag === "CEO";
+    return membership?.permissionLevel.tag === "Ceo";
   }, [currentGroupId, identity, currentGroup, memberships]);
 
   // Event data states
@@ -220,6 +221,13 @@ const [editSubEventForm, setEditSubEventForm] =
     setBannerUrl(event.bannerUrl || "");
     setEventStatus(event.status);
   }, [events, eventId, navigate]);
+
+  const currentEvent = useMemo(() => {
+    if (!events || !eventId) return null;
+    return events.find((e: Event) => e.eventId.toString() === eventId) || null;
+  }, [events, eventId]);
+
+  const creatorGroupId = currentEvent?.creatorGroupId || null;
 
   // Get sub events for this event
   const eventSubEvents = useMemo(
@@ -1051,7 +1059,7 @@ const handleEditSubEventClick = useCallback((subEvent: {
     [members]
   );
 
-  const availableInviteGroups = useMemo(() => {
+const availableInviteGroups = useMemo(() => {
     const invitedGroupIds = new Set(eventParticipants.map((participant) => participant.groupId));
 
     return groups.filter(
@@ -1059,6 +1067,106 @@ const handleEditSubEventClick = useCallback((subEvent: {
         group.groupId !== currentGroupId && !invitedGroupIds.has(group.groupId)
     );
   }, [groups, currentGroupId, eventParticipants]);
+
+  const hosts = useMemo(
+    () =>
+      eventParticipants.filter(
+        (p) => p.role.tag === "Host" && p.status.tag === "Accepted"
+      ),
+    [eventParticipants]
+  );
+
+  const participants = useMemo(
+    () =>
+      eventParticipants.filter((p) => p.role.tag === "Participant"),
+    [eventParticipants]
+  );
+
+  const handleAddCohost = async (groupId: bigint) => {
+    if (!connection || !eventId) return;
+
+    try {
+      await connection.reducers.addCohostToEvent({
+        eventId: BigInt(eventId),
+        groupId: groupId,
+      });
+      toast.success("Co-host added", {
+        description: "The group has been added as a co-host.",
+      });
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error adding co-host", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error adding co-host", {
+          description: "There was a problem adding the co-host.",
+        });
+      }
+      console.error("Error adding co-host:", error);
+    }
+  };
+
+  const handleRemoveParticipant = async (groupId: bigint) => {
+    if (!connection || !eventId) return;
+
+    if (!confirm("Are you sure you want to remove this group from the event?")) {
+      return;
+    }
+
+    try {
+      await connection.reducers.removeParticipantFromEvent({
+        eventId: BigInt(eventId),
+        groupId: groupId,
+      });
+      toast.success("Participant removed", {
+        description: "The group has been removed from the event.",
+      });
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error removing participant", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error removing participant", {
+          description: "There was a problem removing the participant.",
+        });
+      }
+      console.error("Error removing participant:", error);
+    }
+  };
+
+  const handleUpdateParticipantRole = async (
+    groupId: bigint,
+    newRole: "Host" | "Participant"
+  ) => {
+    if (!connection || !eventId) return;
+
+    const role: ParticipantRole =
+      newRole === "Host" ? { tag: "Host" } : { tag: "Participant" };
+
+    try {
+      await connection.reducers.updateParticipantRole({
+        eventId: BigInt(eventId),
+        groupId: groupId,
+        newRole: role,
+      });
+      toast.success("Role updated", {
+        description: `The group role has been updated to ${newRole}.`,
+      });
+    } catch (error) {
+      if (error instanceof SenderError) {
+        toast.error("Error updating role", {
+          description: `${error.message}`,
+        });
+      } else {
+        toast.error("Error updating role", {
+          description: "There was a problem updating the role.",
+        });
+      }
+      console.error("Error updating role:", error);
+    }
+  };
 
   const clearBanner = () => {
     setSelectedFile(null);
@@ -1122,9 +1230,16 @@ return (
         setShowInviteGroupsDialog,
         selectedGroups,
         currentGroupId,
+        creatorGroupId,
         handleSelectGroup,
         handleRemoveGroup,
         handleInviteGroups,
+        eventParticipants,
+        hosts,
+        participants,
+        handleAddCohost,
+        handleRemoveParticipant,
+        handleUpdateParticipantRole,
         showManageOwnFlightsDialog,
         setShowManageOwnFlightsDialog,
         selectedOwnSubEvents,
@@ -1182,7 +1297,9 @@ return (
 
         <SubEventsManagementCard />
 
-        <InviteGroupsCard />
+<InviteGroupsCard />
+
+        <ManageParticipantsCard />
 
         <ManageOwnFlightsCard />
       </div>

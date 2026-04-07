@@ -134,7 +134,7 @@ export default function AdminEvents() {
         m.userIdentity.toHexString() === identity.toHexString()
     );
 
-    return membership?.permissionLevel.tag === "CEO";
+    return membership?.permissionLevel.tag === "Ceo";
   }, [groupIdBigInt, identity, memberships, currentGroup]);
 
   const invitationSubEvents = useSubEventsForEvents(invitationEventIds);

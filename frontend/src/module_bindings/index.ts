@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AddCohostToEventReducer from "./add_cohost_to_event_reducer";
 import AddGroupCallsignFilterReducer from "./add_group_callsign_filter_reducer";
 import AddGroupMemberReducer from "./add_group_member_reducer";
 import AddLiveChatMessageReducer from "./add_live_chat_message_reducer";
@@ -52,6 +53,7 @@ import RegisterGroupReducer from "./register_group_reducer";
 import RejectGroupApplicationReducer from "./reject_group_application_reducer";
 import RemoveGroupCallsignFilterReducer from "./remove_group_callsign_filter_reducer";
 import RemoveGroupMemberReducer from "./remove_group_member_reducer";
+import RemoveParticipantFromEventReducer from "./remove_participant_from_event_reducer";
 import RespondToEventInvitationReducer from "./respond_to_event_invitation_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
 import SetUserProfileReducer from "./set_user_profile_reducer";
@@ -60,6 +62,7 @@ import UpdateEventReducer from "./update_event_reducer";
 import UpdateFlightSignupReducer from "./update_flight_signup_reducer";
 import UpdateGroupReducer from "./update_group_reducer";
 import UpdateLiveFlightsReducer from "./update_live_flights_reducer";
+import UpdateParticipantRoleReducer from "./update_participant_role_reducer";
 import UpdateSubEventReducer from "./update_sub_event_reducer";
 
 // Import all procedure arg schemas
@@ -304,6 +307,7 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("add_cohost_to_event", AddCohostToEventReducer),
   __reducerSchema("add_group_callsign_filter", AddGroupCallsignFilterReducer),
   __reducerSchema("add_group_member", AddGroupMemberReducer),
   __reducerSchema("add_live_chat_message", AddLiveChatMessageReducer),
@@ -322,6 +326,7 @@ const reducersSchema = __reducers(
   __reducerSchema("reject_group_application", RejectGroupApplicationReducer),
   __reducerSchema("remove_group_callsign_filter", RemoveGroupCallsignFilterReducer),
   __reducerSchema("remove_group_member", RemoveGroupMemberReducer),
+  __reducerSchema("remove_participant_from_event", RemoveParticipantFromEventReducer),
   __reducerSchema("respond_to_event_invitation", RespondToEventInvitationReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),
   __reducerSchema("set_user_profile", SetUserProfileReducer),
@@ -330,6 +335,7 @@ const reducersSchema = __reducers(
   __reducerSchema("update_flight_signup", UpdateFlightSignupReducer),
   __reducerSchema("update_group", UpdateGroupReducer),
   __reducerSchema("update_live_flights", UpdateLiveFlightsReducer),
+  __reducerSchema("update_participant_role", UpdateParticipantRoleReducer),
   __reducerSchema("update_sub_event", UpdateSubEventReducer),
 );
 

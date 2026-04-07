@@ -58,7 +58,7 @@ export default function GroupPlanner() {
       return (
         isCeo ||
         membership.permissionLevel.tag === "Staff" ||
-        membership.permissionLevel.tag === "CEO"
+        membership.permissionLevel.tag === "Ceo"
       );
     });
   }, [groups, memberships, currentIdentityHex]);

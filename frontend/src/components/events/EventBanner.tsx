@@ -1,16 +1,29 @@
 import { Infer } from "spacetimedb";
-import { Event, Group } from "@/module_bindings/types";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Event, Group, EventParticipant } from "@/module_bindings/types";
+import { HostsDisplay, useHostColors } from "./HostsDisplay";
 
 type EventType = Infer<typeof Event>;
 
 interface EventBannerProps {
   event: EventType;
   hostGroup?: Group | null;
+  eventParticipants?: EventParticipant[];
+  groups?: Group[];
 }
 
-export function EventBanner({ event, hostGroup }: EventBannerProps) {
-  const groupColor = hostGroup?.color || "#000000";
+export function EventBanner({
+  event,
+  hostGroup,
+  eventParticipants = [],
+  groups = [],
+}: EventBannerProps) {
+  const { bottomBarStyle } = useHostColors(
+    hostGroup,
+    eventParticipants,
+    groups,
+    event.creatorGroupId,
+    event.eventId
+  );
 
   return (
     <div className="relative border-b">
@@ -27,30 +40,19 @@ export function EventBanner({ event, hostGroup }: EventBannerProps) {
         <h1 className="text-white text-xl sm:text-3xl font-bold leading-tight">
           {event.name}
         </h1>
-        <p className="text-white/90 text-sm line-clamp-2">
-          {event.description}
-        </p>
-        {hostGroup && (
-          <div className="flex items-center gap-1.5 mt-1.5">
-            <Avatar className="h-4 w-4">
-              <AvatarImage
-                src={hostGroup.logoUrl || ""}
-                alt={hostGroup.name || "Host"}
-              />
-              <AvatarFallback className="text-[8px]">
-                {hostGroup.tag || hostGroup.name?.substring(0, 2) || "H"}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-white/80 text-xs">
-              {hostGroup.name || "Unknown Group"}
-            </span>
-            <div
-              className="w-2 h-2 rounded-full ml-0.5"
-              style={{ backgroundColor: groupColor }}
-            />
-          </div>
-        )}
+        <p className="text-white/90 text-sm line-clamp-2">{event.description}</p>
+        <div className="mt-1.5">
+          <HostsDisplay
+            hostGroup={hostGroup}
+            eventParticipants={eventParticipants}
+            groups={groups}
+            creatorGroupId={event.creatorGroupId}
+            eventId={event.eventId}
+            size="md"
+          />
+        </div>
       </div>
+      <div className="absolute bottom-0 left-0 right-0 h-1" style={bottomBarStyle} />
     </div>
   );
 }

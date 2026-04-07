@@ -1,5 +1,5 @@
 import { createContext, useContext } from "react";
-import { Group, FlightSignup, SubEvent, SubEventType } from "@/module_bindings/types";
+import { Group, FlightSignup, SubEvent, SubEventType, EventParticipant } from "@/module_bindings/types";
 import { MemberOption, SelectedGroup, SubEventFormState } from "./types";
 
 interface EditEventContextValue {
@@ -58,9 +58,17 @@ interface EditEventContextValue {
   setShowInviteGroupsDialog: (open: boolean) => void;
   selectedGroups: SelectedGroup[];
   currentGroupId: bigint | null;
+  creatorGroupId: bigint | null;
   handleSelectGroup: (group: SelectedGroup) => void;
   handleRemoveGroup: (groupId: bigint) => void;
   handleInviteGroups: () => void | Promise<void>;
+
+  eventParticipants: EventParticipant[];
+  hosts: EventParticipant[];
+  participants: EventParticipant[];
+  handleAddCohost: (groupId: bigint) => void | Promise<void>;
+  handleRemoveParticipant: (groupId: bigint) => void | Promise<void>;
+  handleUpdateParticipantRole: (groupId: bigint, newRole: "Host" | "Participant") => void | Promise<void>;
 
   showManageOwnFlightsDialog: boolean;
   setShowManageOwnFlightsDialog: (open: boolean) => void;

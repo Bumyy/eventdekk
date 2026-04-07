@@ -6,6 +6,7 @@ export { EventDetailsFormCard } from "./EventDetailsFormCard";
 export { EventBannerField } from "./EventBannerField";
 export { SubEventsManagementCard } from "./SubEventsManagementCard";
 export { InviteGroupsCard } from "./InviteGroupsCard";
+export { ManageParticipantsCard } from "./ManageParticipantsCard";
 export { ManageOwnFlightsCard } from "./ManageOwnFlightsCard";
 export { CreateEventProvider, useCreateEventContext } from "./CreateEventContext";
 export { CreateEventMainDetailsSection } from "./CreateEventMainDetailsSection";

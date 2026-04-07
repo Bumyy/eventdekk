@@ -464,3 +464,118 @@ pub fn delete_event(ctx: &ReducerContext, event_id: u64) -> Result<(), String> {
     info!("Event {} cancelled by user {:?}", event_id, ctx.sender);
     Ok(())
 }
+
+#[reducer]
+pub fn add_cohost_to_event(
+    ctx: &ReducerContext,
+    event_id: u64,
+    group_id: u64,
+) -> Result<(), String> {
+    is_event_host_staff_or_ceo(ctx, event_id)?;
+    let _group = find_group_or_err(ctx, group_id)?;
+
+    if is_group_participating_in_event(ctx, group_id, event_id) {
+        return Err(format!(
+            "Group {} is already participating in event {}.",
+            group_id, event_id
+        ));
+    }
+
+    let participation = EventParticipant {
+        participation_id: 0,
+        event_id,
+        group_id,
+        role: ParticipantRole::Host,
+        status: ParticipantStatus::Accepted,
+    };
+    ctx.db.event_participant().insert(participation);
+    info!(
+        "Group {} added as co-host to event {} by user {:?}",
+        group_id, event_id, ctx.sender
+    );
+    Ok(())
+}
+
+#[reducer]
+pub fn remove_participant_from_event(
+    ctx: &ReducerContext,
+    event_id: u64,
+    group_id: u64,
+) -> Result<(), String> {
+    let participation = ctx
+        .db
+        .event_participant()
+        .iter()
+        .find(|p| p.event_id == event_id && p.group_id == group_id)
+        .ok_or_else(|| {
+            format!(
+                "Group {} is not participating in event {}.",
+                group_id, event_id
+            )
+        })?;
+
+    if participation.role == ParticipantRole::Host {
+        is_event_host_staff_or_ceo(ctx, event_id)?;
+        let host_count = ctx
+            .db
+            .event_participant()
+            .iter()
+            .filter(|p| p.event_id == event_id && p.role == ParticipantRole::Host)
+            .count();
+        if host_count <= 1 {
+            return Err("Cannot remove the last host from an event.".to_string());
+        }
+    }
+
+    ctx.db
+        .event_participant()
+        .participation_id()
+        .delete(participation.participation_id);
+    info!("Group {} removed from event {}", group_id, event_id);
+    Ok(())
+}
+
+#[reducer]
+pub fn update_participant_role(
+    ctx: &ReducerContext,
+    event_id: u64,
+    group_id: u64,
+    new_role: ParticipantRole,
+) -> Result<(), String> {
+    is_event_host_staff_or_ceo(ctx, event_id)?;
+
+    let mut participation = ctx
+        .db
+        .event_participant()
+        .iter()
+        .find(|p| p.event_id == event_id && p.group_id == group_id)
+        .ok_or_else(|| {
+            format!(
+                "Group {} is not participating in event {}.",
+                group_id, event_id
+            )
+        })?;
+
+    if participation.role == ParticipantRole::Host && new_role == ParticipantRole::Participant {
+        let host_count = ctx
+            .db
+            .event_participant()
+            .iter()
+            .filter(|p| p.event_id == event_id && p.role == ParticipantRole::Host)
+            .count();
+        if host_count <= 1 {
+            return Err("Cannot demote the last host. At least one host must remain.".to_string());
+        }
+    }
+
+    participation.role = new_role;
+    ctx.db
+        .event_participant()
+        .participation_id()
+        .update(participation);
+    info!(
+        "Group {} role updated to {:?} in event {}",
+        group_id, new_role, event_id
+    );
+    Ok(())
+}

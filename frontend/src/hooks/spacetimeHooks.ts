@@ -495,31 +495,54 @@ export const useGroupRelatedEvents = (groupId: bigint | null) => {
 };
 
 /**
- * Upcoming events hosted by a specific group (where endTime > now)
- * Uses server-side subscription with .where() for efficient filtering
+ * Upcoming events hosted or co-hosted by a specific group (where endTime > now)
+ * Includes events where group is creator OR group has Host role in event_participant
  */
 export const useUpcomingHostedEvents = (groupId: bigint | null) => {
-  const query = useMemo(() => {
-    const now = Timestamp.fromDate(new Date());
+  const now = useMemo(() => Timestamp.fromDate(new Date()), []);
+  
+  const creatorEventsQuery = useMemo(() => {
     return groupId
       ? tables.event.where((r) =>
           r.creatorGroupId.eq(groupId).and(r.endTime.gt(now))
         )
       : tables.event.where((r) => r.creatorGroupId.eq(0n));
-  }, [groupId]);
+  }, [groupId, now]);
 
-  const [events] = useTable(query);
+  const participantsQuery = useMemo(
+    () =>
+      groupId
+        ? tables.event_participant.where((ep) => ep.groupId.eq(groupId))
+        : tables.event_participant.where((ep) => ep.groupId.eq(0n)),
+    [groupId]
+  );
+
+  const [creatorEvents] = useTable(creatorEventsQuery);
+  const [eventParticipants] = useTable(participantsQuery);
   const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
-    if (!events) return [];
-    return [...events]
-      .filter((e) => e.status.tag !== "Cancelled")
+    if (!creatorEvents || !eventParticipants || !allEvents) return [];
+
+    const hostedEventIds = new Set<bigint>();
+    
+    creatorEvents.forEach((e) => hostedEventIds.add(e.eventId));
+    
+    eventParticipants
+      .filter((ep) => ep.role.tag === "Host" && ep.status.tag === "Accepted")
+      .forEach((ep) => hostedEventIds.add(ep.eventId));
+
+    return [...allEvents]
+      .filter((e) =>
+        hostedEventIds.has(e.eventId) &&
+        e.status.tag !== "Cancelled" &&
+        e.endTime.toDate().getTime() > now.toDate().getTime()
+      )
       .sort(
         (a, b) =>
           a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
       );
-  }, [events]);
+  }, [creatorEvents, eventParticipants, allEvents, now]);
 };
 
 export const useUpcomingAttendingEvents = (groupId: bigint | null) => {
@@ -532,41 +555,84 @@ export const useUpcomingAttendingEvents = (groupId: bigint | null) => {
   );
 
   const [eventParticipants] = useTable(participantsQuery);
-
-  const eventsQuery = useMemo(() => {
-    const now = Timestamp.fromDate(new Date());
-    return groupId
-      ? tables.event
-          .where((e) => e.endTime.gt(now))
-          .where((e) => e.creatorGroupId.ne(groupId))
-      : tables.event.where((e) => e.eventId.eq(0n));
-  }, [groupId]);
-
-  const [events] = useTable(eventsQuery);
+  const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
-    return selectUpcomingAttendingEvents(events, eventParticipants);
-  }, [events, eventParticipants]);
+    if (!eventParticipants || !allEvents) return [];
+    
+    const now = new Date().getTime();
+    
+    const hostedEventIds = new Set<bigint>();
+    eventParticipants
+      .filter((ep) => ep.role.tag === "Host")
+      .forEach((ep) => hostedEventIds.add(ep.eventId));
+    
+    const attendingEventIds = new Set<bigint>();
+    eventParticipants
+      .filter((ep) => 
+        ep.role.tag === "Participant" && 
+        ep.status.tag === "Accepted" &&
+        !hostedEventIds.has(ep.eventId)
+      )
+      .forEach((ep) => attendingEventIds.add(ep.eventId));
+
+    return [...allEvents]
+      .filter((e) => {
+        if (e.status.tag === "Cancelled") return false;
+        if (e.endTime.toDate().getTime() <= now) return false;
+        if (!attendingEventIds.has(e.eventId)) return false;
+        return true;
+      })
+      .sort(
+        (a, b) =>
+          a.startTime.toDate().getTime() - b.startTime.toDate().getTime()
+      );
+  }, [eventParticipants, allEvents]);
 };
 
 export const usePastHostedEvents = (groupId: bigint | null) => {
-  const query = useMemo(() => {
-    const now = Timestamp.fromDate(new Date());
+  const now = useMemo(() => Timestamp.fromDate(new Date()), []);
+  
+  const creatorEventsQuery = useMemo(() => {
     return groupId
-      ? tables.event
-          .where((r) => r.creatorGroupId.eq(groupId))
-          .where((r) => r.endTime.lte(now))
+      ? tables.event.where((r) =>
+          r.creatorGroupId.eq(groupId).and(r.endTime.lte(now))
+        )
       : tables.event.where((r) => r.creatorGroupId.eq(0n));
-  }, [groupId]);
+  }, [groupId, now]);
 
-  const [events] = useTable(query);
+  const participantsQuery = useMemo(
+    () =>
+      groupId
+        ? tables.event_participant.where((ep) => ep.groupId.eq(groupId))
+        : tables.event_participant.where((ep) => ep.groupId.eq(0n)),
+    [groupId]
+  );
+
+  const [creatorEvents] = useTable(creatorEventsQuery);
+  const [eventParticipants] = useTable(participantsQuery);
+  const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
-    if (!events) return [];
-    return [...events].sort(
-      (a, b) => b.startTime.toDate().getTime() - a.startTime.toDate().getTime()
-    );
-  }, [events]);
+    if (!creatorEvents || !eventParticipants || !allEvents) return [];
+
+    const hostedEventIds = new Set<bigint>();
+    
+    creatorEvents.forEach((e) => hostedEventIds.add(e.eventId));
+    
+    eventParticipants
+      .filter((ep) => ep.role.tag === "Host" && ep.status.tag === "Accepted")
+      .forEach((ep) => hostedEventIds.add(ep.eventId));
+
+    return [...allEvents]
+      .filter((e) =>
+        hostedEventIds.has(e.eventId) &&
+        e.endTime.toDate().getTime() <= now.toDate().getTime()
+      )
+      .sort(
+        (a, b) => b.startTime.toDate().getTime() - a.startTime.toDate().getTime()
+      );
+  }, [creatorEvents, eventParticipants, allEvents, now]);
 };
 
 export const usePendingEventInvitations = (groupId: bigint | null) => {
