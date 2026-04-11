@@ -307,7 +307,7 @@ const Navigation = () => {
         {/* --- Right Side (Theme, Back to App & Profile) --- */}
         <div className="flex items-center gap-3">
           {isHomePage && (
-            <div className="hidden sm:block">
+            <div className="hidden lg:block">
               <SearchBar
                 value={searchQuery}
                 onChange={handleSearchChange}
