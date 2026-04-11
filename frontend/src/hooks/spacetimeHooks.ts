@@ -167,13 +167,12 @@ export const useCurrentUser = () => {
 
 export const useGroups = () => {
   const [rows] = useTable(tables.group);
-  return rows;
+  return rows ?? [];
 };
 
 export const useSuperAdmins = () => {
   const [rows] = useTable(tables.super_admin);
-  console.log(rows);
-  return rows;
+  return rows ?? [];
 };
 
 export const useHasSuperAdmins = () => {
@@ -195,8 +194,7 @@ export const useIsSuperAdmin = () => {
 
 export const useGroupApplications = () => {
   const [rows] = useTable(tables.group_application);
-  console.log(rows);
-  return rows;
+  return rows ?? [];
 };
 
 /**
@@ -220,7 +218,7 @@ export const useGroupById = (groupId: bigint | null) => {
 
 export const useGroupMemberships = () => {
   const [rows] = useTable(tables.group_membership);
-  return rows;
+  return rows ?? [];
 };
 
 export const useGroupCallsignFilters = (groupId: bigint | null) => {
@@ -244,22 +242,22 @@ export const useGroupCallsignFilters = (groupId: bigint | null) => {
 
 export const useAllGroupCallsignFilters = () => {
   const [rows] = useTable(tables.group_callsign_filter);
-  return rows;
+  return rows ?? [];
 };
 
 export const useUsers = () => {
   const [rows] = useTable(tables.user);
-  return rows;
+  return rows ?? [];
 };
 
 export const useEvents = () => {
   const [rows] = useTable(tables.event);
-  return rows;
+  return rows ?? [];
 };
 
 export const useEventParticipants = () => {
   const [rows] = useTable(tables.event_participant);
-  return rows;
+  return rows ?? [];
 };
 
 /**
@@ -287,7 +285,7 @@ export const useEventParticipantsForEvent = (eventId: bigint | null) => {
 
 export const useSubEvents = () => {
   const [rows] = useTable(tables.sub_event);
-  return rows;
+  return rows ?? [];
 };
 
 /**
@@ -375,7 +373,7 @@ export const useSubEventsForEvents = (eventIds: bigint[]) => {
 
 export const useFlightSignups = () => {
   const [rows] = useTable(tables.flight_signup);
-  return rows;
+  return rows ?? [];
 };
 
 /**
@@ -429,17 +427,17 @@ export const useFlightSignupsForGroup = (groupId: bigint | null) => {
 
 export const useLiveFlights = () => {
   const [rows] = useTable(tables.live_flight);
-  return rows;
+  return rows ?? [];
 };
 
 export const useDiscoveryEvents = () => {
   const [rows] = useTable(tables.discovery_event);
-  return rows;
+  return rows ?? [];
 };
 
 export const useLiveChatMessages = () => {
   const [rows] = useTable(tables.live_chat_message);
-  return rows;
+  return rows ?? [];
 };
 
 // ============ Filtered Hooks for Admin Events ============
