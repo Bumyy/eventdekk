@@ -22,7 +22,7 @@ export default function EventDialog({
 }: EventDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[calc(100vw-1rem)] h-[calc(100vh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100vh-2rem)] max-w-none sm:max-w-none overflow-hidden p-0 gap-0 [&>button]:opacity-100 [&>button]:bg-background/95 [&>button]:border [&>button]:border-border [&>button]:shadow-sm">
+      <DialogContent className="w-[calc(100vw-1rem)] h-[calc(100vh-1rem)] sm:w-[calc(100vw-2rem)] sm:h-[calc(100vh-2rem)] max-w-none sm:max-w-none overflow-hidden p-0 gap-0 border-0 [&>button]:absolute [&>button]:top-3 [&>button]:right-3 [&>button]:z-50 [&>button]:flex [&>button]:items-center [&>button]:justify-center [&>button]:p-0 [&>button]:leading-none [&>button]:h-8 [&>button]:w-8 [&>button]:touch-manipulation [&>button]:opacity-100 [&>button]:bg-background/95 [&>button]:border [&>button]:border-border [&>button]:text-foreground [&>button]:shadow-sm [&>button>svg]:size-5 sm:[&>button]:after:content-['ESC'] sm:[&>button]:after:absolute sm:[&>button]:after:top-[calc(100%+0.35rem)] sm:[&>button]:after:left-1/2 sm:[&>button]:after:-translate-x-1/2 sm:[&>button]:after:text-[11px] sm:[&>button]:after:font-semibold sm:[&>button]:after:tracking-[0.08em] sm:[&>button]:after:text-muted-foreground">
         <EventDetailsContent
           event={event}
           canRegister={canRegister}
