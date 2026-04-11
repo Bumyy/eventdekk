@@ -1,25 +1,31 @@
 const express = require("express");
 const authController = require("../controllers/auth.controller");
-const passport = require("passport"); // Needed for OAuth routes
+const authMiddleware = require("../middleware/auth.middleware");
 
 const router = express.Router();
 
-// === OAuth Routes ===
-
-// Step 1: Redirect to Provider
+// === OAuth Login Routes ===
 router.get("/google", authController.googleLogin);
 router.get("/discord", authController.discordLogin);
 
-// Step 2: Provider Callback
+// === OAuth Callback Routes ===
 router.get("/google/callback", authController.googleCallback);
 router.get("/discord/callback", authController.discordCallback);
 
+// === OAuth Linking Routes (requires authentication)===
+router.get("/link/google", authController.googleLink);
+router.get("/link/discord", authController.discordLink);
+
 // === Username/Password Routes ===
-
-// Register a new user
 router.post("/register", authController.register);
+router.post("/login", authController.localLogin);
 
-// Login with existing credentials
-router.post("/login", authController.localLogin); // Uses passport.authenticate('local', ...) internally
+// === Account Management (requires authentication) ===
+router.get(
+  "/linked-accounts",
+  authMiddleware,
+  authController.getLinkedAccounts
+);
+router.post("/logout", authController.logout);
 
 module.exports = router;

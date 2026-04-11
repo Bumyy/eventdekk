@@ -1,9 +1,10 @@
 const authService = require("../services/auth.service");
+const AuthMethodModel = require("../models/auth.method.model");
 const passport = require("passport");
+const authMiddleware = require("../middleware/auth.middleware");
 
 class AuthController {
   // --- OAuth Initiators ---
-  // Redirects user to the provider's login page
   googleLogin(req, res, next) {
     passport.authenticate("google", { scope: ["profile", "email"] })(
       req,
@@ -20,11 +21,34 @@ class AuthController {
     );
   }
 
+  // --- OAuth Linking Initiators ---
+  googleLink(req, res, next) {
+    const sdbToken = req.query.token;
+    if (!sdbToken) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+    const state = Buffer.from(JSON.stringify({ link: true, sdbToken })).toString('base64');
+    passport.authenticate("google", {
+      scope: ["profile", "email"],
+      state: state
+    })(req, res, next);
+  }
+
+  discordLink(req, res, next) {
+    const sdbToken = req.query.token;
+    if (!sdbToken) {
+      return res.status(401).json({ message: "Authentication required." });
+    }
+    const state = Buffer.from(JSON.stringify({ link: true, sdbToken })).toString('base64');
+    passport.authenticate("discord", {
+      scope: ["identify", "email"],
+      state: state
+    })(req, res, next);
+  }
+
   // --- OAuth Callbacks ---
-  // Provider redirects back here after user authorizes/denies
   googleCallback = (req, res, next) => {
-    // Helper to build callback URL
-    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false) => {
+    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false, isLinked = false) => {
       const baseUrl =
         process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
       const callbackPath = baseUrl.includes("/auth/callback")
@@ -36,10 +60,9 @@ class AuthController {
         return `${baseUrl}${callbackPath}?${param}`;
       }
 
-      // Build URL with token and optional profile data
       let url = `${baseUrl}${callbackPath}?token=${encodeURIComponent(tokenOrError)}`;
-
       url += `&isNewUser=${isNewUser}`;
+      url += `&isLinked=${isLinked}`;
 
       if (profileData) {
         if (profileData.displayName) {
@@ -64,6 +87,9 @@ class AuthController {
           console.error("Google Auth Error:", err);
           return res.redirect(getCallbackUrl("auth_error", "error"));
         }
+        if (data && data.error) {
+          return res.redirect(getCallbackUrl(data.error, "error"));
+        }
         if (!data || !data.sdbToken) {
           console.log(
             "Google Auth Failed:",
@@ -78,7 +104,8 @@ class AuthController {
             data.sdbToken,
             "token",
             data.profileData,
-            data.isNewUser
+            data.isNewUser,
+            data.isLinked || false
           )
         );
       }
@@ -86,8 +113,7 @@ class AuthController {
   };
 
   discordCallback = (req, res, next) => {
-    // Helper to build callback URL
-    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false) => {
+    const getCallbackUrl = (tokenOrError, type = "token", profileData = null, isNewUser = false, isLinked = false) => {
       const baseUrl =
         process.env.REDIRECT_URI?.replace(/\/$/, "") || "http://localhost:5173";
       const callbackPath = baseUrl.includes("/auth/callback")
@@ -99,10 +125,9 @@ class AuthController {
         return `${baseUrl}${callbackPath}?${param}`;
       }
 
-      // Build URL with token and optional profile data
       let url = `${baseUrl}${callbackPath}?token=${encodeURIComponent(tokenOrError)}`;
-
       url += `&isNewUser=${isNewUser}`;
+      url += `&isLinked=${isLinked}`;
 
       if (profileData) {
         if (profileData.displayName) {
@@ -127,6 +152,9 @@ class AuthController {
           console.error("Discord Auth Error:", err);
           return res.redirect(getCallbackUrl("auth_error", "error"));
         }
+        if (data && data.error) {
+          return res.redirect(getCallbackUrl(data.error, "error"));
+        }
         if (!data || !data.sdbToken) {
           console.log(
             "Discord Auth Failed:",
@@ -140,7 +168,8 @@ class AuthController {
             data.sdbToken,
             "token",
             data.profileData,
-            data.isNewUser
+            data.isNewUser,
+            data.isLinked || false
           )
         );
       }
@@ -156,21 +185,18 @@ class AuthController {
         .status(400)
         .json({ message: "Username and password are required." });
     }
-    // Add more validation (password strength, username format) here
 
     try {
       const { sdbToken } = await authService.registerPasswordUser(
         username,
         password
       );
-      // Return the SDB token upon successful registration
       res
         .status(201)
         .json({ message: "Registration successful.", token: sdbToken });
     } catch (error) {
-      // Handle specific errors like "Username already taken"
       if (error.message.includes("already taken")) {
-        return res.status(409).json({ message: error.message }); // 409 Conflict
+        return res.status(409).json({ message: error.message });
       }
       console.error("Registration Error:", error);
       res
@@ -187,7 +213,6 @@ class AuthController {
         session: false,
       },
       (err, data, info) => {
-        // Custom callback
         if (err) {
           console.error("Local Login Error:", err);
           return res
@@ -195,17 +220,35 @@ class AuthController {
             .json({ message: "Login failed due to an internal error." });
         }
         if (!data || !data.sdbToken) {
-          // Authentication failed (user not found or wrong password)
           return res
             .status(401)
             .json({ message: info?.message || "Invalid credentials." });
         }
-        // Success! Return the SDB token.
         res
           .status(200)
           .json({ message: "Login successful.", token: data.sdbToken });
       }
     )(req, res, next);
+  }
+
+  // --- Get Linked Accounts ---
+  async getLinkedAccounts(req, res) {
+    try {
+      const methods = await AuthMethodModel.findByUserId(req.user.id);
+      const linkedAccounts = methods.map((m) => ({
+        type: m.method_type,
+        linkedAt: m.created_at,
+      }));
+      res.status(200).json({ linkedAccounts });
+    } catch (error) {
+      console.error("Error getting linked accounts:", error);
+      res.status(500).json({ message: "Failed to get linked accounts." });
+    }
+  }
+
+  // --- Logout ---
+  async logout(req, res) {
+    res.status(200).json({ message: "Logged out successfully." });
   }
 }
 

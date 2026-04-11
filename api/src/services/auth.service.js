@@ -157,35 +157,35 @@ class AuthService {
     }
   }
 
-  // --- Linking Logic (Conceptual - Requires Session/Auth State) ---
-  // This needs a way to know *who* is currently logged in to link to.
-  // Usually requires session management or passing a temporary internal JWT.
+  // --- Linking Logic ---
+  async linkProviderToUser(currentUserId, methodType, providerId, issuer) {
+    try {
+      const existingLink = await AuthMethodModel.findByProvider(
+        methodType,
+        providerId,
+        issuer
+      );
 
-  /*
-    async linkProviderToCurrentUser(currentUserId, methodType, providerId, issuer) {
-        try {
-            // 1. Check if the provider ID is already linked *to someone else*
-            const existingLink = await AuthMethodModel.findByProvider(methodType, providerId, issuer);
-            if (existingLink && existingLink.user_id !== currentUserId) {
-                throw new Error("This external account is already linked to a different user.");
-            }
-            // 2. Check if it's already linked to the *current* user (optional, maybe just succeed)
-            if (existingLink && existingLink.user_id === currentUserId) {
-                 console.log(`Account ${methodType} already linked to user ${currentUserId}.`);
-                 return { success: true, message: "Account already linked." };
-            }
+      if (existingLink && existingLink.user_id !== currentUserId) {
+        throw new Error("This external account is already linked to a different user.");
+      }
 
-            // 3. Create the new link
-             await AuthMethodModel.create(currentUserId, methodType, { providerId, issuer });
-             console.log(`Linked ${methodType} account to user ${currentUserId}.`);
-             return { success: true, message: "Account linked successfully." };
+      if (existingLink && existingLink.user_id === currentUserId) {
+        console.log(`Account ${methodType} already linked to user ${currentUserId}.`);
+        return { success: true, message: "Account already linked." };
+      }
 
-        } catch (error) {
-             console.error(`Error linking ${methodType} to user ${currentUserId}:`, error);
-             throw error;
-        }
+      await AuthMethodModel.create(currentUserId, methodType, {
+        providerId,
+        issuer,
+      });
+      console.log(`Linked ${methodType} account to user ${currentUserId}.`);
+      return { success: true, message: "Account linked successfully." };
+    } catch (error) {
+      console.error(`Error linking ${methodType} to user ${currentUserId}:`, error);
+      throw error;
     }
-    */
+  }
 
   // Helper to find user by internal ID (used by hypothetical deserializeUser)
   async findUserById(id) {

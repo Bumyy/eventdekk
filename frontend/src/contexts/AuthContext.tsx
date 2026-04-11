@@ -15,13 +15,22 @@ interface OAuthProfileData {
   isNewUser: boolean;
 }
 
+interface LinkedAccount {
+  type: string;
+  linkedAt: string;
+}
+
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   sdbToken: string | null;
   pendingOAuthProfile: OAuthProfileData | null;
   clearPendingOAuthProfile: () => void;
-  logout: (silent?: boolean) => void; // <-- Updated signature
+  logout: (silent?: boolean) => void;
+  linkedAccounts: LinkedAccount[];
+  fetchLinkedAccounts: (tokenOverride?: string) => Promise<void>;
+  linkGoogle: () => void;
+  linkDiscord: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +47,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [pendingOAuthProfile, setPendingOAuthProfile] =
     useState<OAuthProfileData | null>(null);
+  const [linkedAccounts, setLinkedAccounts] = useState<LinkedAccount[]>([]);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -49,7 +59,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setIsAuthenticated(true);
     }
 
-    // Check for pending OAuth profile data
     const storedProfile = localStorage.getItem(OAUTH_PROFILE_KEY);
     if (storedProfile) {
       try {
@@ -98,29 +107,39 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     navigate("/login");
   }, [navigate]);
 
-  useEffect(() => {
-    if (window.location.pathname === "/auth/callback") {
-      const params = new URLSearchParams(window.location.search);
-      const token = params.get("token");
-      const error = params.get("error");
-      const displayName = params.get("displayName");
-      const profilePicture = params.get("profilePicture");
-      const isNewUser = params.get("isNewUser") === "true";
+  const clearPendingOAuthProfile = useCallback(() => {
+    localStorage.removeItem(OAUTH_PROFILE_KEY);
+    setPendingOAuthProfile(null);
+  }, []);
 
-      if (token) {
-        const profileData: OAuthProfileData = {
-          displayName: displayName || null,
-          profilePicture: profilePicture || null,
-          isNewUser,
-        };
-        handleAuthSuccess(token, profileData);
-      } else if (error) {
-        handleAuthFailure(error);
+  const fetchLinkedAccounts = useCallback(async (tokenOverride?: string) => {
+    const token = tokenOverride || sdbToken;
+    if (!token) return;
+    try {
+      const response = await fetch(`${API_URL}/auth/linked-accounts`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setLinkedAccounts(data.linkedAccounts);
       }
+    } catch (error) {
+      console.error("Error fetching linked accounts:", error);
     }
-  }, [handleAuthSuccess, handleAuthFailure]);
+  }, [sdbToken]);
 
-  // <-- Updated logout function with 'silent' parameter
+  const linkGoogle = useCallback(() => {
+    if (!sdbToken) return;
+    window.location.href = `${API_URL}/auth/link/google?token=${encodeURIComponent(sdbToken)}`;
+  }, [sdbToken]);
+
+  const linkDiscord = useCallback(() => {
+    if (!sdbToken) return;
+    window.location.href = `${API_URL}/auth/link/discord?token=${encodeURIComponent(sdbToken)}`;
+  }, [sdbToken]);
+
   const logout = async (silent = false) => {
     try {
       await fetch(`${API_URL}/auth/logout`, { method: "POST" });
@@ -134,6 +153,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
       setSdbToken(null);
       setIsAuthenticated(false);
       setPendingOAuthProfile(null);
+      setLinkedAccounts([]);
 
       if (!silent) {
         toast.info("Logged out");
@@ -142,10 +162,43 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     }
   };
 
-  const clearPendingOAuthProfile = useCallback(() => {
-    localStorage.removeItem(OAUTH_PROFILE_KEY);
-    setPendingOAuthProfile(null);
-  }, []);
+  useEffect(() => {
+    if (sdbToken) {
+      fetchLinkedAccounts();
+    }
+  }, [sdbToken, fetchLinkedAccounts]);
+
+  useEffect(() => {
+    if (window.location.pathname === "/auth/callback") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      const error = params.get("error");
+      const displayName = params.get("displayName");
+      const profilePicture = params.get("profilePicture");
+      const isNewUser = params.get("isNewUser") === "true";
+      const isLinked = params.get("isLinked") === "true";
+
+      if (token) {
+        if (isLinked) {
+          toast.success("Account linked successfully!");
+          localStorage.setItem(SDB_AUTH_TOKEN_KEY, token);
+          setSdbToken(token);
+          setIsAuthenticated(true);
+          fetchLinkedAccounts(token);
+          navigate("/profile", { replace: true });
+        } else {
+          const profileData: OAuthProfileData = {
+            displayName: displayName || null,
+            profilePicture: profilePicture || null,
+            isNewUser,
+          };
+          handleAuthSuccess(token, profileData);
+        }
+      } else if (error) {
+        handleAuthFailure(error);
+      }
+    }
+  }, [handleAuthSuccess, handleAuthFailure, fetchLinkedAccounts, navigate]);
 
   return (
     <AuthContext.Provider
@@ -156,6 +209,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
         pendingOAuthProfile,
         clearPendingOAuthProfile,
         logout,
+        linkedAccounts,
+        fetchLinkedAccounts,
+        linkGoogle,
+        linkDiscord,
       }}
     >
       {children}

@@ -94,8 +94,19 @@ class AuthMethodModel {
     });
   }
 
-  // Potentially add methods to find all methods for a user (for linking UI)
-  // static findByUserId(userId) { ... }
+  // Find all auth methods for a user
+  static findByUserId(userId) {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT id, method_type, provider_id, issuer, username, created_at FROM auth_methods WHERE user_id = ?`;
+      db.all(sql, [userId], (err, rows) => {
+        if (err) {
+          console.error("Error finding auth methods by user ID:", err.message);
+          return reject(new Error("Database error finding auth methods."));
+        }
+        resolve(rows || []);
+      });
+    });
+  }
 }
 
 module.exports = AuthMethodModel;

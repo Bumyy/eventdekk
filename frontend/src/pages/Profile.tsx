@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useCurrentUser } from "@/hooks/spacetimeHooks";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +37,7 @@ const Profile = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const { linkedAccounts, linkGoogle, linkDiscord } = useAuth();
 
   const currentUser = useCurrentUser();
   const detectedTz = detectUserTimezone();
@@ -373,6 +375,33 @@ const Profile = () => {
                   Your timezone matches your automatically detected local time.
                 </p>
               ) : null}
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <h3 className="text-lg font-semibold">Linked Accounts</h3>
+              <p className="text-sm text-muted-foreground">
+                Link your Google or Discord account to sign in with either provider.
+              </p>
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  type="button"
+                  variant={linkedAccounts.some((a) => a.type === "google") ? "outline" : "default"}
+                  size="sm"
+                  disabled={linkedAccounts.some((a) => a.type === "google")}
+                  onClick={linkGoogle}
+                >
+                  {linkedAccounts.some((a) => a.type === "google") ? "Google Linked" : "Link Google"}
+                </Button>
+                <Button
+                  type="button"
+                  variant={linkedAccounts.some((a) => a.type === "discord") ? "outline" : "default"}
+                  size="sm"
+                  disabled={linkedAccounts.some((a) => a.type === "discord")}
+                  onClick={linkDiscord}
+                >
+                  {linkedAccounts.some((a) => a.type === "discord") ? "Discord Linked" : "Link Discord"}
+                </Button>
+              </div>
             </div>
 
             <div className="flex justify-end pt-4">

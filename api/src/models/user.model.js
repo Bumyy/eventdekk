@@ -44,6 +44,20 @@ class UserModel {
       });
     });
   }
+
+  // Find a user by their SDB token
+  static findBySdbToken(sdbToken) {
+    return new Promise((resolve, reject) => {
+      const sql = `SELECT id, sdb_token FROM users WHERE sdb_token = ?`;
+      db.get(sql, [sdbToken], (err, row) => {
+        if (err) {
+          console.error("Error finding user by SDB token:", err.message);
+          return reject(new Error("Database error finding user."));
+        }
+        resolve(row || null);
+      });
+    });
+  }
 }
 
 module.exports = UserModel;

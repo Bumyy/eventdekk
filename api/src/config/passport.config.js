@@ -3,6 +3,7 @@ const GoogleStrategy = require("passport-google-oauth20").Strategy;
 const DiscordStrategy = require("passport-discord").Strategy;
 const LocalStrategy = require("passport-local").Strategy;
 const authService = require("../services/auth.service");
+const UserModel = require("../models/user.model");
 require("dotenv").config();
 
 passport.use(
@@ -11,18 +12,15 @@ passport.use(
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: process.env.GOOGLE_CALLBACK_URL,
-      scope: ["profile", "email"], // Request basic profile and email
+      scope: ["profile", "email"],
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // profile.id is the google 'sub'
-        // profile.provider is 'google'
-        // The issuer for google is typically 'https://accounts.google.com'
-        const issuer = "https://accounts.google.com"; // Standard Google issuer
+        const issuer = "https://accounts.google.com";
         const providerId = profile.id;
         const methodType = "google";
 
-        // Extract profile data from Google
         const googleDisplayName =
           profile.displayName ||
           [profile.name?.givenName, profile.name?.familyName]
@@ -46,8 +44,35 @@ passport.use(
           profilePicture: googleProfilePicture,
         };
 
-        // Try find or create user based on this Google login
-        // The service function handles linking or new account creation
+        const state = req.query.state;
+        if (state) {
+          try {
+            const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+            if (decodedState.link && decodedState.sdbToken) {
+              const user = await UserModel.findBySdbToken(decodedState.sdbToken);
+              if (!user) {
+                return done(null, { error: "Invalid or expired session." });
+              }
+
+              await authService.linkProviderToUser(
+                user.id,
+                methodType,
+                providerId,
+                issuer
+              );
+
+              return done(null, {
+                sdbToken: decodedState.sdbToken,
+                profileData,
+                isNewUser: false,
+                isLinked: true,
+              });
+            }
+          } catch (e) {
+            console.error("Error parsing state for linking:", e);
+          }
+        }
+
         const { user, sdbToken, isNewUser } =
           await authService.findOrCreateUserByProvider(
             methodType,
@@ -59,7 +84,6 @@ passport.use(
           return done(new Error("Could not find or create user."), null);
         }
 
-        // Pass the sdbToken and profile data to the callback
         return done(null, { sdbToken, profileData, isNewUser });
       } catch (err) {
         return done(err, null);
@@ -74,38 +98,57 @@ passport.use(
       clientID: process.env.DISCORD_CLIENT_ID,
       clientSecret: process.env.DISCORD_CLIENT_SECRET,
       callbackURL: process.env.DISCORD_CALLBACK_URL,
-      scope: ["identify", "email"], // 'identify' gets user ID, username, avatar, discriminator
+      scope: ["identify", "email"],
+      passReqToCallback: true,
     },
-    async (accessToken, refreshToken, profile, done) => {
+    async (req, accessToken, refreshToken, profile, done) => {
       try {
-        // profile.id is the discord user ID
-        // profile.provider is 'discord'
-        // Discord doesn't have a standard OIDC issuer URL easily available via passport
-        // We can use a conventional one or leave it null/empty if not strictly needed for uniqueness
-        // Let's use a conventional one for consistency.
-        const issuer = "https://discord.com/api"; // Conventional issuer for Discord
+        const issuer = "https://discord.com/api";
         const providerId = profile.id;
         const methodType = "discord";
 
-        // Extract profile data from Discord
-        // Use global_name (display name) if available, fallback to username
         const displayName = profile.global_name || profile.username || null;
 
-        // Construct avatar URL
         let profilePicture = null;
         if (profile.avatar) {
-          // User has custom avatar
           profilePicture = `https://cdn.discordapp.com/avatars/${profile.id}/${profile.avatar}.png?size=256`;
         } else if (profile.discriminator) {
-          // Default avatar based on discriminator (legacy discriminator system)
           const defaultAvatarIndex = parseInt(profile.discriminator) % 5;
           profilePicture = `https://cdn.discordapp.com/embed/avatars/${defaultAvatarIndex}.png`;
         } else {
-          // New username system without discriminator - use avatar index 0
           profilePicture = `https://cdn.discordapp.com/embed/avatars/0.png`;
         }
 
         const profileData = { displayName, profilePicture };
+
+        const state = req.query.state;
+        if (state) {
+          try {
+            const decodedState = JSON.parse(Buffer.from(state, 'base64').toString('utf-8'));
+            if (decodedState.link && decodedState.sdbToken) {
+              const user = await UserModel.findBySdbToken(decodedState.sdbToken);
+              if (!user) {
+                return done(null, { error: "Invalid or expired session." });
+              }
+
+              await authService.linkProviderToUser(
+                user.id,
+                methodType,
+                providerId,
+                issuer
+              );
+
+              return done(null, {
+                sdbToken: decodedState.sdbToken,
+                profileData,
+                isNewUser: false,
+                isLinked: true,
+              });
+            }
+          } catch (e) {
+            console.error("Error parsing state for linking:", e);
+          }
+        }
 
         const { user, sdbToken, isNewUser } =
           await authService.findOrCreateUserByProvider(
@@ -118,7 +161,6 @@ passport.use(
           return done(new Error("Could not find or create user."), null);
         }
 
-        // Pass the sdbToken and profile data to the callback
         return done(null, { sdbToken, profileData, isNewUser });
       } catch (err) {
         return done(err, null);
@@ -129,20 +171,17 @@ passport.use(
 
 passport.use(
   new LocalStrategy(
-    // Passport expects username and password fields by default
     async (username, password, done) => {
       try {
         const result = await authService.verifyPasswordUser(username, password);
 
         if (!result.user || !result.sdbToken) {
-          // Authentication failed (user not found or password mismatch)
           return done(null, false, {
             message: result.message || "Incorrect username or password.",
           });
         }
 
-        // Authentication successful
-        return done(null, { sdbToken: result.sdbToken }); // Pass sdbToken
+        return done(null, { sdbToken: result.sdbToken });
       } catch (err) {
         return done(err);
       }
