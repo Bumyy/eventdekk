@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   UserCircle,
   AlertCircle,
+  Calendar,
 } from "lucide-react";
 import {
   SubEventType,
@@ -165,12 +166,15 @@ return (
           </div>
         )}
 
-        <div className="flex-1 p-4">
+<div className="flex-1 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-            <div className="space-y-2">
+            <div className="flex-1 space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-xl font-semibold">{event.name}</h2>
             {isDraft && <Badge variant="outline">Draft</Badge>}
+            <Badge variant={event.isInternal ? "default" : "secondary"}>
+              {event.isInternal ? "Internal" : "External"}
+            </Badge>
             {isHosting && missingLeadsCount > 0 && (
               <Badge variant="destructive" className="flex items-center gap-1">
                 <AlertTriangle className="h-3 w-3" />
@@ -208,16 +212,14 @@ return (
               </>
             )}
           </div>
-          <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            {event.description}
-          </p>
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-3 text-base font-medium">
+            <Calendar className="h-4 w-4 text-muted-foreground" />
             <span>{formatDateInTimezone(event.startTime, userTimezone)}</span>
-            <span>•</span>
+            <span className="text-muted-foreground">•</span>
             <span>{formatTimeInTimezone(event.startTime, userTimezone)}</span>
             {isAttending && creatorGroupInfo && (
               <>
-                <span>•</span>
+                <span className="text-muted-foreground">•</span>
                 <div className="flex items-center gap-2">
                   <Avatar className="h-5 w-5">
                     <AvatarImage
@@ -234,6 +236,53 @@ return (
               </>
             )}
           </div>
+          {isAttending && flightSignups.length > 0 && subEvents.length === 1 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {flightSignups[0].aircraftType && (
+                <div className="flex items-center gap-1">
+                  <Plane className="h-3 w-3" />
+                  <span>{flightSignups[0].aircraftType}</span>
+                </div>
+              )}
+              {flightSignups[0].callsign && (
+                <>
+                  <span>•</span>
+                  <span>{flightSignups[0].callsign}</span>
+                </>
+              )}
+              {subEvents[0].groupFlightDepartureIcao && subEvents[0].groupFlightArrivalIcao && (
+                <>
+                  <span>•</span>
+                  <span>{subEvents[0].groupFlightDepartureIcao} → {subEvents[0].groupFlightArrivalIcao}</span>
+                </>
+              )}
+            </div>
+          )}
+          {isHosting && subEvents.length === 1 && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              {subEvents[0].subEventType.tag === "GroupFlight" && subEvents[0].groupFlightDepartureIcao && subEvents[0].groupFlightArrivalIcao && (
+                <>
+                  <Plane className="h-3 w-3" />
+                  <span>{subEvents[0].groupFlightDepartureIcao} → {subEvents[0].groupFlightArrivalIcao}</span>
+                </>
+              )}
+              {subEvents[0].subEventType.tag === "FlyIn" && subEvents[0].hubIcao && (
+                <>
+                  <MapPin className="h-3 w-3" />
+                  <span>Fly-in to {subEvents[0].hubIcao}</span>
+                </>
+              )}
+              {subEvents[0].subEventType.tag === "FlyOut" && subEvents[0].hubIcao && (
+                <>
+                  <Plane className="h-3 w-3" />
+                  <span>Fly-out from {subEvents[0].hubIcao}</span>
+                </>
+              )}
+            </div>
+          )}
+          <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+            {event.description}
+          </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
 {onToggleExpand && (

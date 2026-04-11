@@ -447,7 +447,13 @@ export const useLiveChatMessages = () => {
  * Useful for global scheduling suggestions.
  */
 export const useAllActiveEvents = () => {
-  const [events] = useTable(tables.event);
+  const query = useMemo(
+    () => tables.event.where((e) => e.isInternal.eq(false)),
+    []
+  );
+
+  const [events] = useTable(query);
+  const [allEvents] = useTable(tables.event);
 
   return useMemo(() => {
     return selectAllActiveEvents(events);
