@@ -175,6 +175,7 @@ export default function AdminMembers() {
                           placeholder="Search users..."
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
                           className="h-8"
                         />
                       </div>
