@@ -56,6 +56,7 @@ import RemoveGroupMemberReducer from "./remove_group_member_reducer";
 import RemoveParticipantFromEventReducer from "./remove_participant_from_event_reducer";
 import RespondToEventInvitationReducer from "./respond_to_event_invitation_reducer";
 import RevokeSuperAdminReducer from "./revoke_super_admin_reducer";
+import SetGroupDiscordWebhookReducer from "./set_group_discord_webhook_reducer";
 import SetUserProfileReducer from "./set_user_profile_reducer";
 import SignupForFlightReducer from "./signup_for_flight_reducer";
 import UpdateEventReducer from "./update_event_reducer";
@@ -66,9 +67,12 @@ import UpdateParticipantRoleReducer from "./update_participant_role_reducer";
 import UpdateSubEventReducer from "./update_sub_event_reducer";
 
 // Import all procedure arg schemas
+import * as InviteGroupToEventAndNotifyProcedure from "./invite_group_to_event_and_notify_procedure";
+import * as RespondToEventInvitationAndNotifyProcedure from "./respond_to_event_invitation_and_notify_procedure";
 
 // Import all table schema definitions
 import DiscoveryEventRow from "./discovery_event_table";
+import DiscoveryFeedRow from "./discovery_feed_table";
 import EventRow from "./event_table";
 import EventParticipantRow from "./event_participant_table";
 import FlightSignupRow from "./flight_signup_table";
@@ -78,6 +82,7 @@ import GroupCallsignFilterRow from "./group_callsign_filter_table";
 import GroupMembershipRow from "./group_membership_table";
 import LiveChatMessageRow from "./live_chat_message_table";
 import LiveFlightRow from "./live_flight_table";
+import MyGroupDiscordWebhooksRow from "./my_group_discord_webhooks_table";
 import SubEventRow from "./sub_event_table";
 import SuperAdminRow from "./super_admin_table";
 import UserRow from "./user_table";
@@ -303,6 +308,20 @@ const tablesSchema = __schema({
       { name: 'user_identity_key', constraint: 'unique', columns: ['identity'] },
     ],
   }, UserRow),
+  discovery_feed: __table({
+    name: 'discovery_feed',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, DiscoveryFeedRow),
+  my_group_discord_webhooks: __table({
+    name: 'my_group_discord_webhooks',
+    indexes: [
+    ],
+    constraints: [
+    ],
+  }, MyGroupDiscordWebhooksRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
@@ -329,6 +348,7 @@ const reducersSchema = __reducers(
   __reducerSchema("remove_participant_from_event", RemoveParticipantFromEventReducer),
   __reducerSchema("respond_to_event_invitation", RespondToEventInvitationReducer),
   __reducerSchema("revoke_super_admin", RevokeSuperAdminReducer),
+  __reducerSchema("set_group_discord_webhook", SetGroupDiscordWebhookReducer),
   __reducerSchema("set_user_profile", SetUserProfileReducer),
   __reducerSchema("signup_for_flight", SignupForFlightReducer),
   __reducerSchema("update_event", UpdateEventReducer),
@@ -341,6 +361,8 @@ const reducersSchema = __reducers(
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
 const proceduresSchema = __procedures(
+  __procedureSchema("invite_group_to_event_and_notify", InviteGroupToEventAndNotifyProcedure.params, InviteGroupToEventAndNotifyProcedure.returnType),
+  __procedureSchema("respond_to_event_invitation_and_notify", RespondToEventInvitationAndNotifyProcedure.params, RespondToEventInvitationAndNotifyProcedure.returnType),
 );
 
 /** The remote SpacetimeDB module schema, both runtime and type information. */

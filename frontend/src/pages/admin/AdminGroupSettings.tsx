@@ -11,6 +11,7 @@ export default function AdminGroupSettings() {
       title="Group Settings"
       backTo={groupId ? `/admin/dashboard/${groupId}` : "/admin"}
       canEditIdentityFields={false}
+      showDiscordWebhookSettings
     />
   );
 }

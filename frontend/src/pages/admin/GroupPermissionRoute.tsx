@@ -5,6 +5,7 @@ import { useSpacetimeDB } from "spacetimedb/react";
 import {
   useGroupById,
   useGroupMemberships,
+  useIsSuperAdmin,
 } from "@/hooks/spacetimeHooks";
 
 type PermissionLevel = "Ceo" | "Staff" | "Member";
@@ -21,11 +22,16 @@ const GroupPermissionRoute: React.FC<GroupPermissionRouteProps> = ({
   const { groupId } = useParams();
   const groupIdBigInt = groupId ? BigInt(groupId) : null;
   const { identity } = useSpacetimeDB();
+  const isSuperAdmin = useIsSuperAdmin();
   const currentGroup = useGroupById(groupIdBigInt);
   const memberships = useGroupMemberships();
 
   const hasPermission = useMemo(() => {
     if (!groupIdBigInt || !identity) return false;
+
+    if (isSuperAdmin) {
+      return true;
+    }
 
     if (
       currentGroup &&
@@ -57,7 +63,14 @@ const GroupPermissionRoute: React.FC<GroupPermissionRouteProps> = ({
     }
 
     return false;
-  }, [groupIdBigInt, identity, memberships, currentGroup, requiredPermission]);
+  }, [
+    groupIdBigInt,
+    identity,
+    memberships,
+    currentGroup,
+    requiredPermission,
+    isSuperAdmin,
+  ]);
 
   if (!groupIdBigInt) {
     return <Navigate to="/admin" replace />;

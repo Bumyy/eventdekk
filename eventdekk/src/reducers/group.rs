@@ -1,7 +1,8 @@
 use crate::enums::{ApplicationStatus, PermissionLevel};
 use crate::tables::{
-    group, group_application, group_callsign_filter, group_membership, super_admin, user, Group,
-    GroupApplication, GroupCallsignFilter, GroupMembership, SuperAdmin,
+    group, group_application, group_callsign_filter, group_discord_webhook, group_membership,
+    super_admin, user, Group, GroupApplication, GroupCallsignFilter, GroupDiscordWebhook,
+    GroupMembership, SuperAdmin,
 };
 use crate::utils::{check_permission, find_group_or_err};
 use log::info;
@@ -38,6 +39,24 @@ fn normalize_optional_string(value: Option<String>) -> Option<String> {
             Some(trimmed.to_string())
         }
     })
+}
+
+fn validate_discord_webhook_url(value: &str) -> Result<String, String> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err("Webhook URL cannot be empty.".to_string());
+    }
+
+    let is_discord_webhook = (trimmed.starts_with("https://discord.com/api/webhooks/")
+        || trimmed.starts_with("https://ptb.discord.com/api/webhooks/")
+        || trimmed.starts_with("https://canary.discord.com/api/webhooks/"))
+        && trimmed.len() > "https://discord.com/api/webhooks/".len();
+
+    if !is_discord_webhook {
+        return Err("Webhook URL must be a valid Discord webhook URL.".to_string());
+    }
+
+    Ok(trimmed.to_string())
 }
 
 fn validate_group_fields(
@@ -332,6 +351,51 @@ pub fn update_group(
 
     ctx.db.group().group_id().update(group);
     info!("Group {} updated by user {:?}", group_id, ctx.sender);
+    Ok(())
+}
+
+#[reducer]
+pub fn set_group_discord_webhook(
+    ctx: &ReducerContext,
+    group_id: u64,
+    webhook_url: String,
+    enabled: bool,
+) -> Result<(), String> {
+    let group = find_group_or_err(ctx, group_id)?;
+
+    let sender_is_super_admin = is_super_admin(ctx, ctx.sender);
+    let sender_is_primary_ceo = group.ceo_identity == ctx.sender;
+    let sender_is_membership_ceo = check_permission(ctx, group_id, PermissionLevel::CEO).is_ok();
+
+    if !sender_is_super_admin && !sender_is_primary_ceo && !sender_is_membership_ceo {
+        return Err(
+            "Only the group CEO (or super admin) can manage Discord webhook settings.".to_string(),
+        );
+    }
+
+    let webhook_url = validate_discord_webhook_url(&webhook_url)?;
+
+    if let Some(mut existing) = ctx.db.group_discord_webhook().group_id().find(group_id) {
+        let webhook_changed = existing.webhook_url != webhook_url;
+        existing.webhook_url = webhook_url;
+        existing.enabled = if webhook_changed { true } else { enabled };
+        existing.updated_at = ctx.timestamp;
+        existing.updated_by = Some(ctx.sender);
+        ctx.db.group_discord_webhook().group_id().update(existing);
+    } else {
+        ctx.db.group_discord_webhook().insert(GroupDiscordWebhook {
+            group_id,
+            webhook_url,
+            enabled: true,
+            updated_at: ctx.timestamp,
+            updated_by: Some(ctx.sender),
+        });
+    }
+
+    info!(
+        "Discord webhook updated for group {} by user {:?} (enabled={})",
+        group_id, ctx.sender, enabled
+    );
     Ok(())
 }
 

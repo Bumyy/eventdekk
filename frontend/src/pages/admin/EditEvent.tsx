@@ -155,6 +155,19 @@ const [editSubEventForm, setEditSubEventForm] =
     }
   };
 
+  const inviteGroupToEventCompat = async (payload: {
+    eventId: bigint;
+    invitedGroupId: bigint;
+  }) => {
+    const procedures = (connection as any)?.procedures;
+    if (procedures?.inviteGroupToEventAndNotify) {
+      await procedures.inviteGroupToEventAndNotify(payload);
+      return;
+    }
+
+    await connection?.reducers.inviteGroupToEvent(payload);
+  };
+
   const isIcaoLengthValid = (icao?: string) => {
     if (!icao) return true;
     return icao.trim().length === 4;
@@ -1019,7 +1032,7 @@ const handleEditSubEventClick = useCallback((subEvent: {
     try {
       await Promise.all(
         selectedGroups.map((group) =>
-          connection.reducers.inviteGroupToEvent({
+          inviteGroupToEventCompat({
             eventId: eventIdBigInt,
             invitedGroupId: group.id,
           })

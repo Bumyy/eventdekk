@@ -98,6 +98,7 @@ export default function AdminEvents() {
   const upcomingAttendingEvents = useUpcomingAttendingEvents(groupIdBigInt);
   const pastEvents = usePastHostedEvents(groupIdBigInt);
   const pendingInvitations = usePendingEventInvitations(groupIdBigInt);
+  console.log(pendingInvitations);
 
   // Get group's availability data for conflict checking
   const groupAvailabilityData = useGroupAvailabilityData(groupIdBigInt);
@@ -186,6 +187,20 @@ export default function AdminEvents() {
       const { liveryId, ...fallbackPayload } = payload;
       await (connection?.reducers as any).updateFlightSignup(fallbackPayload);
     }
+  };
+
+  const respondToEventInvitationCompat = async (payload: {
+    eventId: bigint;
+    groupId: bigint;
+    response: { tag: "Accepted" | "Declined" | "Pending" };
+  }) => {
+    const procedures = (connection as any)?.procedures;
+    if (procedures?.respondToEventInvitationAndNotify) {
+      await procedures.respondToEventInvitationAndNotify(payload);
+      return;
+    }
+
+    await connection?.reducers.respondToEventInvitation(payload);
   };
 
   const handleCreateEvent = async (eventData: {
@@ -445,7 +460,7 @@ export default function AdminEvents() {
 
     try {
       // Step 1: Respond to the invitation - using direct await
-      await connection.reducers.respondToEventInvitation({
+      await respondToEventInvitationCompat({
         eventId: invitation.eventId,
         groupId: invitation.groupId,
         response: { tag: "Accepted" },
@@ -567,7 +582,7 @@ export default function AdminEvents() {
     const toastId = toast.loading("Declining invitation...");
 
     try {
-      await connection.reducers.respondToEventInvitation({
+      await respondToEventInvitationCompat({
         eventId: invitation.eventId,
         groupId: invitation.groupId,
         response: { tag: "Declined" },

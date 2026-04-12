@@ -1,17 +1,14 @@
 import { useNavigate } from "react-router-dom";
 import { useGroupSettingsForm } from "@/hooks/useGroupSettingsForm";
+import { useIsSuperAdmin } from "@/hooks/spacetimeHooks";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Separator } from "@/components/ui/separator";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   ArrowLeft,
@@ -20,6 +17,7 @@ import {
   Loader2,
   Palette,
   Plus,
+  Save,
   Trash2,
   Upload,
 } from "lucide-react";
@@ -29,6 +27,7 @@ type GroupSettingsEditorProps = {
   title: string;
   backTo?: string;
   canEditIdentityFields?: boolean;
+  showDiscordWebhookSettings?: boolean;
 };
 
 export function GroupSettingsEditor({
@@ -36,8 +35,10 @@ export function GroupSettingsEditor({
   title,
   backTo,
   canEditIdentityFields = true,
+  showDiscordWebhookSettings = false,
 }: GroupSettingsEditorProps) {
   const navigate = useNavigate();
+  const isSuperAdmin = useIsSuperAdmin();
   const {
     isUploading,
     isSaving,
@@ -60,6 +61,13 @@ export function GroupSettingsEditor({
     isManagingCallsignFilter,
     addCallsignFilter,
     removeCallsignFilter,
+    discordWebhookUrl,
+    setDiscordWebhookUrl,
+    discordWebhookEnabled,
+    setDiscordWebhookEnabled,
+    isSavingDiscordWebhook,
+    canManageDiscordWebhook,
+    saveDiscordWebhookSettings,
     handleLogoFileChange,
     handleLogoUrlChange,
     handleSubmit,
@@ -82,6 +90,9 @@ export function GroupSettingsEditor({
           <TabsTrigger value="general">General Settings</TabsTrigger>
           <TabsTrigger value="branding">Branding</TabsTrigger>
           <TabsTrigger value="callsign">Callsign Matching</TabsTrigger>
+          {showDiscordWebhookSettings && (
+            <TabsTrigger value="discord">Discord</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="general" className="space-y-4">
@@ -167,7 +178,10 @@ export function GroupSettingsEditor({
               <div className="space-y-4">
                 <div className="flex items-center gap-4">
                   <Avatar className="h-24 w-24 rounded-md">
-                    <AvatarImage src={logoPreview || undefined} alt="Group logo" />
+                    <AvatarImage
+                      src={logoPreview || undefined}
+                      alt="Group logo"
+                    />
                     <AvatarFallback className="rounded-md text-lg">
                       {tag || name.substring(0, 2)}
                     </AvatarFallback>
@@ -258,7 +272,9 @@ export function GroupSettingsEditor({
                 <div className="rounded-md bg-muted p-4 text-sm flex gap-2">
                   <Info className="h-5 w-5 text-muted-foreground shrink-0" />
                   <div>
-                    <p className="font-medium">Recommended logo specifications:</p>
+                    <p className="font-medium">
+                      Recommended logo specifications:
+                    </p>
                     <ul className="list-disc pl-5 mt-1 text-muted-foreground">
                       <li>Square aspect ratio (1:1)</li>
                       <li>Minimum size: 256x256 pixels</li>
@@ -290,8 +306,9 @@ export function GroupSettingsEditor({
             <div className="space-y-2">
               <h3 className="text-lg font-semibold">Callsign Formats</h3>
               <p className="text-sm text-muted-foreground">
-                Add one format per line, like <code>Qatari VA</code> or <code>QR</code>.
-                A live callsign matches when it contains all words from one format.
+                Add one format per line, like <code>Qatari VA</code> or{" "}
+                <code>QR</code>. A live callsign matches when it contains all
+                words from one format.
               </p>
             </div>
 
@@ -344,6 +361,83 @@ export function GroupSettingsEditor({
             </div>
           </Card>
         </TabsContent>
+
+        {showDiscordWebhookSettings && (
+          <TabsContent value="discord" className="space-y-4">
+            <Card className="p-6 space-y-6">
+              <div className="space-y-2">
+                <h3 className="text-lg font-semibold">
+                  Discord Updates Webhook
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Configure where invite and invitation response updates will be
+                  posted.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-muted p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <Label
+                      htmlFor="discord-enabled"
+                      className="text-sm font-medium"
+                    >
+                      Enable webhook notifications
+                    </Label>
+                    <p className="text-xs text-muted-foreground">
+                      Turn off to keep the URL saved but pause all Discord
+                      messages. Changing the webhook URL automatically
+                      re-enables notifications.
+                    </p>
+                  </div>
+                  <Checkbox
+                    id="discord-enabled"
+                    checked={discordWebhookEnabled}
+                    onCheckedChange={(checked) =>
+                      setDiscordWebhookEnabled(checked === true)
+                    }
+                    disabled={!canManageDiscordWebhook}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="discord-webhook-url">Webhook URL</Label>
+                  <Input
+                    id="discord-webhook-url"
+                    placeholder="https://discord.com/api/webhooks/..."
+                    value={discordWebhookUrl}
+                    onChange={(e) => setDiscordWebhookUrl(e.target.value)}
+                    disabled={!canManageDiscordWebhook}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Only group CEOs and super admins can view or change this
+                    value.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <Button
+                  type="button"
+                  onClick={saveDiscordWebhookSettings}
+                  disabled={isSavingDiscordWebhook || !canManageDiscordWebhook}
+                >
+                  {isSavingDiscordWebhook ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Save Webhook
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+          </TabsContent>
+        )}
       </Tabs>
     </div>
   );

@@ -6,5 +6,11 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all procedure arg schemas
+import * as InviteGroupToEventAndNotifyProcedure from "../invite_group_to_event_and_notify_procedure";
+import * as RespondToEventInvitationAndNotifyProcedure from "../respond_to_event_invitation_and_notify_procedure";
 
+export type InviteGroupToEventAndNotifyArgs = __Infer<typeof InviteGroupToEventAndNotifyProcedure.params>;
+export type InviteGroupToEventAndNotifyResult = __Infer<typeof InviteGroupToEventAndNotifyProcedure.returnType>;
+export type RespondToEventInvitationAndNotifyArgs = __Infer<typeof RespondToEventInvitationAndNotifyProcedure.params>;
+export type RespondToEventInvitationAndNotifyResult = __Infer<typeof RespondToEventInvitationAndNotifyProcedure.returnType>;
 

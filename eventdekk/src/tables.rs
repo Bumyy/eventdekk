@@ -242,6 +242,18 @@ pub struct DiscoveryEvent {
     pub added_at: Timestamp,
 }
 
+#[table(name = group_discord_webhook,
+    index(name = idx_updated_at, btree(columns = [updated_at]))
+)]
+pub struct GroupDiscordWebhook {
+    #[primary_key]
+    pub group_id: u64,
+    pub webhook_url: String,
+    pub enabled: bool,
+    pub updated_at: Timestamp,
+    pub updated_by: Option<Identity>,
+}
+
 #[table(name = discovery_rotation_schedule, scheduled(crate::reducers::discovery::rotate_discovery_event))]
 #[derive(Clone, Copy)]
 pub struct DiscoveryRotationSchedule {

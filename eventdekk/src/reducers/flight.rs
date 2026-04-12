@@ -44,7 +44,11 @@ pub fn signup_for_flight(
             group_id, sub_event.event_id
         ));
     }
-    if event.status != EventStatus::Published && event.status != EventStatus::InProgress {
+    let is_creator_group = event.creator_group_id == group_id;
+    if !is_creator_group
+        && event.status != EventStatus::Published
+        && event.status != EventStatus::InProgress
+    {
         return Err("Event is not Published or InProgress.".to_string());
     }
     if departure_icao.len() != 4 || arrival_icao.len() != 4 {
@@ -119,7 +123,11 @@ pub fn update_flight_signup(
     let sub_event = find_sub_event_or_err(ctx, signup.sub_event_id)?;
     let event = find_event_or_err(ctx, sub_event.event_id)?;
 
-    if event.status != EventStatus::Published && event.status != EventStatus::InProgress {
+    let is_creator_group = event.creator_group_id == signup.group_id;
+    if !is_creator_group
+        && event.status != EventStatus::Published
+        && event.status != EventStatus::InProgress
+    {
         return Err("Event is not Published or InProgress.".to_string());
     }
 
@@ -155,7 +163,11 @@ pub fn delete_flight_signup(ctx: &ReducerContext, signup_id: u64) -> Result<(), 
     let sub_event = find_sub_event_or_err(ctx, signup.sub_event_id)?;
     let event = find_event_or_err(ctx, sub_event.event_id)?;
 
-    if event.status != EventStatus::Published && event.status != EventStatus::InProgress {
+    let is_creator_group = event.creator_group_id == signup.group_id;
+    if !is_creator_group
+        && event.status != EventStatus::Published
+        && event.status != EventStatus::InProgress
+    {
         return Err("Event is not Published or InProgress.".to_string());
     }
 

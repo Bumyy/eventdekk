@@ -130,6 +130,24 @@ export const GroupCallsignFilter = __t.object("GroupCallsignFilter", {
 });
 export type GroupCallsignFilter = __Infer<typeof GroupCallsignFilter>;
 
+export const GroupDiscordWebhook = __t.object("GroupDiscordWebhook", {
+  groupId: __t.u64(),
+  webhookUrl: __t.string(),
+  enabled: __t.bool(),
+  updatedAt: __t.timestamp(),
+  updatedBy: __t.option(__t.identity()),
+});
+export type GroupDiscordWebhook = __Infer<typeof GroupDiscordWebhook>;
+
+export const GroupDiscordWebhookAdminView = __t.object("GroupDiscordWebhookAdminView", {
+  groupId: __t.u64(),
+  webhookUrl: __t.string(),
+  enabled: __t.bool(),
+  updatedAt: __t.timestamp(),
+  updatedBy: __t.option(__t.identity()),
+});
+export type GroupDiscordWebhookAdminView = __Infer<typeof GroupDiscordWebhookAdminView>;
+
 export const GroupMembership = __t.object("GroupMembership", {
   membershipId: __t.u64(),
   userIdentity: __t.identity(),
