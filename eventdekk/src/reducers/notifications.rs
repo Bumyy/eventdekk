@@ -1,10 +1,11 @@
 use crate::enums::ParticipantStatus;
 use crate::reducers::event::{invite_group_to_event, respond_to_event_invitation};
-use crate::tables::{event, group, group_discord_webhook};
-use serde_json::json;
-use spacetimedb::{http::Request, procedure, ProcedureContext};
+use crate::tables::{event, event_participant, group, group_discord_webhook, Event, Group};
+use spacetimedb::{http::Request, procedure, ProcedureContext, Timestamp};
 
 const EVENT_BASE_URL: &str = "https://eventdekk.com";
+const EVENTDEKK_NAME: &str = "Eventdekk";
+const EVENTDEKK_LOGO_URL: &str = "https://cdn.discordapp.com/icons/1156491820944080926/ca34b4bc33234c7b7fba6a6f5e7529b7.webp?size=128&quality=lossless";
 
 fn redact_webhook_url(url: &str) -> String {
     if let Some(idx) = url.find("/api/webhooks/") {
@@ -12,6 +13,67 @@ fn redact_webhook_url(url: &str) -> String {
         return format!("{}***", prefix);
     }
     "***".to_string()
+}
+
+fn hex_color_to_decimal(hex: Option<&String>) -> Option<i32> {
+    let hex = hex?;
+    let hex = hex.strip_prefix('#').unwrap_or(hex);
+    i32::from_str_radix(hex, 16).ok()
+}
+
+fn events_conflict(start1: Timestamp, end1: Timestamp, start2: Timestamp, end2: Timestamp) -> bool {
+    start1 < end2 && start2 < end1
+}
+
+fn check_group_conflicts_on_day(
+    tx: &spacetimedb::TxContext,
+    group_id: u64,
+    event_start: Timestamp,
+    event_end: Timestamp,
+    exclude_event_id: u64,
+) -> Option<(String, Timestamp, Timestamp)> {
+    let participant_entries: Vec<_> = tx
+        .db
+        .event_participant()
+        .idx_group()
+        .filter(&group_id)
+        .filter(|p| {
+            p.status == ParticipantStatus::Accepted || p.status == ParticipantStatus::Pending
+        })
+        .collect();
+
+    for participant in participant_entries {
+        if participant.event_id == exclude_event_id {
+            continue;
+        }
+
+        if let Some(other_event) = tx.db.event().event_id().find(participant.event_id) {
+            if events_conflict(
+                event_start,
+                event_end,
+                other_event.start_time,
+                other_event.end_time,
+            ) {
+                return Some((
+                    other_event.name,
+                    other_event.start_time,
+                    other_event.end_time,
+                ));
+            }
+        }
+    }
+
+    None
+}
+
+fn format_discord_timestamp(ts: Timestamp) -> String {
+    let secs = ts.to_micros_since_unix_epoch() / 1_000_000;
+    format!("<t:{}:F>", secs)
+}
+
+fn format_discord_timestamp_relative(ts: Timestamp) -> String {
+    let secs = ts.to_micros_since_unix_epoch() / 1_000_000;
+    format!("<t:{}:R>", secs)
 }
 
 fn send_discord_webhook(
@@ -91,30 +153,78 @@ pub fn invite_group_to_event_and_notify(
                 )
             })?;
 
-        Ok::<(String, String, String, String, u64), String>((
-            event_row.name,
-            invited_group_row.name,
-            invited_group_row.tag,
-            host_group_row.name,
-            invited_group_row.group_id,
+        let target_group_id = invited_group_row.group_id;
+
+        let conflict = check_group_conflicts_on_day(
+            tx,
+            invited_group_id,
+            event_row.start_time,
+            event_row.end_time,
+            event_id,
+        );
+
+        Ok::<
+            (
+                Event,
+                Group,
+                Group,
+                Option<(String, Timestamp, Timestamp)>,
+                u64,
+            ),
+            String,
+        >((
+            event_row,
+            invited_group_row,
+            host_group_row,
+            conflict,
+            target_group_id,
         ))
     })?;
 
-    let (event_name, invited_group_name, invited_group_tag, host_group_name, target_group_id) =
-        details;
+    let (event_row, _invited_group, host_group, conflict, target_group_id) = details;
 
     let event_url = format!("{}/event/{}", EVENT_BASE_URL, event_id);
+    let group_color = hex_color_to_decimal(host_group.color.as_ref());
+    let group_color_value = group_color.unwrap_or(0);
+    let host_logo = host_group
+        .logo_url
+        .as_ref()
+        .map(|u| u.as_str())
+        .unwrap_or(EVENTDEKK_LOGO_URL);
 
-    let payload = json!({
-        "content": format!(
-            "Event invitation for **{} ({})**\nYou were invited by **{}**.",
-            invited_group_name, invited_group_tag, host_group_name
-        ),
+    let mut fields = vec![];
+
+    if let Some((conflict_name, conflict_start, conflict_end)) = conflict {
+        fields.push(serde_json::json!({
+            "name": "⚠️ Schedule Conflict",
+            "value": format!(
+                "You have another event: **{}** ({} - {})",
+                conflict_name,
+                format_discord_timestamp(conflict_start),
+                format_discord_timestamp_relative(conflict_end)
+            ),
+            "inline": false
+        }));
+    }
+
+    let payload = serde_json::json!({
+        "username": EVENTDEKK_NAME,
+        "avatar_url": EVENTDEKK_LOGO_URL,
+        "content": "🎉 **New Event Invitation**",
         "embeds": [
             {
-                "title": event_name,
+                "author": {
+                    "name": host_group.name,
+                    "icon_url": host_logo
+                },
+                "title": event_row.name,
                 "url": event_url,
-                "description": "Open event details",
+                "description": format!("<t:{}:F>", event_row.start_time.to_micros_since_unix_epoch() / 1_000_000),
+                "color": group_color_value,
+                "thumbnail": event_row.banner_url.as_ref().map(|url| serde_json::json!({
+                    "url": url
+                })),
+                "fields": fields
             }
         ]
     });
@@ -159,36 +269,50 @@ pub fn respond_to_event_invitation_and_notify(
                     )
                 })?;
 
-            Ok::<(String, String, String, String, u64), String>((
-                event_row.name,
-                responding_group_row.name,
-                responding_group_row.tag,
-                host_group_row.name,
-                host_group_row.group_id,
+            let target_group_id = host_group_row.group_id;
+
+            Ok::<(Event, Group, Group, u64), String>((
+                event_row,
+                responding_group_row,
+                host_group_row,
+                target_group_id,
             ))
         })?;
 
-    let (event_name, responding_group_name, responding_group_tag, host_group_name, target_group_id) =
-        details;
+    let (event_row, responding_group, _host_group, target_group_id) = details;
 
     let event_url = format!("{}/event/{}", EVENT_BASE_URL, event_id);
+    let group_color = hex_color_to_decimal(responding_group.color.as_ref());
+    let group_color_value = group_color.unwrap_or(0);
+    let group_logo = responding_group
+        .logo_url
+        .as_ref()
+        .map(|u| u.as_str())
+        .unwrap_or(EVENTDEKK_LOGO_URL);
 
-    let response_label = match response {
-        ParticipantStatus::Accepted => "accepted",
-        ParticipantStatus::Declined => "declined",
-        ParticipantStatus::Pending => "pending",
+    let (emoji, action) = match response {
+        ParticipantStatus::Accepted => ("✅", "accepted"),
+        ParticipantStatus::Declined => ("❌", "declined"),
+        ParticipantStatus::Pending => ("⏳", "pending"),
     };
 
-    let payload = json!({
-        "content": format!(
-            "Invitation update for **{}**\n**{} ({})** has **{}** your invitation.",
-            host_group_name, responding_group_name, responding_group_tag, response_label
-        ),
+    let payload = serde_json::json!({
+        "username": EVENTDEKK_NAME,
+        "avatar_url": EVENTDEKK_LOGO_URL,
+        "content": format!("{} **{} ({})** has **{}** your invitation", emoji, responding_group.name, responding_group.tag, action),
         "embeds": [
             {
-                "title": event_name,
+                "author": {
+                    "name": format!("{} ({})", responding_group.name, responding_group.tag),
+                    "icon_url": group_logo
+                },
+                "title": event_row.name,
                 "url": event_url,
-                "description": "Open event details",
+                "description": format!("<t:{}:F>", event_row.start_time.to_micros_since_unix_epoch() / 1_000_000),
+                "color": group_color_value,
+                "thumbnail": event_row.banner_url.as_ref().map(|url| serde_json::json!({
+                    "url": url
+                }))
             }
         ]
     });
