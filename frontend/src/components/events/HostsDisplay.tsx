@@ -41,7 +41,10 @@ export function HostsDisplay({
     return (
       <div className="flex items-center gap-1">
         <Avatar className={avatarSize}>
-          <AvatarImage src={hostGroup.logoUrl || ""} alt={hostGroup.name || "Host"} />
+          <AvatarImage
+            src={hostGroup.logoUrl || ""}
+            alt={hostGroup.name || "Host"}
+          />
           <AvatarFallback className={fallbackSize}>
             {hostGroup.tag || hostGroup.name?.substring(0, 2) || "H"}
           </AvatarFallback>
@@ -53,14 +56,34 @@ export function HostsDisplay({
     );
   }
 
-  if (allHostGroups.length <= 2) {
+  if (allHostGroups.length === 1) {
+    const group = allHostGroups[0];
+    return (
+      <div className="flex items-center gap-1 min-w-0">
+        <Avatar className={avatarSize}>
+          <AvatarImage src={group.logoUrl || ""} alt={group.name || "Host"} />
+          <AvatarFallback className={fallbackSize}>
+            {group.tag || group.name?.substring(0, 2) || "H"}
+          </AvatarFallback>
+        </Avatar>
+        <span className={`truncate ${textSize}`}>
+          {group.name || "Unknown"}
+        </span>
+      </div>
+    );
+  }
+
+  if (allHostGroups.length === 2) {
     return (
       <div className="flex items-center gap-1 min-w-0 flex-wrap">
         {allHostGroups.map((group, idx) => (
           <span key={group.groupId} className="flex items-center gap-0.5">
             {idx > 0 && <span className="text-white/40 mx-0.5">×</span>}
             <Avatar className={avatarSize}>
-              <AvatarImage src={group.logoUrl || ""} alt={group.name || "Host"} />
+              <AvatarImage
+                src={group.logoUrl || ""}
+                alt={group.name || "Host"}
+              />
               <AvatarFallback className={fallbackSize}>
                 {group.tag || group.name?.substring(0, 2) || "H"}
               </AvatarFallback>
@@ -78,7 +101,10 @@ export function HostsDisplay({
     <div className="flex items-center gap-1 min-w-0">
       <div className="flex items-center -space-x-1">
         {allHostGroups.map((group) => (
-          <Avatar key={group.groupId} className={`${avatarSize} border border-white/20`}>
+          <Avatar
+            key={group.groupId}
+            className={`${avatarSize} border border-white/20`}
+          >
             <AvatarImage src={group.logoUrl || ""} alt={group.name || "Host"} />
             <AvatarFallback className={fallbackSize}>
               {group.tag || group.name?.substring(0, 2) || "H"}
