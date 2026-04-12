@@ -116,19 +116,30 @@ export const selectUpcomingAttendingEvents = <
 
 export const selectPendingEventInvitations = <
   TParticipant extends { eventId: bigint; status: { tag: string } },
-  TEvent extends { eventId: bigint; startTime: DateLike },
+  TEvent extends {
+eventId: bigint;
+    startTime: DateLike;
+    endTime: DateLike;
+    status?: { tag: string };
+  },
 >(
   events: readonly TEvent[] | undefined,
   eventParticipants: readonly TParticipant[] | undefined
 ): TEvent[] => {
   if (!eventParticipants || !events) return [];
+  const now = new Date().getTime();
   const pendingEventIds = new Set(
     eventParticipants
       .filter((p) => p.status.tag === "Pending")
       .map((p) => p.eventId)
   );
   return [...events]
-    .filter((e) => pendingEventIds.has(e.eventId))
+    .filter(
+      (e) =>
+        pendingEventIds.has(e.eventId) &&
+        e.status?.tag !== "Cancelled"&&
+        toMillis(e.endTime) > now
+    )
     .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
 };
 
@@ -238,6 +249,11 @@ export const useGroupCallsignFilters = (groupId: bigint | null) => {
     if (!filters) return [];
     return [...filters].sort((a, b) => Number(a.filterId - b.filterId));
   }, [filters]);
+};
+
+export const useMyGroupDiscordWebhooks = () => {
+  const [rows] = useTable(tables.my_group_discord_webhooks);
+  return rows ?? [];
 };
 
 export const useAllGroupCallsignFilters = () => {
@@ -381,20 +397,17 @@ export const useFlightSignups = () => {
  * Uses server-side typed join filtering via sub_event.eventId
  */
 export const useFlightSignupsForEvent = (eventId: bigint | null) => {
-  const signupsQuery = useMemo(
-    () => {
-      if (!eventId) {
-        return tables.flight_signup.where((fs) => fs.groupId.eq(0n));
-      }
+  const signupsQuery = useMemo(() => {
+    if (!eventId) {
+      return tables.flight_signup.where((fs) => fs.groupId.eq(0n));
+    }
 
-      return tables.sub_event
-        .where((se) => se.eventId.eq(eventId))
-        .rightSemijoin(tables.flight_signup, (se, fs) =>
-          se.subEventId.eq(fs.subEventId)
-        );
-    },
-    [eventId]
-  );
+    return tables.sub_event
+      .where((se) => se.eventId.eq(eventId))
+      .rightSemijoin(tables.flight_signup, (se, fs) =>
+        se.subEventId.eq(fs.subEventId)
+      );
+  }, [eventId]);
 
   const [rows] = useTable(signupsQuery);
   // This line is needed due to a bug in SpacetimeDB react SDK, do not remove
@@ -504,7 +517,7 @@ export const useGroupRelatedEvents = (groupId: bigint | null) => {
  */
 export const useUpcomingHostedEvents = (groupId: bigint | null) => {
   const now = useMemo(() => Timestamp.fromDate(new Date()), []);
-  
+
   const creatorEventsQuery = useMemo(() => {
     return groupId
       ? tables.event.where((r) =>
@@ -529,18 +542,19 @@ export const useUpcomingHostedEvents = (groupId: bigint | null) => {
     if (!creatorEvents || !eventParticipants || !allEvents) return [];
 
     const hostedEventIds = new Set<bigint>();
-    
+
     creatorEvents.forEach((e) => hostedEventIds.add(e.eventId));
-    
+
     eventParticipants
       .filter((ep) => ep.role.tag === "Host" && ep.status.tag === "Accepted")
       .forEach((ep) => hostedEventIds.add(ep.eventId));
 
     return [...allEvents]
-      .filter((e) =>
-        hostedEventIds.has(e.eventId) &&
-        e.status.tag !== "Cancelled" &&
-        e.endTime.toDate().getTime() > now.toDate().getTime()
+      .filter(
+        (e) =>
+          hostedEventIds.has(e.eventId) &&
+          e.status.tag !== "Cancelled" &&
+          e.endTime.toDate().getTime() > now.toDate().getTime()
       )
       .sort(
         (a, b) =>
@@ -563,20 +577,21 @@ export const useUpcomingAttendingEvents = (groupId: bigint | null) => {
 
   return useMemo(() => {
     if (!eventParticipants || !allEvents) return [];
-    
+
     const now = new Date().getTime();
-    
+
     const hostedEventIds = new Set<bigint>();
     eventParticipants
       .filter((ep) => ep.role.tag === "Host")
       .forEach((ep) => hostedEventIds.add(ep.eventId));
-    
+
     const attendingEventIds = new Set<bigint>();
     eventParticipants
-      .filter((ep) => 
-        ep.role.tag === "Participant" && 
-        ep.status.tag === "Accepted" &&
-        !hostedEventIds.has(ep.eventId)
+      .filter(
+        (ep) =>
+          ep.role.tag === "Participant" &&
+          ep.status.tag === "Accepted" &&
+          !hostedEventIds.has(ep.eventId)
       )
       .forEach((ep) => attendingEventIds.add(ep.eventId));
 
@@ -596,7 +611,7 @@ export const useUpcomingAttendingEvents = (groupId: bigint | null) => {
 
 export const usePastHostedEvents = (groupId: bigint | null) => {
   const now = useMemo(() => Timestamp.fromDate(new Date()), []);
-  
+
   const creatorEventsQuery = useMemo(() => {
     return groupId
       ? tables.event.where((r) =>
@@ -621,33 +636,39 @@ export const usePastHostedEvents = (groupId: bigint | null) => {
     if (!creatorEvents || !eventParticipants || !allEvents) return [];
 
     const hostedEventIds = new Set<bigint>();
-    
+
     creatorEvents.forEach((e) => hostedEventIds.add(e.eventId));
-    
+
     eventParticipants
       .filter((ep) => ep.role.tag === "Host" && ep.status.tag === "Accepted")
       .forEach((ep) => hostedEventIds.add(ep.eventId));
 
     return [...allEvents]
-      .filter((e) =>
-        hostedEventIds.has(e.eventId) &&
-        e.endTime.toDate().getTime() <= now.toDate().getTime()
+      .filter(
+        (e) =>
+          hostedEventIds.has(e.eventId) &&
+          e.endTime.toDate().getTime() <= now.toDate().getTime()
       )
       .sort(
-        (a, b) => b.startTime.toDate().getTime() - a.startTime.toDate().getTime()
+        (a, b) =>
+          b.startTime.toDate().getTime() - a.startTime.toDate().getTime()
       );
   }, [creatorEvents, eventParticipants, allEvents, now]);
 };
 
 export const usePendingEventInvitations = (groupId: bigint | null) => {
+  const now = useMemo(() => Timestamp.fromDate(new Date()), []);
+
   const query = useMemo(
     () =>
       groupId
         ? tables.event_participant
             .where((ep) => ep.groupId.eq(groupId))
-            .rightSemijoin(tables.event, (ep, e) => ep.eventId.eq(e.eventId))
+            .rightSemijoin(tables.event, (ep, e) =>
+              ep.eventId.eq(e.eventId).and(e.endTime.gt(now))
+            )
         : tables.event.where((e) => e.eventId.eq(0n)),
-    [groupId]
+    [groupId, now]
   );
 
   const [events] = useTable(query);
@@ -756,24 +777,16 @@ export const useOnlineAttendingUsers = (eventId: bigint | null) => {
     const attendingGroupIds = new Set<bigint>([event.creatorGroupId]);
 
     eventParticipants
-      .filter(
-        (ep) =>
-          ep.eventId === eventId &&
-          ep.status.tag === "Accepted"
-      )
+      .filter((ep) => ep.eventId === eventId && ep.status.tag === "Accepted")
       .forEach((ep) => attendingGroupIds.add(ep.groupId));
 
     const memberUserIdentities = new Set<string>();
     groupMembers
       .filter((gm) => attendingGroupIds.has(gm.groupId))
-      .forEach((gm) =>
-        memberUserIdentities.add(gm.userIdentity.toHexString())
-      );
+      .forEach((gm) => memberUserIdentities.add(gm.userIdentity.toHexString()));
 
     const onlineUsers = users.filter(
-      (u) =>
-        u.online &&
-        memberUserIdentities.has(u.identity.toHexString())
+      (u) => u.online && memberUserIdentities.has(u.identity.toHexString())
     );
 
     return {

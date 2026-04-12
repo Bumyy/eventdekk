@@ -144,9 +144,9 @@ describe("spacetimeHooks selectors", () => {
 
   it("returns pending invitation events sorted by start time", () => {
     const events = [
-      { eventId: 10n, startTime: time("2026-06-01T11:00:00Z") },
-      { eventId: 9n, startTime: time("2026-06-01T09:00:00Z") },
-      { eventId: 8n, startTime: time("2026-06-01T10:00:00Z") },
+      { eventId: 10n, startTime: time("2026-06-01T11:00:00Z"), endTime: time("2026-06-02T11:00:00Z") },
+      { eventId: 9n, startTime: time("2026-06-01T09:00:00Z"), endTime: time("2026-06-02T09:00:00Z") },
+      { eventId: 8n, startTime: time("2026-06-01T10:00:00Z"), endTime: time("2026-06-02T10:00:00Z") },
     ];
     const eventParticipants = [
       { eventId: 8n, status: { tag: "Pending" } },
