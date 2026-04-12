@@ -350,7 +350,7 @@ const [editSubEventForm, setEditSubEventForm] =
       }
     });
 
-    // Initialize flight details for this sub-event if not already done
+// Initialize flight details for this sub-event if not already done
     const subEvent = subEvents.find((se) => se.subEventId === subEventId);
     if (subEvent) {
       setOwnFlightDetails((prev) => {
@@ -364,6 +364,8 @@ const [editSubEventForm, setEditSubEventForm] =
             route: "",
             customDepartureIcao: "",
             customArrivalIcao: "",
+            departureTime: format(subEvent.scheduledStartTime.toDate(), "yyyy-MM-dd'T'HH:mm"),
+            arrivalTime: format(subEvent.scheduledEndTime.toDate(), "yyyy-MM-dd'T'HH:mm"),
           };
 
           return {

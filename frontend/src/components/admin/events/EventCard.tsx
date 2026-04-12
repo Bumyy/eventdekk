@@ -146,7 +146,7 @@ export function EventCard({
         )
     : false;
 
-return (
+  return (
     <Card
       className={`overflow-hidden p-0 transition-colors ${isUserLeadForThisEvent ? "border-secondary bg-secondary/5" : ""}${hasIncompleteInfo ? " border-amber-500/50" : ""}${onEventClick ? " cursor-pointer" : ""}`}
       onClick={onEventClick}
@@ -166,174 +166,236 @@ return (
           </div>
         )}
 
-<div className="flex-1 p-4">
+        <div className="flex-1 p-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex-1 space-y-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-xl font-semibold">{event.name}</h2>
-            {isDraft && <Badge variant="outline">Draft</Badge>}
-            <Badge variant={event.isInternal ? "default" : "secondary"}>
-              {event.isInternal ? "Internal" : "External"}
-            </Badge>
-            {isHosting && missingLeadsCount > 0 && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertTriangle className="h-3 w-3" />
-                {missingLeadsCount} Missing Lead
-                {missingLeadsCount !== 1 ? "s" : ""}
-              </Badge>
-            )}
-            {isAttending && hasIncompleteInfo && (
-              <Badge variant="destructive" className="flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                Incomplete Details
-              </Badge>
-            )}
-            {isUserLeadForThisEvent && (
-              <Badge
-                variant="default"
-                className="bg-blue-600 text-white flex items-center gap-1"
-              >
-                <UserCircle className="h-3 w-3" />
-                {isHosting ? "You are Lead" : "You are Group Lead"}
-              </Badge>
-            )}
-            {isHosting && (
-              <Badge variant="outline">{subEvents.length} Sub-events</Badge>
-            )}
-            {isAttending && (
-              <>
-                <Badge variant="outline" className="flex items-center gap-1">
-                  <Users className="h-3 w-3" />
-                  Attending
+              <div className="flex flex-wrap items-center gap-2">
+                <h2 className="text-xl font-semibold">{event.name}</h2>
+                {isDraft && <Badge variant="outline">Draft</Badge>}
+                <Badge variant={event.isInternal ? "default" : "secondary"}>
+                  {event.isInternal ? "Internal" : "External"}
                 </Badge>
-                <Badge variant="secondary">
-                  {participatingCount} of {subEvents.length} sub-events
-                </Badge>
-              </>
-            )}
-          </div>
-          <div className="flex items-center gap-3 text-base font-medium">
-            <Calendar className="h-4 w-4 text-muted-foreground" />
-            <span>{formatDateInTimezone(event.startTime, userTimezone)}</span>
-            <span className="text-muted-foreground">•</span>
-            <span>{formatTimeInTimezone(event.startTime, userTimezone)}</span>
-            {isAttending && creatorGroupInfo && (
-              <>
+                {isHosting && missingLeadsCount > 0 && (
+                  <Badge
+                    variant="destructive"
+                    className="flex items-center gap-1"
+                  >
+                    <AlertTriangle className="h-3 w-3" />
+                    {missingLeadsCount} Missing Lead
+                    {missingLeadsCount !== 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {isAttending && hasIncompleteInfo && (
+                  <Badge
+                    variant="destructive"
+                    className="flex items-center gap-1"
+                  >
+                    <AlertCircle className="h-3 w-3" />
+                    Incomplete Details
+                  </Badge>
+                )}
+                {isUserLeadForThisEvent && (
+                  <Badge
+                    variant="default"
+                    className="bg-blue-600 text-white flex items-center gap-1"
+                  >
+                    <UserCircle className="h-3 w-3" />
+                    {isHosting ? "You are Lead" : "You are Group Lead"}
+                  </Badge>
+                )}
+                {isHosting && (
+                  <Badge variant="outline">{subEvents.length} Sub-events</Badge>
+                )}
+                {isAttending && (
+                  <>
+                    <Badge
+                      variant="outline"
+                      className="flex items-center gap-1"
+                    >
+                      <Users className="h-3 w-3" />
+                      Attending
+                    </Badge>
+                    <Badge variant="secondary">
+                      {participatingCount} of {subEvents.length} sub-events
+                    </Badge>
+                  </>
+                )}
+              </div>
+              <div className="flex items-center gap-3 text-base font-medium">
+                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <span>
+                  {formatDateInTimezone(event.startTime, userTimezone)}
+                </span>
                 <span className="text-muted-foreground">•</span>
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-5 w-5">
-                    <AvatarImage
-                      src={creatorGroupInfo.logo}
-                      alt={creatorGroupInfo.name}
-                    />
-                    <AvatarFallback className="text-xs">
-                      {creatorGroupInfo.tag ||
-                        creatorGroupInfo.name.substring(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span>{creatorGroupInfo.name}</span>
+                <span>
+                  {formatTimeInTimezone(event.startTime, userTimezone)}
+                </span>
+                {isAttending && creatorGroupInfo && (
+                  <>
+                    <span className="text-muted-foreground">•</span>
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-5 w-5">
+                        <AvatarImage
+                          src={creatorGroupInfo.logo}
+                          alt={creatorGroupInfo.name}
+                        />
+                        <AvatarFallback className="text-xs">
+                          {creatorGroupInfo.tag ||
+                            creatorGroupInfo.name.substring(0, 2)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span>{creatorGroupInfo.name}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+              {isAttending &&
+                flightSignups.length > 0 &&
+                subEvents.length === 1 && (
+                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                    {flightSignups[0].aircraftType && (
+                      <div className="flex items-center gap-1">
+                        <Plane className="h-3 w-3" />
+                        <span>{flightSignups[0].aircraftType}</span>
+                      </div>
+                    )}
+                    {flightSignups[0].callsign && (
+                      <>
+                        <span>•</span>
+                        <span>{flightSignups[0].callsign}</span>
+                      </>
+                    )}
+                    {subEvents[0].groupFlightDepartureIcao &&
+                      subEvents[0].groupFlightArrivalIcao && (
+                        <>
+                          <span>•</span>
+                          <span>
+                            {subEvents[0].groupFlightDepartureIcao} →{" "}
+                            {subEvents[0].groupFlightArrivalIcao}
+                          </span>
+                        </>
+                      )}
+                  </div>
+                )}
+              {isHosting && subEvents.length === 1 && (
+                <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                  {flightSignups[0]?.aircraftType && (
+                    <>
+                      <Plane className="h-3 w-3" />
+                      <span>{flightSignups[0].aircraftType}</span>
+                    </>
+                  )}
+                  {flightSignups[0]?.callsign && (
+                    <>
+                      <span>•</span>
+                      <span>{flightSignups[0].callsign}</span>
+                    </>
+                  )}
+                  {subEvents[0].subEventType.tag === "GroupFlight" &&
+                    subEvents[0].groupFlightDepartureIcao &&
+                    subEvents[0].groupFlightArrivalIcao && (
+                      <>
+                        {(flightSignups[0]?.aircraftType ||
+                          flightSignups[0]?.callsign) && <span>•</span>}
+                        <Plane className="h-3 w-3" />
+                        <span>
+                          {subEvents[0].groupFlightDepartureIcao} →{" "}
+                          {subEvents[0].groupFlightArrivalIcao}
+                        </span>
+                      </>
+                    )}
+                  {subEvents[0].subEventType.tag === "FlyIn" &&
+                    subEvents[0].hubIcao && (
+                      <>
+                        <MapPin className="h-3 w-3" />
+                        <span>Fly-in to {subEvents[0].hubIcao}</span>
+                      </>
+                    )}
+                  {subEvents[0].subEventType.tag === "FlyOut" &&
+                    subEvents[0].hubIcao && (
+                      <>
+                        <Plane className="h-3 w-3" />
+                        <span>Fly-out from {subEvents[0].hubIcao}</span>
+                      </>
+                    )}
                 </div>
-              </>
-            )}
-          </div>
-          {isAttending && flightSignups.length > 0 && subEvents.length === 1 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {flightSignups[0].aircraftType && (
-                <div className="flex items-center gap-1">
-                  <Plane className="h-3 w-3" />
-                  <span>{flightSignups[0].aircraftType}</span>
-                </div>
               )}
-              {flightSignups[0].callsign && (
-                <>
-                  <span>•</span>
-                  <span>{flightSignups[0].callsign}</span>
-                </>
-              )}
-              {subEvents[0].groupFlightDepartureIcao && subEvents[0].groupFlightArrivalIcao && (
-                <>
-                  <span>•</span>
-                  <span>{subEvents[0].groupFlightDepartureIcao} → {subEvents[0].groupFlightArrivalIcao}</span>
-                </>
-              )}
-            </div>
-          )}
-          {isHosting && subEvents.length === 1 && (
-            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              {subEvents[0].subEventType.tag === "GroupFlight" && subEvents[0].groupFlightDepartureIcao && subEvents[0].groupFlightArrivalIcao && (
-                <>
-                  <Plane className="h-3 w-3" />
-                  <span>{subEvents[0].groupFlightDepartureIcao} → {subEvents[0].groupFlightArrivalIcao}</span>
-                </>
-              )}
-              {subEvents[0].subEventType.tag === "FlyIn" && subEvents[0].hubIcao && (
-                <>
-                  <MapPin className="h-3 w-3" />
-                  <span>Fly-in to {subEvents[0].hubIcao}</span>
-                </>
-              )}
-              {subEvents[0].subEventType.tag === "FlyOut" && subEvents[0].hubIcao && (
-                <>
-                  <Plane className="h-3 w-3" />
-                  <span>Fly-out from {subEvents[0].hubIcao}</span>
-                </>
-              )}
-            </div>
-          )}
-          <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
-            {event.description}
-          </p>
+              <p className="text-muted-foreground overflow-hidden text-ellipsis [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                {event.description}
+              </p>
             </div>
             <div className="flex shrink-0 flex-wrap items-start justify-end gap-2">
-{onToggleExpand && (
-            <Button variant="ghost" size="icon" onClick={(e) => {e.stopPropagation(); onToggleExpand();}}>
-              {expanded ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-            </Button>
-          )}
-          {isHosting && (
-            <>
-              {isDraft && onPublish && (
-                <Button variant="default" onClick={(e) => {e.stopPropagation(); onPublish();}}>
-                  <Send className="h-4 w-4 mr-1" />
-                  Publish
+              {onToggleExpand && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand();
+                  }}
+                >
+                  {expanded ? (
+                    <ChevronUp className="h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4" />
+                  )}
                 </Button>
               )}
-              {onManage && (
+              {isHosting && (
+                <>
+                  {isDraft && onPublish && (
+                    <Button
+                      variant="default"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onPublish();
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-1" />
+                      Publish
+                    </Button>
+                  )}
+                  {onManage && (
+                    <Button
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onManage();
+                      }}
+                      aria-label="Manage event"
+                    >
+                      <Settings className="h-4 w-4 sm:hidden" />
+                      <span className="hidden sm:inline">Manage</span>
+                    </Button>
+                  )}
+                  {onDelete && (
+                    <Button
+                      variant="destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete();
+                      }}
+                      aria-label="Delete event"
+                    >
+                      <Trash2 className="h-4 w-4 sm:hidden" />
+                      <span className="hidden sm:inline">Delete</span>
+                    </Button>
+                  )}
+                </>
+              )}
+              {isAttending && onManageParticipation && (
                 <Button
                   variant="outline"
-                  onClick={(e) => {e.stopPropagation(); onManage();}}
-                  aria-label="Manage event"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageParticipation();
+                  }}
+                  aria-label="Manage participation"
                 >
                   <Settings className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">Manage</span>
+                  <span className="hidden sm:inline">Manage Participation</span>
                 </Button>
               )}
-              {onDelete && (
-                <Button
-                  variant="destructive"
-                  onClick={(e) => {e.stopPropagation(); onDelete();}}
-                  aria-label="Delete event"
-                >
-                  <Trash2 className="h-4 w-4 sm:hidden" />
-                  <span className="hidden sm:inline">Delete</span>
-                </Button>
-              )}
-            </>
-          )}
-          {isAttending && onManageParticipation && (
-            <Button
-              variant="outline"
-              onClick={(e) => {e.stopPropagation(); onManageParticipation();}}
-              aria-label="Manage participation"
-            >
-              <Settings className="h-4 w-4 sm:hidden" />
-              <span className="hidden sm:inline">Manage Participation</span>
-            </Button>
-          )}
             </div>
           </div>
         </div>
@@ -412,7 +474,9 @@ return (
                                 alt={signupLeadUser.displayName || "Lead"}
                               />
                               <AvatarFallback className="text-[8px]">
-                                {signupLeadUser.displayName?.substring(0, 2).toUpperCase() || "?"}
+                                {signupLeadUser.displayName
+                                  ?.substring(0, 2)
+                                  .toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
                           )}
@@ -426,11 +490,15 @@ return (
                           ) : (
                             <Avatar className="h-4 w-4">
                               <AvatarImage
-                                src={subEventLeadUser?.ifcProfileUrl || undefined}
+                                src={
+                                  subEventLeadUser?.ifcProfileUrl || undefined
+                                }
                                 alt={subEventLeadUser?.displayName || "Lead"}
                               />
                               <AvatarFallback className="text-[8px]">
-                                {subEventLeadUser?.displayName?.substring(0, 2).toUpperCase() || "?"}
+                                {subEventLeadUser?.displayName
+                                  ?.substring(0, 2)
+                                  .toUpperCase() || "?"}
                               </AvatarFallback>
                             </Avatar>
                           )}
@@ -456,7 +524,9 @@ return (
                               alt={subEventLeadUser?.displayName || "Lead"}
                             />
                             <AvatarFallback className="text-[8px]">
-                              {subEventLeadUser?.displayName?.substring(0, 2).toUpperCase() || "?"}
+                              {subEventLeadUser?.displayName
+                                ?.substring(0, 2)
+                                .toUpperCase() || "?"}
                             </AvatarFallback>
                           </Avatar>
                         )}

@@ -281,6 +281,8 @@ export function EventInvitationDialog({
             route: "",
             customDepartureIcao: "",
             customArrivalIcao: "",
+            departureTime: subEvent.scheduledStartTime.toDate().toISOString(),
+            arrivalTime: subEvent.scheduledEndTime.toDate().toISOString(),
           };
 
           return {

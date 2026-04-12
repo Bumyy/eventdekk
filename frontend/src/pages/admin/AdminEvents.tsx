@@ -303,7 +303,7 @@ export default function AdminEvents() {
     navigate(`/admin/groups/${groupId}/events/${eventId}/edit`);
   };
 
-const handleManageParticipation = (event: Event) => {
+  const handleManageParticipation = (event: Event) => {
     const invitationData = {
       eventId: event.eventId,
       groupId: groupIdBigInt,
@@ -352,7 +352,7 @@ const handleManageParticipation = (event: Event) => {
     setPreFilledFlightDetails(flightDetailsFromSignups);
     setSelectedEventForManagement(invitationData);
     setShowManagementDialog(true);
-};
+  };
 
   const handleEventClick = (event: Event) => {
     setSelectedEvent(event);

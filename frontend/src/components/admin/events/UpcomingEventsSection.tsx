@@ -1,5 +1,11 @@
 import { EventCard } from "./EventCard";
-import { Event, Group, SubEvent, FlightSignup, User } from "@/module_bindings/types";
+import {
+  Event,
+  Group,
+  SubEvent,
+  FlightSignup,
+  User,
+} from "@/module_bindings/types";
 
 interface UpcomingEventsSectionProps {
   upcomingEvents: Event[];
@@ -21,7 +27,10 @@ interface UpcomingEventsSectionProps {
   onEventClick?: (event: Event) => void;
 }
 
-function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): boolean {
+function hasIncompleteFlightDetails(
+  signup: FlightSignup,
+  subEvent: SubEvent
+): boolean {
   const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
   const isFlyIn = subEvent.subEventType.tag === "FlyIn";
   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
@@ -31,9 +40,13 @@ function hasIncompleteFlightDetails(signup: FlightSignup, subEvent: SubEvent): b
 
   if (!signup.desiredDepartureTime || !signup.desiredArrivalTime) return true;
 
-  if (isFlyIn && (!signup.departureIcao || signup.departureIcao.trim() === "")) return true;
-  if (isFlyOut && (!signup.arrivalIcao || signup.arrivalIcao.trim() === "")) return true;if (!isGroupFlight) {
-    if (!signup.departureIcao || signup.departureIcao.trim() === "") return true;
+  if (isFlyIn && (!signup.departureIcao || signup.departureIcao.trim() === ""))
+    return true;
+  if (isFlyOut && (!signup.arrivalIcao || signup.arrivalIcao.trim() === ""))
+    return true;
+  if (!isGroupFlight) {
+    if (!signup.departureIcao || signup.departureIcao.trim() === "")
+      return true;
     if (!signup.arrivalIcao || signup.arrivalIcao.trim() === "") return true;
   }
 
@@ -51,7 +64,10 @@ interface SignupIssues {
   missingArrivalIcao: boolean;
 }
 
-function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues {
+function getSignupIssues(
+  signup: FlightSignup,
+  subEvent: SubEvent
+): SignupIssues {
   const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
   const isFlyIn = subEvent.subEventType.tag === "FlyIn";
   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
@@ -88,7 +104,10 @@ function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues
     issues.missingArrivalTime = true;
     issues.hasIssues = true;
   }
-  if (isFlyIn && (!signup.departureIcao || signup.departureIcao.trim() === "")) {
+  if (
+    isFlyIn &&
+    (!signup.departureIcao || signup.departureIcao.trim() === "")
+  ) {
     issues.missingDepartureIcao = true;
     issues.hasIssues = true;
   }
@@ -96,7 +115,7 @@ function getSignupIssues(signup: FlightSignup, subEvent: SubEvent): SignupIssues
     issues.missingArrivalIcao = true;
     issues.hasIssues = true;
   }
-  if (!isGroupFlight && !isFlyIn &&!isFlyOut) {
+  if (!isGroupFlight && !isFlyIn && !isFlyOut) {
     if (!signup.departureIcao || signup.departureIcao.trim() === "") {
       issues.missingDepartureIcao = true;
       issues.hasIssues = true;
@@ -149,11 +168,22 @@ export function UpcomingEventsSection({
               const eventSubEvents = subEvents.filter(
                 (se) => se.eventId === event.eventId
               );
-return (
+
+              const groupSignupsForEvent =
+                flightSignups?.filter(
+                  (signup) =>
+                    signup.groupId === groupId &&
+                    eventSubEvents.some(
+                      (se) => se.subEventId === signup.subEventId
+                    )
+                ) || [];
+
+              return (
                 <EventCard
                   key={event.eventId.toString()}
                   event={event}
                   subEvents={eventSubEvents}
+                  flightSignups={groupSignupsForEvent}
                   userTimezone={userTimezone}
                   isHosting={true}
                   creatorGroupInfo={getGroupInfo(event.creatorGroupId)}
@@ -187,13 +217,14 @@ return (
                 (se) => se.eventId === event.eventId
               );
 
-              const groupSignupsForEvent = flightSignups?.filter(
-                (signup) =>
-                  signup.groupId === groupId &&
-                  eventSubEvents.some(
-                    (se) => se.subEventId === signup.subEventId
-                  )
-              ) || [];
+              const groupSignupsForEvent =
+                flightSignups?.filter(
+                  (signup) =>
+                    signup.groupId === groupId &&
+                    eventSubEvents.some(
+                      (se) => se.subEventId === signup.subEventId
+                    )
+                ) || [];
 
               const participatingSubEventIds = groupSignupsForEvent.map(
                 (signup) => signup.subEventId
@@ -208,7 +239,9 @@ return (
                 const subEvent = eventSubEvents.find(
                   (se) => se.subEventId === signup.subEventId
                 );
-                return subEvent ? hasIncompleteFlightDetails(signup, subEvent) : false;
+                return subEvent
+                  ? hasIncompleteFlightDetails(signup, subEvent)
+                  : false;
               });
 
               const creatorGroupInfo = getGroupInfo(event.creatorGroupId);
@@ -224,7 +257,7 @@ return (
                 };
               });
 
-return (
+              return (
                 <EventCard
                   key={event.eventId.toString()}
                   event={event}
