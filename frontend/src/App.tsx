@@ -1,4 +1,10 @@
-import React, { useMemo, useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+} from "react";
 import { BrowserRouter as Router, Routes, Route, Link } from "react-router-dom";
 import { ThemeProvider } from "./components/ThemeProvider";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
@@ -43,6 +49,7 @@ import AdminGroupSettings from "@/pages/admin/AdminGroupSettings";
 import GroupPlanner from "@/pages/admin/GroupPlanner";
 import ApplyForGroup from "@/pages/admin/ApplyForGroup";
 import SuperAdminRoute from "@/pages/admin/SuperAdminRoute";
+import GroupPermissionRoute from "@/pages/admin/GroupPermissionRoute";
 
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   const { sdbToken, isLoading, logout } = useAuth();
@@ -58,7 +65,8 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   activeNonceRef.current = reconnectNonce;
 
   // Use auth token if available, otherwise fall back to anonymous token
-  const effectiveToken = sdbToken || sessionStorage.getItem("eventdekk_anonymous_token");
+  const effectiveToken =
+    sdbToken || sessionStorage.getItem("eventdekk_anonymous_token");
 
   const clearTimer = () => {
     if (timerRef.current !== null) {
@@ -117,9 +125,11 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
     };
   }, [triggerReconnect]);
 
-const connectionBuilder = useMemo(() => {
+  const connectionBuilder = useMemo(() => {
     const instanceNonce = reconnectNonce;
-    const url = new URL(import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000");
+    const url = new URL(
+      import.meta.env.VITE_SPACETIME_URL || "ws://localhost:3000"
+    );
     url.searchParams.set("reconnect", String(instanceNonce));
 
     return DbConnection.builder()
@@ -168,7 +178,7 @@ const connectionBuilder = useMemo(() => {
       });
   }, [effectiveToken, reconnectNonce, logout, triggerReconnect]);
 
-if (isLoading) {
+  if (isLoading) {
     return <AuthLoading />;
   }
 
@@ -176,7 +186,7 @@ if (isLoading) {
 
   return (
     <SpacetimeDBProvider
-      key={`${reconnectNonce}-${effectiveToken || 'anon'}`}
+      key={`${reconnectNonce}-${effectiveToken || "anon"}`}
       connectionBuilder={connectionBuilder}
     >
       <OAuthProfileSync>
@@ -200,7 +210,7 @@ function App() {
           <SpacetimeWrapper>
             <Toaster richColors />
 
-<div className="relative isolate min-h-screen bg-background text-foreground">
+            <div className="relative isolate min-h-screen bg-background text-foreground">
               <AppBackground />
               <Navigation />
 
@@ -260,11 +270,29 @@ function App() {
                       element={<AdminDashboard />}
                     />
                     <Route path="planner/:groupId" element={<GroupPlanner />} />
-                    <Route path="events/:groupId" element={<AdminEvents />} />
-                    <Route path="members/:groupId" element={<AdminMembers />} />
+                    <Route
+                      path="events/:groupId"
+                      element={
+                        <GroupPermissionRoute requiredPermission="Staff">
+                          <AdminEvents />
+                        </GroupPermissionRoute>
+                      }
+                    />
+                    <Route
+                      path="members/:groupId"
+                      element={
+                        <GroupPermissionRoute requiredPermission="Ceo">
+                          <AdminMembers />
+                        </GroupPermissionRoute>
+                      }
+                    />
                     <Route
                       path="settings/:groupId"
-                      element={<AdminGroupSettings />}
+                      element={
+                        <GroupPermissionRoute requiredPermission="Ceo">
+                          <AdminGroupSettings />
+                        </GroupPermissionRoute>
+                      }
                     />
                     <Route
                       path="groups/:groupId/events/:eventId/edit"
