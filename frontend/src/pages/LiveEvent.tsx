@@ -220,7 +220,7 @@ const LiveEvent = () => {
         {/* Left side - Map Section */}
         <div className="w-2/3 flex flex-col h-full border-r">
           <div className="px-4 py-5 border-b flex justify-between items-center">
-            <h1 className="text-xl font-bold">{event.name}</h1>
+            <h1 className="text-xl font-bold">{event.name} <span className="text-sm font-normal text-muted-foreground">({filteredFlights.length} pilot{filteredFlights.length !== 1 ? "s" : ""})</span></h1>
             {flightLoadingError && (
               <div className="text-xs text-destructive">
                 Flight data error: {flightLoadingError}
@@ -264,7 +264,7 @@ const LiveEvent = () => {
 
         {/* Event name overlay */}
         <div className="absolute top-3 left-3 z-10 max-w-[70%] rounded-md bg-background/70 backdrop-blur-sm px-3 py-2 pointer-events-none">
-          <h1 className="text-sm font-semibold truncate">{event.name}</h1>
+          <h1 className="text-sm font-semibold truncate">{event.name} <span className="text-xs font-normal text-muted-foreground">({filteredFlights.length})</span></h1>
           {flightLoadingError && (
             <div className="text-[10px] text-destructive mt-1 truncate">
               {flightLoadingError}
