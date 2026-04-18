@@ -17,7 +17,10 @@ const {
     useSubEvents: vi.fn(() => []),
     useGroups: vi.fn(() => []),
     useFlightSignups: vi.fn(() => []),
-    useGroupMembersForGroup: vi.fn(() => []),
+    useGroupLeadMembersForGroup: vi.fn(() => []),
+    useEventParticipantsForEvent: vi.fn(() => []),
+    useGroupMemberships: vi.fn(() => []),
+    useGroupById: vi.fn(() => null),
   },
 }));
 
@@ -58,6 +61,7 @@ vi.mock("@/components/admin/events", () => ({
   EventDetailsFormCard: () => <div>EventDetailsFormCard</div>,
   SubEventsManagementCard: () => <div>SubEventsManagementCard</div>,
   InviteGroupsCard: () => <div>InviteGroupsCard</div>,
+  ManageParticipantsCard: () => <div>ManageParticipantsCard</div>,
   ManageOwnFlightsCard: () => <div>ManageOwnFlightsCard</div>,
 }));
 
@@ -100,7 +104,7 @@ describe("EditEvent page", () => {
     });
   });
 
-  it("renders draft action and saves event", async () => {
+  it("renders save action and saves event", async () => {
     mockHooks.useEvents.mockReturnValue([
       {
         eventId: 123n,
@@ -119,10 +123,9 @@ describe("EditEvent page", () => {
 
     render(<EditEvent />);
 
-    expect(await screen.findByText("Publish Event")).toBeInTheDocument();
-    expect(screen.getByText("Save as Draft")).toBeInTheDocument();
+    expect(await screen.findByText("Save")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("Save as Draft"));
+    fireEvent.click(screen.getByText("Save"));
 
     await waitFor(() => expect(mockUpdateEvent).toHaveBeenCalledTimes(1));
     const payload = mockUpdateEvent.mock.calls[0][0];

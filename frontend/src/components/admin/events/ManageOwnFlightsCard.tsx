@@ -16,7 +16,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -39,13 +38,9 @@ import {
 } from "lucide-react";
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
 import { useEditEventContext } from "./EditEventContext";
-import { useEffect, useState } from "react";
-import {
-  AircraftLiveryPicker,
-  type AircraftLiveryValue,
-} from "@/components/AircraftLiveryPicker";
-
-const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+import { useState } from "react";
+import { SubEventFlightForm } from "@/components/events/SubEventFlightForm";
+import type { AircraftLiveryValue } from "@/components/AircraftLiveryPicker";
 
 export function ManageOwnFlightsCard() {
   const {
@@ -216,271 +211,53 @@ export function ManageOwnFlightsCard() {
 
                           {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
-                              <h4 className="text-sm font-medium">
-                                Flight Details
-                              </h4>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`own-callsign-${subEvent.subEventId}`}
-                                  >
-                                    Callsign
-                                  </Label>
-                                  <Input
-                                    id={`own-callsign-${subEvent.subEventId}`}
-                                    value={
-                                      ownFlightDetails[
-                                        subEvent.subEventId.toString()
-                                      ]?.callsign || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "callsign",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="e.g. QFA123"
-                                    disabled={isSubmittingFlights}
-                                    aria-invalid={!!callsignError}
-                                  />
-                                  {callsignError && (
-                                    <p className="text-xs text-destructive mt-1">
-                                      {callsignError}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <AircraftLiveryPicker
-                                    id={`own-aircraft-${subEvent.subEventId}`}
-                                    value={{
-                                      aircraftName:
-                                        ownFlightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.aircraftType || "",
-                                      liveryId:
-                                        ownFlightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.liveryId || "",
-                                    }}
-                                    onChange={(value) => {
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "aircraftType",
-                                        value.aircraftName
-                                      );
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "liveryId",
-                                        value.liveryId
-                                      );
-                                    }}
-                                    disabled={isSubmittingFlights}
-                                  />
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`own-departure-icao-${subEvent.subEventId}`}
-                                  >
-                                    {isGroupFlight
-                                      ? "Departure Airport (Fixed)"
-                                      : isFlyOut
-                                        ? "Departure Airport (Hub)"
-                                        : "Departure Airport"}
-                                  </Label>
-                                  <Input
-                                    id={`own-departure-icao-${subEvent.subEventId}`}
-                                    value={
-                                      isGroupFlight
-                                        ? subEvent.groupFlightDepartureIcao ||
-                                          ""
-                                        : isFlyOut
-                                          ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customDepartureIcao || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "customDepartureIcao",
-                                        limitIcaoLength(e.target.value)
-                                      )
-                                    }
-                                    placeholder={
-                                      isGroupFlight || isFlyOut
-                                        ? isGroupFlight
-                                          ? subEvent.groupFlightDepartureIcao ||
-                                            "Fixed departure"
-                                          : subEvent.hubIcao ||
-                                            "Fixed hub departure"
-                                        : "Enter departure ICAO"
-                                    }
-                                    disabled={
-                                      isSubmittingFlights ||
-                                      isGroupFlight ||
-                                      isFlyOut
-                                    }
-                                    maxLength={4}
-                                  />
-                                  {(isGroupFlight || isFlyOut) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Departure is fixed to:{" "}
-                                      {isGroupFlight
-                                        ? subEvent.groupFlightDepartureIcao
-                                        : subEvent.hubIcao}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`own-arrival-icao-${subEvent.subEventId}`}
-                                  >
-                                    {isGroupFlight
-                                      ? "Arrival Airport (Fixed)"
-                                      : isFlyIn
-                                        ? "Arrival Airport (Hub)"
-                                        : "Arrival Airport"}
-                                  </Label>
-                                  <Input
-                                    id={`own-arrival-icao-${subEvent.subEventId}`}
-                                    value={
-                                      isGroupFlight
-                                        ? subEvent.groupFlightArrivalIcao || ""
-                                        : isFlyIn
-                                          ? subEvent.hubIcao || ""
-                                          : ownFlightDetails[
-                                              subEvent.subEventId.toString()
-                                            ]?.customArrivalIcao || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "customArrivalIcao",
-                                        limitIcaoLength(e.target.value)
-                                      )
-                                    }
-                                    placeholder={
-                                      isGroupFlight || isFlyIn
-                                        ? isGroupFlight
-                                          ? subEvent.groupFlightArrivalIcao ||
-                                            "Fixed arrival"
-                                          : subEvent.hubIcao ||
-                                            "Fixed hub arrival"
-                                        : "Enter arrival ICAO"
-                                    }
-                                    disabled={
-                                      isSubmittingFlights ||
-                                      isGroupFlight ||
-                                      isFlyIn
-                                    }
-                                    maxLength={4}
-                                  />
-                                  {(isGroupFlight || isFlyIn) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Arrival is fixed to:{" "}
-                                      {isGroupFlight
-                                        ? subEvent.groupFlightArrivalIcao
-                                        : subEvent.hubIcao}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label
-                                  htmlFor={`own-route-${subEvent.subEventId}`}
-                                >
-                                  {isGroupFlight
-                                    ? "Route (Based on group flight)"
-                                    : "Your Flight Route"}
-                                </Label>
-                                <Input
-                                  id={`own-route-${subEvent.subEventId}`}
-                                  value={
-                                    ownFlightDetails[
-                                      subEvent.subEventId.toString()
-                                    ]?.route || ""
-                                  }
-                                  onChange={(e) =>
-                                    updateOwnFlightDetail(
-                                      subEvent.subEventId.toString(),
-                                      "route",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder={
-                                    isGroupFlight
-                                      ? subEvent.groupFlightRoute ||
-                                        "Using planned group flight route"
-                                      : "Enter your flight route"
-                                  }
-                                  disabled={isSubmittingFlights}
-                                />
-                                {isGroupFlight && subEvent.groupFlightRoute && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Planned route: {subEvent.groupFlightRoute}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`own-departure-${subEvent.subEventId}`}
-                                  >
-                                    Planned Departure Time
-                                  </Label>
-                                  <Input
-                                    id={`own-departure-${subEvent.subEventId}`}
-                                    type="datetime-local"
-                                    value={
-                                      ownFlightDetails[
-                                        subEvent.subEventId.toString()
-                                      ]?.departureTime || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "departureTime",
-                                        e.target.value
-                                      )
-                                    }
-                                    disabled={isSubmittingFlights}
-                                  />
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`own-arrival-${subEvent.subEventId}`}
-                                  >
-                                    Planned Arrival Time
-                                  </Label>
-                                  <Input
-                                    id={`own-arrival-${subEvent.subEventId}`}
-                                    type="datetime-local"
-                                    value={
-                                      ownFlightDetails[
-                                        subEvent.subEventId.toString()
-                                      ]?.arrivalTime || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateOwnFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "arrivalTime",
-                                        e.target.value
-                                      )
-                                    }
-                                    disabled={isSubmittingFlights}
-                                  />
-                                </div>
-                              </div>
+                              <SubEventFlightForm
+                                subEvent={subEvent}
+                                callsign={callsignValue}
+                                callsignError={callsignError}
+                                aircraftType={ownFlightDetails[subEvent.subEventId.toString()]?.aircraftType || ""}
+                                liveryId={ownFlightDetails[subEvent.subEventId.toString()]?.liveryId || ""}
+                                departureIcao={
+                                  isGroupFlight
+                                    ? subEvent.groupFlightDepartureIcao || ""
+                                    : isFlyOut
+                                      ? subEvent.hubIcao || ""
+                                      : ownFlightDetails[subEvent.subEventId.toString()]?.customDepartureIcao || ""
+                                }
+                                arrivalIcao={
+                                  isGroupFlight
+                                    ? subEvent.groupFlightArrivalIcao || ""
+                                    : isFlyIn
+                                      ? subEvent.hubIcao || ""
+                                      : ownFlightDetails[subEvent.subEventId.toString()]?.customArrivalIcao || ""
+                                }
+                                route={ownFlightDetails[subEvent.subEventId.toString()]?.route || ""}
+                                departureTime={ownFlightDetails[subEvent.subEventId.toString()]?.departureTime}
+                                arrivalTime={ownFlightDetails[subEvent.subEventId.toString()]?.arrivalTime}
+                                onCallsignChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "callsign", value)
+                                }
+                                onAircraftChange={(value: AircraftLiveryValue) => {
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "aircraftType", value.aircraftName);
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "liveryId", value.liveryId);
+                                }}
+                                onDepartureIcaoChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "customDepartureIcao", value)
+                                }
+                                onArrivalIcaoChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "customArrivalIcao", value)
+                                }
+                                onRouteChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "route", value)
+                                }
+                                onDepartureTimeChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "departureTime", value || "")
+                                }
+                                onArrivalTimeChange={(value) =>
+                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "arrivalTime", value || "")
+                                }
+                                disabled={isSubmittingFlights}
+                              />
                             </div>
                           )}
                         </div>

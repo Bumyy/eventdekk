@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { format } from "date-fns";
 import {
   Dialog,
   DialogContent,
@@ -11,18 +12,9 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { format } from "date-fns";
-import { toast } from "sonner";
 import {
   Calendar,
   Clock,
@@ -34,12 +26,9 @@ import {
   CalendarX,
 } from "lucide-react";
 import { SubEventType, Event, SubEvent } from "@/module_bindings/types";
-import { DateTimePicker } from "@/components/ui/datetime-picker";
 import { useGroupLeadMembersForGroup } from "@/hooks/spacetimeHooks";
-import {
-  AircraftLiveryPicker,
-  type AircraftLiveryValue,
-} from "@/components/AircraftLiveryPicker";
+import { SubEventFlightForm } from "@/components/events/SubEventFlightForm";
+import type { AircraftLiveryValue } from "@/components/AircraftLiveryPicker";
 
 interface GroupAvailabilityData {
   hostedEvents: Event[];
@@ -696,7 +685,7 @@ export function EventInvitationDialog({
                               return null;
                             })()}
 
-                          {isSelected && (
+{isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="space-y-1 md:col-span-2">
@@ -741,265 +730,43 @@ export function EventInvitationDialog({
                                     </SelectContent>
                                   </Select>
                                 </div>
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`callsign-${subEvent.subEventId}`}
-                                  >
-                                    Callsign
-                                  </Label>
-                                  <Input
-                                    id={`callsign-${subEvent.subEventId}`}
-                                    value={
-                                      flightDetails[
-                                        subEvent.subEventId.toString()
-                                      ]?.callsign || ""
-                                    }
-                                    onChange={(e) =>
-                                      updateFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "callsign",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder="e.g. QFA123"
-                                    disabled={isProcessing}
-                                    aria-invalid={!!callsignError}
-                                  />
-                                  {callsignError && (
-                                    <p className="text-xs text-destructive mt-1">
-                                      {callsignError}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <AircraftLiveryPicker
-                                    id={`aircraft-${subEvent.subEventId}`}
-                                    value={{
-                                      aircraftName:
-                                        flightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.aircraftType || "",
-                                      liveryId:
-                                        flightDetails[
-                                          subEvent.subEventId.toString()
-                                        ]?.liveryId || "",
-                                    }}
-                                    onChange={(value) => {
-                                      updateFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "aircraftType",
-                                        value.aircraftName
-                                      );
-                                      updateFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "liveryId",
-                                        value.liveryId
-                                      );
-                                    }}
-                                    disabled={isProcessing}
-                                  />
-                                </div>
                               </div>
 
-                              {/* Airport Details */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`departure-icao-${subEvent.subEventId}`}
-                                  >
-                                    {isGroupFlight
-                                      ? "Departure Airport (Fixed)"
-                                      : isFlyOut
-                                        ? "Departure Airport (Hub)"
-                                        : "Departure Airport"}
-                                  </Label>
-                                  <Input
-                                    id={`departure-icao-${subEvent.subEventId}`}
-                                    value={
-                                      isGroupFlight
-                                        ? subEvent.groupFlightDepartureIcao ||
-                                          ""
-                                        : isFlyOut
-                                          ? subEvent.hubIcao || ""
-                                          : customDepartureIcao
-                                    }
-                                    onChange={(e) =>
-                                      updateFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "customDepartureIcao",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder={
-                                      isGroupFlight || isFlyOut
-                                        ? isGroupFlight
-                                          ? subEvent.groupFlightDepartureIcao ||
-                                            "Fixed departure"
-                                          : subEvent.hubIcao ||
-                                            "Fixed hub departure"
-                                        : "Enter departure ICAO"
-                                    }
-                                    disabled={
-                                      isProcessing || isGroupFlight || isFlyOut
-                                    }
-                                    maxLength={4}
-                                    aria-invalid={!!departureIcaoError}
-                                  />
-                                  {departureIcaoError && (
-                                    <p className="text-xs text-destructive mt-1">
-                                      {departureIcaoError}
-                                    </p>
-                                  )}
-                                  {(isGroupFlight || isFlyOut) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Departure is fixed to:{" "}
-                                      {isGroupFlight
-                                        ? subEvent.groupFlightDepartureIcao
-                                        : subEvent.hubIcao}
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="space-y-1">
-                                  <Label
-                                    htmlFor={`arrival-icao-${subEvent.subEventId}`}
-                                  >
-                                    {isGroupFlight
-                                      ? "Arrival Airport (Fixed)"
-                                      : isFlyIn
-                                        ? "Arrival Airport (Hub)"
-                                        : "Arrival Airport"}
-                                  </Label>
-                                  <Input
-                                    id={`arrival-icao-${subEvent.subEventId}`}
-                                    value={
-                                      isGroupFlight
-                                        ? subEvent.groupFlightArrivalIcao || ""
-                                        : isFlyIn
-                                          ? subEvent.hubIcao || ""
-                                          : customArrivalIcao
-                                    }
-                                    onChange={(e) =>
-                                      updateFlightDetail(
-                                        subEvent.subEventId.toString(),
-                                        "customArrivalIcao",
-                                        e.target.value
-                                      )
-                                    }
-                                    placeholder={
-                                      isGroupFlight || isFlyIn
-                                        ? isGroupFlight
-                                          ? subEvent.groupFlightArrivalIcao ||
-                                            "Fixed arrival"
-                                          : subEvent.hubIcao ||
-                                            "Fixed hub arrival"
-                                        : "Enter arrival ICAO"
-                                    }
-                                    disabled={
-                                      isProcessing || isGroupFlight || isFlyIn
-                                    }
-                                    maxLength={4}
-                                    aria-invalid={!!arrivalIcaoError}
-                                  />
-                                  {arrivalIcaoError && (
-                                    <p className="text-xs text-destructive mt-1">
-                                      {arrivalIcaoError}
-                                    </p>
-                                  )}
-                                  {(isGroupFlight || isFlyIn) && (
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      Arrival is fixed to:{" "}
-                                      {isGroupFlight
-                                        ? subEvent.groupFlightArrivalIcao
-                                        : subEvent.hubIcao}
-                                    </p>
-                                  )}
-                                </div>
-                              </div>
-
-                              <div className="space-y-1">
-                                <Label htmlFor={`route-${subEvent.subEventId}`}>
-                                  {isGroupFlight
-                                    ? "Route (Based on group flight)"
-                                    : "Your Flight Route"}
-                                </Label>
-                                <Input
-                                  id={`route-${subEvent.subEventId}`}
-                                  value={
-                                    flightDetails[
-                                      subEvent.subEventId.toString()
-                                    ]?.route || ""
-                                  }
-                                  onChange={(e) =>
-                                    updateFlightDetail(
-                                      subEvent.subEventId.toString(),
-                                      "route",
-                                      e.target.value
-                                    )
-                                  }
-                                  placeholder={
-                                    isGroupFlight
-                                      ? subEvent.groupFlightRoute ||
-                                        "Using planned group flight route"
-                                      : "Enter your flight route"
-                                  }
-                                  disabled={isProcessing}
-                                />
-                                {isGroupFlight && subEvent.groupFlightRoute && (
-                                  <p className="text-xs text-muted-foreground mt-1">
-                                    Planned route: {subEvent.groupFlightRoute}
-                                  </p>
-                                )}
-                              </div>
-
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <DateTimePicker
-                                  label="Planned Departure Time"
-                                  value={
-                                    flightDetails[
-                                      subEvent.subEventId.toString()
-                                    ]?.departureTime
-                                      ? new Date(
-                                          flightDetails[
-                                            subEvent.subEventId.toString()
-                                          ]!.departureTime!
-                                        )
-                                      : undefined
-                                  }
-                                  onChange={(date) =>
-                                    updateFlightDetail(
-                                      subEvent.subEventId.toString(),
-                                      "departureTime",
-                                      date ? date.toISOString() : undefined
-                                    )
-                                  }
-                                  placeholder="Select departure time"
-                                />
-
-                                <DateTimePicker
-                                  label="Planned Arrival Time"
-                                  value={
-                                    flightDetails[
-                                      subEvent.subEventId.toString()
-                                    ]?.arrivalTime
-                                      ? new Date(
-                                          flightDetails[
-                                            subEvent.subEventId.toString()
-                                          ]!.arrivalTime!
-                                        )
-                                      : undefined
-                                  }
-                                  onChange={(date) =>
-                                    updateFlightDetail(
-                                      subEvent.subEventId.toString(),
-                                      "arrivalTime",
-                                      date ? date.toISOString() : undefined
-                                    )
-                                  }
-                                  placeholder="Select arrival time"
-                                />
-                              </div>
+                              <SubEventFlightForm
+                                subEvent={subEvent}
+                                callsign={subEventFlightDetails?.callsign || ""}
+                                callsignError={getCallsignError(subEventFlightDetails?.callsign)}
+                                aircraftType={subEventFlightDetails?.aircraftType || ""}
+                                liveryId={subEventFlightDetails?.liveryId || ""}
+                                departureIcao={customDepartureIcao}
+                                arrivalIcao={customArrivalIcao}
+                                route={subEventFlightDetails?.route || ""}
+                                departureTime={subEventFlightDetails?.departureTime}
+                                arrivalTime={subEventFlightDetails?.arrivalTime}
+                                onCallsignChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "callsign", value)
+                                }
+                                onAircraftChange={(value: AircraftLiveryValue) => {
+                                  updateFlightDetail(subEvent.subEventId.toString(), "aircraftType", value.aircraftName);
+                                  updateFlightDetail(subEvent.subEventId.toString(), "liveryId", value.liveryId);
+                                }}
+                                onDepartureIcaoChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "customDepartureIcao", value)
+                                }
+                                onArrivalIcaoChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "customArrivalIcao", value)
+                                }
+                                onRouteChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "route", value)
+                                }
+                                onDepartureTimeChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "departureTime", value || "")
+                                }
+                                onArrivalTimeChange={(value) =>
+                                  updateFlightDetail(subEvent.subEventId.toString(), "arrivalTime", value || "")
+                                }
+                                disabled={isProcessing}
+                              />
                             </div>
                           )}
                         </div>

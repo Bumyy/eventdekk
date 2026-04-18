@@ -9,6 +9,15 @@ import {
 import "leaflet/dist/leaflet.css";
 import { useLiveEventContext } from "@/contexts/LiveEventContext";
 
+const PilotCountBadge = ({ count }: { count: number }) => (
+  <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+      <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9 0-1.2.3l-.3.3c-.3.3-.3.8 0 1.1L8 12l-4 4c-1 1-1 2.5 0 3.5s2.5 1 3.5 0l4-4 4.1 4.7c.3.3.8.3 1.1 0l.3-.3c.3-.3.4-.7.3-1.2Z" />
+    </svg>
+    <span>{count} pilot{count !== 1 ? "s" : ""}</span>
+  </span>
+);
+
 const LiveEvent = () => {
   const { eventId } = useParams<{ eventId: string }>();
   const { setCurrentEventId } = useLiveEventContext();
@@ -220,7 +229,10 @@ const LiveEvent = () => {
         {/* Left side - Map Section */}
         <div className="w-2/3 flex flex-col h-full border-r">
           <div className="px-4 py-5 border-b flex justify-between items-center">
-            <h1 className="text-xl font-bold">{event.name} <span className="text-sm font-normal text-muted-foreground">({filteredFlights.length} pilot{filteredFlights.length !== 1 ? "s" : ""})</span></h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold">{event.name}</h1>
+              <PilotCountBadge count={filteredFlights.length} />
+            </div>
             {flightLoadingError && (
               <div className="text-xs text-destructive">
                 Flight data error: {flightLoadingError}
@@ -264,7 +276,8 @@ const LiveEvent = () => {
 
         {/* Event name overlay */}
         <div className="absolute top-3 left-3 z-10 max-w-[70%] rounded-md bg-background/70 backdrop-blur-sm px-3 py-2 pointer-events-none">
-          <h1 className="text-sm font-semibold truncate">{event.name} <span className="text-xs font-normal text-muted-foreground">({filteredFlights.length})</span></h1>
+          <h1 className="text-sm font-semibold truncate">{event.name}</h1>
+          <PilotCountBadge count={filteredFlights.length} />
           {flightLoadingError && (
             <div className="text-[10px] text-destructive mt-1 truncate">
               {flightLoadingError}

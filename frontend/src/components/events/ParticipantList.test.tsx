@@ -65,7 +65,7 @@ describe("ParticipantList", () => {
   it("renders empty state when no signups", () => {
     render(<ParticipantList signups={[]} groups={mockGroups} />);
     
-    expect(screen.getByText("No groups have joined this sub-event yet.")).toBeInTheDocument();
+    expect(screen.getByText("No groups have joined this wave yet.")).toBeInTheDocument();
   });
 
   it("renders participants with group names", () => {
@@ -78,8 +78,10 @@ describe("ParticipantList", () => {
   it("renders callsign and aircraft type when available", () => {
     render(<ParticipantList signups={mockSignups} groups={mockGroups} />);
     
-    expect(screen.getByText("ALP123 - B737")).toBeInTheDocument();
-    expect(screen.getByText("BET456 - A320")).toBeInTheDocument();
+    expect(screen.getByText("(ALP123)")).toBeInTheDocument();
+    expect(screen.getByText("(BET456)")).toBeInTheDocument();
+    expect(screen.getByText("B737")).toBeInTheDocument();
+    expect(screen.getByText("A320")).toBeInTheDocument();
   });
 
   it("displays group tag in avatar fallback when no logo", () => {
@@ -108,7 +110,7 @@ describe("ParticipantList", () => {
     
     render(<ParticipantList signups={signupWithoutGroup} groups={mockGroups} />);
     
-    expect(screen.getByText("Unknown Group")).toBeInTheDocument();
+    expect(screen.getByText("Unknown")).toBeInTheDocument();
   });
 
   it("renders logo when available", () => {

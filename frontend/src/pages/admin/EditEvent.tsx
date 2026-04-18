@@ -155,14 +155,23 @@ const [editSubEventForm, setEditSubEventForm] =
     }
   };
 
-  const inviteGroupToEventCompat = async (payload: {
+const inviteGroupToEventCompat = async (payload: {
     eventId: bigint;
     invitedGroupId: bigint;
   }) => {
     const procedures = (connection as any)?.procedures;
     if (procedures?.inviteGroupToEventAndNotify) {
-      await procedures.inviteGroupToEventAndNotify(payload);
-      return;
+      try {
+        await procedures.inviteGroupToEventAndNotify(payload);
+        return;
+      } catch {
+        try {
+          await procedures.inviteGroupToEventAndNotify(payload);
+          return;
+        } catch {
+          // Fall back to plain reducer if procedure fails twice
+        }
+      }
     }
 
     await connection?.reducers.inviteGroupToEvent(payload);
@@ -642,7 +651,7 @@ const [editSubEventForm, setEditSubEventForm] =
     // Calculate event times from sub-events
     let eventStartTime = startTime;
     let eventEndTime = endTime;
-    
+
     if (eventSubEvents.length > 0) {
       const minStartTime = new Date(
         Math.min(...eventSubEvents.map(se => se.scheduledStartTime.toDate().getTime()))
@@ -903,8 +912,8 @@ const handleEditSubEventClick = useCallback((subEvent: {
     try {
       await connection.reducers.updateSubEvent({
         subEventId: firstSubEvent.subEventId,
-        name: name,
-        description: description,
+        name: formState.name,
+        description: formState.description || undefined,
         subEventType: subEventType,
         scheduledStartTime: Timestamp.fromDate(formState.startTime),
         scheduledEndTime: Timestamp.fromDate(formState.endTime),
@@ -937,7 +946,7 @@ const handleEditSubEventClick = useCallback((subEvent: {
         toast.error("Error updating wave");
       }
     }
-  }, [connection, eventId, eventSubEvents, members, name, description]);
+  }, [connection, eventId, eventSubEvents, members]);
 
   const handleUpdateSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !editingSubEventId) return;

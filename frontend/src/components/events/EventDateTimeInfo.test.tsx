@@ -68,6 +68,6 @@ describe("EventDateTimeInfo", () => {
       />
     );
 
-    expect(container.firstChild).toHaveClass("rounded-2xl", "border", "bg-muted/30");
+    expect(container.firstChild).toHaveClass("border-l-4", "px-3");
   });
 });

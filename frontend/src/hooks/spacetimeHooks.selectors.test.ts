@@ -85,7 +85,7 @@ describe("spacetimeHooks selectors", () => {
 
     const result = selectAllActiveEvents(events);
 
-    expect(result.map((e) => e.eventId)).toEqual([3n, 2n]);
+    expect(result.map((e) => e.eventId)).toEqual([2n]);
   });
 
   it("returns hosted and accepted group-related events excluding cancelled", () => {

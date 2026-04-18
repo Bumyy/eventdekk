@@ -18,7 +18,7 @@ vi.mock("sonner", () => ({
 }));
 
 vi.mock("@/hooks/spacetimeHooks", () => ({
-  useGroupMembersForGroup: () => [],
+  useGroupLeadMembersForGroup: () => [],
 }));
 
 vi.mock("@/utils/timezoneUtils", async () => {
@@ -79,7 +79,10 @@ describe("CreateEventDialog", () => {
     expect(payload.description).toBe("Test Description");
     expect(payload.startTime).toEqual(new Date("2026-01-01T10:00:00Z"));
     expect(payload.endTime).toEqual(new Date("2026-01-01T12:00:00Z"));
-    expect(payload.subEvents).toEqual([]);
+    expect(payload.subEvents).toHaveLength(1);
+    expect(payload.subEvents[0].name).toBe("Test Event");
+    expect(payload.subEvents[0].description).toBe("Test Description");
+    expect(payload.subEvents[0].subEventType).toEqual({ tag: "GroupFlight" });
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

@@ -189,15 +189,24 @@ export default function AdminEvents() {
     }
   };
 
-  const respondToEventInvitationCompat = async (payload: {
+const respondToEventInvitationCompat = async (payload: {
     eventId: bigint;
     groupId: bigint;
     response: { tag: "Accepted" | "Declined" | "Pending" };
   }) => {
     const procedures = (connection as any)?.procedures;
     if (procedures?.respondToEventInvitationAndNotify) {
-      await procedures.respondToEventInvitationAndNotify(payload);
-      return;
+      try {
+        await procedures.respondToEventInvitationAndNotify(payload);
+        return;
+      } catch {
+        try {
+          await procedures.respondToEventInvitationAndNotify(payload);
+          return;
+        } catch {
+          // Fall back to plain reducer if procedure fails twice
+        }
+      }
     }
 
     await connection?.reducers.respondToEventInvitation(payload);
