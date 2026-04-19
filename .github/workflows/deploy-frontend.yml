@@ -28,6 +28,10 @@ jobs:
       - run: npm ci
 
       - run: npm run build
+        env:
+          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_SPACETIME_URL: ${{ secrets.VITE_SPACETIME_URL }}
+          VITE_MAPTILER_API_KEY: ${{ secrets.VITE_MAPTILER_API_KEY }}
 
       - run: npx wrangler pages deploy dist --project-name=alpha-eventdekk
         env:
