@@ -12,7 +12,13 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -685,7 +691,7 @@ export function EventInvitationDialog({
                               return null;
                             })()}
 
-{isSelected && (
+                          {isSelected && (
                             <div className="mt-4 space-y-3 border-t pt-3">
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div className="space-y-1 md:col-span-2">
@@ -735,35 +741,75 @@ export function EventInvitationDialog({
                               <SubEventFlightForm
                                 subEvent={subEvent}
                                 callsign={subEventFlightDetails?.callsign || ""}
-                                callsignError={getCallsignError(subEventFlightDetails?.callsign)}
-                                aircraftType={subEventFlightDetails?.aircraftType || ""}
+                                callsignError={getCallsignError(
+                                  subEventFlightDetails?.callsign
+                                )}
+                                aircraftType={
+                                  subEventFlightDetails?.aircraftType || ""
+                                }
                                 liveryId={subEventFlightDetails?.liveryId || ""}
                                 departureIcao={customDepartureIcao}
                                 arrivalIcao={customArrivalIcao}
                                 route={subEventFlightDetails?.route || ""}
-                                departureTime={subEventFlightDetails?.departureTime}
+                                departureTime={
+                                  subEventFlightDetails?.departureTime
+                                }
                                 arrivalTime={subEventFlightDetails?.arrivalTime}
                                 onCallsignChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "callsign", value)
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "callsign",
+                                    value
+                                  )
                                 }
-                                onAircraftChange={(value: AircraftLiveryValue) => {
-                                  updateFlightDetail(subEvent.subEventId.toString(), "aircraftType", value.aircraftName);
-                                  updateFlightDetail(subEvent.subEventId.toString(), "liveryId", value.liveryId);
+                                onAircraftChange={(
+                                  value: AircraftLiveryValue
+                                ) => {
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "aircraftType",
+                                    value.aircraftName
+                                  );
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "liveryId",
+                                    value.liveryId
+                                  );
                                 }}
                                 onDepartureIcaoChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "customDepartureIcao", value)
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "customDepartureIcao",
+                                    value
+                                  )
                                 }
                                 onArrivalIcaoChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "customArrivalIcao", value)
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "customArrivalIcao",
+                                    value
+                                  )
                                 }
                                 onRouteChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "route", value)
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "route",
+                                    value
+                                  )
                                 }
                                 onDepartureTimeChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "departureTime", value || "")
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "departureTime",
+                                    value || ""
+                                  )
                                 }
                                 onArrivalTimeChange={(value) =>
-                                  updateFlightDetail(subEvent.subEventId.toString(), "arrivalTime", value || "")
+                                  updateFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "arrivalTime",
+                                    value || ""
+                                  )
                                 }
                                 disabled={isProcessing}
                               />

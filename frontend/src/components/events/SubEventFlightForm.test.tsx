@@ -19,6 +19,20 @@ vi.mock("@/components/AircraftLiveryPicker", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/datetime-picker", () => ({
+  DateTimePicker: ({
+    label,
+    disabled,
+  }: {
+    label?: string;
+    disabled?: boolean;
+  }) => (
+    <button disabled={disabled} type="button">
+      {label || "Date Time Picker"}
+    </button>
+  ),
+}));
+
 const baseSubEvent = {
   subEventId: BigInt(1),
   subEventType: { tag: "GroupFlight" as const },
@@ -145,7 +159,7 @@ describe("SubEventFlightForm", () => {
     expect(onAircraftChange).toHaveBeenCalledWith({ aircraftName: "B738", liveryId: "b738_1" });
   });
 
-  it("renders departure and arrival time inputs", () => {
+  it("renders departure and arrival time pickers", () => {
     render(
       <SubEventFlightForm
         {...defaultProps}
@@ -153,11 +167,7 @@ describe("SubEventFlightForm", () => {
         arrivalTime="2026-01-01T12:00"
       />
     );
-    const departureInput = screen.getByDisplayValue("2026-01-01T10:00");
-    const arrivalInput = screen.getByDisplayValue("2026-01-01T12:00");
-    expect(departureInput).toBeInTheDocument();
-    expect(arrivalInput).toBeInTheDocument();
-    expect(departureInput).toHaveAttribute("type", "datetime-local");
-    expect(arrivalInput).toHaveAttribute("type", "datetime-local");
+    expect(screen.getByRole("button", { name: "Planned Departure Time" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Planned Arrival Time" })).toBeInTheDocument();
   });
 });

@@ -169,23 +169,64 @@ export default function AdminEvents() {
     );
   };
 
+  const isRetryableSignupReducerError = (error: unknown) => {
+    const message =
+      error instanceof Error ? error.message : String(error || "");
+    return (
+      isSchemaDeserializeError(error) ||
+      message.includes("InternalError") ||
+      message.includes("fatal error")
+    );
+  };
+
+  const getFlightSignupCompatPayloads = (payload: any) => {
+    const withoutLivery = (({ liveryId, ...rest }) => rest)(payload);
+    const withoutLiveryAndLead = (({ liveryId, eventLead, ...rest }) => rest)(
+      payload
+    );
+    const withoutOptionalFields = (({
+      liveryId,
+      eventLead,
+      desiredDepartureTime,
+      desiredArrivalTime,
+      ...rest
+    }) => rest)(payload);
+
+    return [
+      payload,
+      withoutLivery,
+      withoutLiveryAndLead,
+      withoutOptionalFields,
+    ];
+  };
+
   const signupForFlightCompat = async (payload: any) => {
-    try {
-      await (connection?.reducers as any).signupForFlight(payload);
-    } catch (error) {
-      if (!isSchemaDeserializeError(error)) throw error;
-      const { liveryId, ...fallbackPayload } = payload;
-      await (connection?.reducers as any).signupForFlight(fallbackPayload);
+    const attempts = getFlightSignupCompatPayloads(payload);
+
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        await (connection?.reducers as any).signupForFlight(attempts[i]);
+        return;
+      } catch (error) {
+        if (!isRetryableSignupReducerError(error) || i === attempts.length - 1) {
+          throw error;
+        }
+      }
     }
   };
 
   const updateFlightSignupCompat = async (payload: any) => {
-    try {
-      await (connection?.reducers as any).updateFlightSignup(payload);
-    } catch (error) {
-      if (!isSchemaDeserializeError(error)) throw error;
-      const { liveryId, ...fallbackPayload } = payload;
-      await (connection?.reducers as any).updateFlightSignup(fallbackPayload);
+    const attempts = getFlightSignupCompatPayloads(payload);
+
+    for (let i = 0; i < attempts.length; i++) {
+      try {
+        await (connection?.reducers as any).updateFlightSignup(attempts[i]);
+        return;
+      } catch (error) {
+        if (!isRetryableSignupReducerError(error) || i === attempts.length - 1) {
+          throw error;
+        }
+      }
     }
   };
 
@@ -493,7 +534,7 @@ const respondToEventInvitationCompat = async (payload: {
         const selectedEventLead =
           details.eventLeadHex && details.eventLeadHex !== "none"
             ? Identity.fromString(details.eventLeadHex)
-            : null;
+            : undefined;
 
         // Determine departure and arrival based on sub-event type
         let departureIcao = "";
@@ -685,7 +726,7 @@ const respondToEventInvitationCompat = async (payload: {
         const selectedEventLead =
           details.eventLeadHex && details.eventLeadHex !== "none"
             ? Identity.fromString(details.eventLeadHex)
-            : null;
+            : undefined;
 
         // Determine departure and arrival based on sub-event type
         let departureIcao = "";

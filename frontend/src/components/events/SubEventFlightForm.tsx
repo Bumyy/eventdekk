@@ -1,5 +1,6 @@
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { DateTimePicker } from "@/components/ui/datetime-picker";
 import {
   AircraftLiveryPicker,
   type AircraftLiveryValue,
@@ -7,6 +8,12 @@ import {
 import { SubEventType } from "@/module_bindings/types";
 
 const limitIcaoLength = (icao: string) => icao.slice(0, 4);
+
+const parseDateTimeValue = (value?: string) => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+};
 
 interface SubEventFlightFormProps {
   subEvent: {
@@ -193,21 +200,23 @@ export function SubEventFlightForm({
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <div className="space-y-1">
-          <Label>Planned Departure Time</Label>
-          <Input
-            type="datetime-local"
-            value={departureTime || ""}
-            onChange={(e) => onDepartureTimeChange(e.target.value || undefined)}
+          <DateTimePicker
+            label="Planned Departure Time"
+            value={parseDateTimeValue(departureTime)}
+            onChange={(date) =>
+              onDepartureTimeChange(date ? date.toISOString() : undefined)
+            }
             disabled={disabled}
           />
         </div>
 
         <div className="space-y-1">
-          <Label>Planned Arrival Time</Label>
-          <Input
-            type="datetime-local"
-            value={arrivalTime || ""}
-            onChange={(e) => onArrivalTimeChange(e.target.value || undefined)}
+          <DateTimePicker
+            label="Planned Arrival Time"
+            value={parseDateTimeValue(arrivalTime)}
+            onChange={(date) =>
+              onArrivalTimeChange(date ? date.toISOString() : undefined)
+            }
             disabled={disabled}
           />
         </div>
