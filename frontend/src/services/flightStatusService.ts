@@ -21,7 +21,9 @@ export interface AirportStatusBatchResponse {
 export const fetchAirportStatusBatch = async (
   icaos: string[]
 ): Promise<AirportStatusBatchResponse> => {
-  const uniqueIcaos = [...new Set(icaos.map((i) => i.trim().toUpperCase()).filter(Boolean))];
+  const uniqueIcaos = [
+    ...new Set(icaos.map((i) => i.trim().toUpperCase()).filter(Boolean)),
+  ];
   if (uniqueIcaos.length === 0) {
     return {
       sessionId: "",

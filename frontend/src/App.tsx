@@ -50,6 +50,7 @@ import GroupPlanner from "@/pages/admin/GroupPlanner";
 import ApplyForGroup from "@/pages/admin/ApplyForGroup";
 import SuperAdminRoute from "@/pages/admin/SuperAdminRoute";
 import GroupPermissionRoute from "@/pages/admin/GroupPermissionRoute";
+import LoadTestRunner from "@/dev/loadTestRunner";
 
 const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
   const { sdbToken, isLoading, logout } = useAuth();
@@ -203,12 +204,18 @@ const SpacetimeWrapper = ({ children }: { children: React.ReactNode }) => {
 };
 
 function App() {
+  const enableLoadTest =
+    import.meta.env.VITE_ENABLE_LOADTEST === "true" ||
+    (window as unknown as { ENABLE_LOADTEST?: string }).ENABLE_LOADTEST ===
+      "true";
+
   return (
     <ThemeProvider defaultTheme="dark">
       <Router>
         <AuthProvider>
           <SpacetimeWrapper>
             <Toaster richColors />
+            <LoadTestRunner enabled={enableLoadTest} />
 
             <div className="relative isolate min-h-screen bg-background text-foreground">
               <AppBackground />

@@ -1,17 +1,17 @@
 const express = require("express");
 const cors = require("cors");
-const cookieParser = require("cookie-parser"); // Add cookie parser
+const cookieParser = require("cookie-parser");
 const uploadRouter = require("./routes/upload.route");
 const authRouter = require("./routes/auth.route");
 const airportRouter = require("./routes/airport.route");
-const flightsRouter = require("./routes/flights.route"); // Add the new router
+const flightsRouter = require("./routes/flights.route");
 const passport = require("./config/passport.config");
 const airportService = require("./services/airport.service");
-const flightUpdateScheduler = require("./jobs/flightUpdateScheduler"); // Import the scheduler
+const flightUpdateScheduler = require("./jobs/flightUpdateScheduler");
 
 const app = express();
 
-// CORS configuration - update to include credentials
+// CORS configuration
 const corsOptions = {
   origin: function (origin, callback) {
     const allowedOrigins = [
@@ -47,7 +47,7 @@ app.use(cors(corsOptions));
 app.options("/upload", cors(corsOptions));
 
 // Middleware
-app.use(cookieParser()); // Add before other middleware
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(passport.initialize());
@@ -59,14 +59,12 @@ app.use("/airports", airportRouter);
 app.use("/flights", flightsRouter); // Add the new router
 
 // Initialize airport data on startup - after ensuring DB is connected
-// We'll use a delay to make sure DB initialization has completed
 setTimeout(async () => {
   try {
     console.log("Initializing airport database...");
     await airportService.updateAirportDatabase();
     console.log("Airport database initialization complete");
 
-    // Start flight update service (no longer needs SpacetimeDB)
     flightUpdateScheduler
       .startScheduler()
       .then(() => {
@@ -78,20 +76,18 @@ setTimeout(async () => {
   } catch (error) {
     console.error("Error initializing airport database:", error);
   }
-}, 2000); // Give the database 2 seconds to initialize
+}, 2000);
 
 // Handle graceful shutdown
 process.on("SIGTERM", () => {
   console.log("SIGTERM received, shutting down gracefully");
   flightUpdateScheduler.stopScheduler();
-  // Other cleanup...
   process.exit(0);
 });
 
 process.on("SIGINT", () => {
   console.log("SIGINT received, shutting down gracefully");
   flightUpdateScheduler.stopScheduler();
-  // Other cleanup...
   process.exit(0);
 });
 

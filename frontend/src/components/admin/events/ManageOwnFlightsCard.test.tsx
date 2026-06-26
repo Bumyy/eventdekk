@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { ManageOwnFlightsCard } from "./ManageOwnFlightsCard";
 
 vi.mock("@/components/events/SubEventFlightForm", () => ({
-  SubEventFlightForm: () => <div data-testid="sub-event-flight-form">Flight Form</div>,
+  SubEventFlightForm: () => (
+    <div data-testid="sub-event-flight-form">Flight Form</div>
+  ),
 }));
 
 vi.mock("@/components/ui/dialog", () => ({
@@ -56,7 +58,9 @@ vi.mock("@/components/admin/events/EditEventContext", () => ({
 }));
 
 vi.mock("@/components/AircraftLiveryPicker", () => ({
-  AircraftLiveryPicker: () => <div data-testid="aircraft-picker">Aircraft Picker</div>,
+  AircraftLiveryPicker: () => (
+    <div data-testid="aircraft-picker">Aircraft Picker</div>
+  ),
 }));
 
 describe("ManageOwnFlightsCard", () => {
@@ -87,7 +91,9 @@ describe("ManageOwnFlightsCard", () => {
 
   it("shows info message when no sub-events are selected", () => {
     render(<ManageOwnFlightsCard />);
-    expect(screen.getByText("Select at least one sub-event to participate in.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Select at least one sub-event to participate in.")
+    ).toBeInTheDocument();
   });
 
   it("renders cancel and save buttons in dialog", () => {
@@ -103,6 +109,8 @@ describe("ManageOwnFlightsCard", () => {
 
   it("renders description text", () => {
     render(<ManageOwnFlightsCard />);
-    expect(screen.getByText(/Select which sub-events your group will participate in/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Select which sub-events your group will participate in/)
+    ).toBeInTheDocument();
   });
 });

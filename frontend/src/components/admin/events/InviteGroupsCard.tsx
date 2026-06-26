@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -40,7 +46,10 @@ export function InviteGroupsCard() {
             Invite other groups to participate in this event
           </CardDescription>
         </div>
-        <Dialog open={showInviteGroupsDialog} onOpenChange={setShowInviteGroupsDialog}>
+        <Dialog
+          open={showInviteGroupsDialog}
+          onOpenChange={setShowInviteGroupsDialog}
+        >
           <DialogTrigger asChild>
             <Button>Invite Groups</Button>
           </DialogTrigger>
@@ -53,7 +62,10 @@ export function InviteGroupsCard() {
                 <Label>Selected Groups</Label>
                 <div className="flex flex-wrap gap-2">
                   {selectedGroups.map((group) => (
-                    <Badge key={group.id.toString()} className="pr-1 flex items-center gap-1">
+                    <Badge
+                      key={group.id.toString()}
+                      className="pr-1 flex items-center gap-1"
+                    >
                       {group.name}
                       <Button
                         variant="ghost"
@@ -66,7 +78,9 @@ export function InviteGroupsCard() {
                     </Badge>
                   ))}
                   {selectedGroups.length === 0 && (
-                    <p className="text-sm text-muted-foreground">No groups selected</p>
+                    <p className="text-sm text-muted-foreground">
+                      No groups selected
+                    </p>
                   )}
                 </div>
               </div>
@@ -75,37 +89,45 @@ export function InviteGroupsCard() {
                 <Label>Add Groups</Label>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="outline" className="w-full justify-between">
+                    <Button
+                      variant="outline"
+                      className="w-full justify-between"
+                    >
                       Select Groups
                       <ChevronDown className="h-4 w-4 opacity-50" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent className="w-[300px]" align="start">
                     <ScrollArea className="h-[300px]">
-                      {availableInviteGroups
-                        .map((group) => (
-                          <DropdownMenuItem
-                            key={group.groupId.toString()}
-                            onClick={() =>
-                              handleSelectGroup({
-                                id: group.groupId,
-                                name: group.name,
-                              })
-                            }
-                          >
-                            {group.name}
-                          </DropdownMenuItem>
-                        ))}
+                      {availableInviteGroups.map((group) => (
+                        <DropdownMenuItem
+                          key={group.groupId.toString()}
+                          onClick={() =>
+                            handleSelectGroup({
+                              id: group.groupId,
+                              name: group.name,
+                            })
+                          }
+                        >
+                          {group.name}
+                        </DropdownMenuItem>
+                      ))}
                     </ScrollArea>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowInviteGroupsDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowInviteGroupsDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={handleInviteGroups} disabled={selectedGroups.length === 0}>
+              <Button
+                onClick={handleInviteGroups}
+                disabled={selectedGroups.length === 0}
+              >
                 Send Invites
               </Button>
             </DialogFooter>

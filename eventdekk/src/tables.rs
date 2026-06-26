@@ -72,6 +72,10 @@ pub struct GroupCallsignFilter {
     pub group_id: u64,
     pub words: String,
     pub created_at: Timestamp,
+    #[default(None::<String>)]
+    pub color: Option<String>,
+    #[default(None::<String>)]
+    pub label: Option<String>,
 }
 
 #[table(name = user, public, index(name = idx_callsign_prefix, btree(columns = [ifc_callsign_prefix])))]
@@ -104,6 +108,12 @@ pub struct Event {
     pub status: EventStatus,
     pub created_at: Timestamp,
     pub is_internal: bool,
+    #[default(None::<String>)]
+    pub flight_filter_mode: Option<String>,
+    #[default(None::<String>)]
+    pub flight_filter_bounds: Option<String>,
+    #[default(false)]
+    pub show_all_flights: bool,
 }
 
 #[table(name = event_participant, public,
@@ -261,4 +271,18 @@ pub struct DiscoveryRotationSchedule {
     #[auto_inc]
     pub scheduled_id: u64,
     pub scheduled_at: ScheduleAt,
+}
+
+#[table(name = event_overlay, public, index(name = idx_event, btree(columns = [event_id])))]
+pub struct EventOverlay {
+    #[primary_key]
+    #[auto_inc]
+    pub overlay_id: u64,
+    pub event_id: u64,
+    pub name: String,
+    pub overlay_type: String, // "kml", "image", "draw"
+    pub data: String,         // KML string or Image URL or GeoJSON string
+    pub config: String,       // JSON options (opacity, image bounds, styles, etc.)
+    pub created_at: Timestamp,
+    pub updated_at: Timestamp,
 }

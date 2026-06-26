@@ -1,11 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  addDays,
-  addHours,
-  differenceInCalendarDays,
-  format,
-} from "date-fns";
+import { addDays, addHours, differenceInCalendarDays, format } from "date-fns";
 import { CalendarPlus, ChevronLeft, ChevronRight } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useUserTimezone } from "@/utils/timezoneUtils";
@@ -49,7 +44,10 @@ const getSlotIndex = (hour: number) => {
   return 4;
 };
 
-const categoryColors: Record<WeeklyCalendarCategory, { bg: string; border: string }> = {
+const categoryColors: Record<
+  WeeklyCalendarCategory,
+  { bg: string; border: string }
+> = {
   internal: { bg: "bg-emerald-500/20", border: "border-emerald-500" },
   hostingExternal: { bg: "bg-sky-500/20", border: "border-sky-500" },
   attendingExternal: { bg: "bg-amber-500/20", border: "border-amber-500" },
@@ -109,14 +107,14 @@ export function AdminWeeklyCalendar({
     return Array.from({ length: 7 }, (_, i) => {
       const d = new Date(year, month - 1, day - diff + i);
       const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const dd = String(d.getDate()).padStart(2, "0");
       return `${y}-${m}-${dd}`;
     });
   }, [anchorDate, timezone]);
 
   const weekDays = useMemo(() => {
-    return weekDayKeys.map(key => {
+    return weekDayKeys.map((key) => {
       const [y, m, d] = key.split("-").map(Number);
       return new Date(y, m - 1, d);
     });
@@ -129,20 +127,22 @@ export function AdminWeeklyCalendar({
     const layout: EventLayout[] = [];
     const eventLanes: Map<string, number> = new Map();
     const occupiedLanes: Map<string, Set<number>> = new Map();
-    
+
     weekDayKeys.forEach((key) => {
       occupiedLanes.set(key, new Set());
     });
 
-    const eventsByStart = [...events].sort((a, b) => a.start.getTime() - b.start.getTime());
+    const eventsByStart = [...events].sort(
+      (a, b) => a.start.getTime() - b.start.getTime()
+    );
 
     for (const event of eventsByStart) {
       const eventStartDayKey = getDayKey(event.start, timezone);
       const eventEndDayKey = getDayKey(event.end, timezone);
-      
+
       let startDayIndex = -1;
       let endDayIndex = -1;
-      
+
       for (let i = 0; i < weekDayKeys.length; i++) {
         if (eventStartDayKey === weekDayKeys[i] && startDayIndex === -1) {
           startDayIndex = i;
@@ -151,29 +151,33 @@ export function AdminWeeklyCalendar({
           endDayIndex = i;
         }
       }
-      
+
       if (startDayIndex === -1 && eventStartDayKey < weekDayKeys[0]) {
         startDayIndex = 0;
       }
       if (endDayIndex === -1 && eventEndDayKey > weekDayKeys[6]) {
         endDayIndex = 6;
       }
-      
+
       if (startDayIndex === -1 && endDayIndex === -1) {
         continue; // Event is entirely outside the week
       }
-      
+
       if (startDayIndex === -1) startDayIndex = 0;
       if (endDayIndex === -1) endDayIndex = 6;
-      
+
       const span = endDayIndex - startDayIndex + 1;
-      
+
       let lane = 0;
       let found = false;
-      
+
       while (!found && lane < 10) {
         let canUse = true;
-        for (let d = startDayIndex; d <= endDayIndex && d < weekDayKeys.length; d++) {
+        for (
+          let d = startDayIndex;
+          d <= endDayIndex && d < weekDayKeys.length;
+          d++
+        ) {
           const lanes = occupiedLanes.get(weekDayKeys[d]);
           if (lanes?.has(lane)) {
             canUse = false;
@@ -186,13 +190,17 @@ export function AdminWeeklyCalendar({
           lane++;
         }
       }
-      
+
       eventLanes.set(event.id, lane);
-      
-      for (let d = startDayIndex; d <= endDayIndex && d < weekDayKeys.length; d++) {
+
+      for (
+        let d = startDayIndex;
+        d <= endDayIndex && d < weekDayKeys.length;
+        d++
+      ) {
         occupiedLanes.get(weekDayKeys[d])?.add(lane);
       }
-      
+
       layout.push({
         event,
         lane,
@@ -269,7 +277,7 @@ export function AdminWeeklyCalendar({
             const hourStr = new Intl.DateTimeFormat("en-US", {
               timeZone: timezone,
               hour: "numeric",
-              hour12: false
+              hour12: false,
             }).format(event.start);
             slotCounts[getSlotIndex(parseInt(hourStr, 10))] += 1;
           }
@@ -277,12 +285,13 @@ export function AdminWeeklyCalendar({
 
         const lowestCount = Math.min(...slotCounts);
         const bestSlotIndex =
-          preferredSlotOrder.find((slotIndex) => slotCounts[slotIndex] === lowestCount) ??
-          2;
+          preferredSlotOrder.find(
+            (slotIndex) => slotCounts[slotIndex] === lowestCount
+          ) ?? 2;
 
         const [y, m, d] = key.split("-").map(Number);
         const hour = slotStartHours[bestSlotIndex];
-        
+
         const start = new Date();
         start.setFullYear(y, m - 1, d);
         start.setHours(hour, 0, 0, 0);
@@ -297,7 +306,9 @@ export function AdminWeeklyCalendar({
           slotLabel: slotLabels[bestSlotIndex],
         };
       })
-      .filter((candidate): candidate is NonNullable<typeof candidate> => !!candidate)
+      .filter(
+        (candidate): candidate is NonNullable<typeof candidate> => !!candidate
+      )
       .sort(
         (a, b) =>
           a.preferredBucket - b.preferredBucket ||
@@ -324,17 +335,17 @@ export function AdminWeeklyCalendar({
   const renderTimeDisplay = (event: AdminWeeklyCalendarEvent) => {
     const startStr = formatTimeInTz(event.start, timezone);
     const endStr = formatTimeInTz(event.end, timezone);
-    
+
     const startDayKey = getDayKey(event.start, timezone);
     const endDayKey = getDayKey(event.end, timezone);
-    
+
     if (startDayKey === endDayKey) {
       return `${startStr} - ${endStr}`;
     }
-    
+
     const startDateStr = formatDateInTz(event.start, timezone);
     const endDateStr = formatDateInTz(event.end, timezone);
-    
+
     return `${startDateStr}, ${startStr} - ${endDateStr}, ${endStr}`;
   };
 
@@ -374,11 +385,11 @@ export function AdminWeeklyCalendar({
       <WeeklyCalendarLegend className="mt-4" />
 
       <div className="mt-4 overflow-x-auto">
-        <div 
+        <div
           className="grid gap-0"
-          style={{ 
+          style={{
             gridTemplateColumns: `repeat(7, minmax(120px, 1fr))`,
-            minHeight: `${Math.max(200, maxLanes * 40 + 80)}px`
+            minHeight: `${Math.max(200, maxLanes * 40 + 80)}px`,
           }}
         >
           {weekDays.map((day, index) => {
@@ -392,16 +403,23 @@ export function AdminWeeklyCalendar({
                 key={key}
                 className="border-r border-b border-t last:border-r-0 first:rounded-l-lg last:rounded-r-lg"
               >
-                <div className={`px-3 py-2 border-b ${isToday ? "bg-primary/10" : "bg-muted/30"}`}>
+                <div
+                  className={`px-3 py-2 border-b ${isToday ? "bg-primary/10" : "bg-muted/30"}`}
+                >
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     {weekdayLabels[index]}
                   </p>
-                  <p className={`text-lg font-semibold leading-tight ${isToday ? "text-primary" : ""}`}>
+                  <p
+                    className={`text-lg font-semibold leading-tight ${isToday ? "text-primary" : ""}`}
+                  >
                     {format(day, "d")}
                   </p>
                 </div>
 
-                <div className="relative min-h-[160px]" style={{ height: `${Math.max(160, maxLanes * 40 + 40)}px` }}>
+                <div
+                  className="relative min-h-[160px]"
+                  style={{ height: `${Math.max(160, maxLanes * 40 + 40)}px` }}
+                >
                   {eventsWithLayout
                     .filter((l) => {
                       const eventStartDay = getDayKey(l.event.start, timezone);
@@ -409,25 +427,33 @@ export function AdminWeeklyCalendar({
                       return key >= eventStartDay && key <= eventEndDay;
                     })
                     .map((layout) => {
-                      const eventStartDayKey = getDayKey(layout.event.start, timezone);
-                      const eventEndDayKey = getDayKey(layout.event.end, timezone);
+                      const eventStartDayKey = getDayKey(
+                        layout.event.start,
+                        timezone
+                      );
+                      const eventEndDayKey = getDayKey(
+                        layout.event.end,
+                        timezone
+                      );
                       const isEventStart = eventStartDayKey === key;
                       const isEventEnd = eventEndDayKey === key;
-                      const isClickable = !!layout.event.canEdit && !!onEventClick;
+                      const isClickable =
+                        !!layout.event.canEdit && !!onEventClick;
                       const colors = categoryColors[layout.event.category];
 
-                      const segmentSpacingClass = isEventStart && isEventEnd
-                        ? "left-1 right-1 rounded-md"
-                        : isEventStart
-                          ? "left-1 right-0 rounded-l-md rounded-r-none"
-                          : isEventEnd
-                            ? "left-0 right-1 rounded-r-md rounded-l-none"
-                            : "left-0 right-0 rounded-none";
+                      const segmentSpacingClass =
+                        isEventStart && isEventEnd
+                          ? "left-1 right-1 rounded-md"
+                          : isEventStart
+                            ? "left-1 right-0 rounded-l-md rounded-r-none"
+                            : isEventEnd
+                              ? "left-0 right-1 rounded-r-md rounded-l-none"
+                              : "left-0 right-0 rounded-none";
 
                       const segmentBorderClass = isEventStart
                         ? `border-l-2 ${colors.border}`
                         : "border-l-0";
-                      
+
                       return (
                         <div
                           key={`${key}-${layout.event.id}`}
@@ -453,9 +479,13 @@ export function AdminWeeklyCalendar({
                         >
                           {isEventStart && (
                             <>
-                              <p className="text-xs font-medium truncate leading-tight">{layout.event.name}</p>
+                              <p className="text-xs font-medium truncate leading-tight">
+                                {layout.event.name}
+                              </p>
                               <p className="text-[10px] text-muted-foreground truncate leading-tight">
-                                {isEventEnd ? formatTimeInTz(layout.event.start, timezone) : `${formatTimeInTz(layout.event.start, timezone)} \u2192`}
+                                {isEventEnd
+                                  ? formatTimeInTz(layout.event.start, timezone)
+                                  : `${formatTimeInTz(layout.event.start, timezone)} \u2192`}
                               </p>
                             </>
                           )}
@@ -472,24 +502,31 @@ export function AdminWeeklyCalendar({
                         </div>
                       );
                     })}
-                  
+
                   {dayEvents.length === 0 && daySuggestion && (
                     <div className="absolute inset-x-2 top-2">
                       <Button
                         variant="outline"
                         size="sm"
                         className="w-full h-auto py-1 text-xs"
-                        onClick={() => onScheduleSuggestion(daySuggestion.start, daySuggestion.end)}
+                        onClick={() =>
+                          onScheduleSuggestion(
+                            daySuggestion.start,
+                            daySuggestion.end
+                          )
+                        }
                       >
                         <CalendarPlus className="h-3 w-3 mr-1" />
                         {format(daySuggestion.start, "h:mm a")}
                       </Button>
                     </div>
                   )}
-                  
+
                   {dayEvents.length === 0 && !daySuggestion && (
                     <div className="absolute inset-0 flex items-center justify-center">
-                      <p className="text-xs text-muted-foreground/50">No events</p>
+                      <p className="text-xs text-muted-foreground/50">
+                        No events
+                      </p>
                     </div>
                   )}
                 </div>

@@ -9,7 +9,6 @@ async function generateSpacetimeDBToken() {
   console.log("Generating SpacetimeDB token...");
   console.log("URL:", process.env.SPACETIME_DB_IDENTITY_URL);
 
-  // Use global fetch (Node.js 18+) or import node-fetch properly
   const response = await fetch(process.env.SPACETIME_DB_IDENTITY_URL, {
     method: "POST",
   });
@@ -147,7 +146,7 @@ class AuthService {
         );
         throw new Error("Account inconsistency detected.");
       }
-      const user = await UserModel.findById(authMethod.user_id); // Get user info if needed
+      const user = await UserModel.findById(authMethod.user_id);
       console.log(`User ${user.id} logged in via password.`);
 
       return { user, sdbToken };
@@ -167,11 +166,15 @@ class AuthService {
       );
 
       if (existingLink && existingLink.user_id !== currentUserId) {
-        throw new Error("This external account is already linked to a different user.");
+        throw new Error(
+          "This external account is already linked to a different user."
+        );
       }
 
       if (existingLink && existingLink.user_id === currentUserId) {
-        console.log(`Account ${methodType} already linked to user ${currentUserId}.`);
+        console.log(
+          `Account ${methodType} already linked to user ${currentUserId}.`
+        );
         return { success: true, message: "Account already linked." };
       }
 
@@ -182,7 +185,10 @@ class AuthService {
       console.log(`Linked ${methodType} account to user ${currentUserId}.`);
       return { success: true, message: "Account linked successfully." };
     } catch (error) {
-      console.error(`Error linking ${methodType} to user ${currentUserId}:`, error);
+      console.error(
+        `Error linking ${methodType} to user ${currentUserId}:`,
+        error
+      );
       throw error;
     }
   }

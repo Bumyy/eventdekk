@@ -45,8 +45,23 @@ export const Event = __t.object("Event", {
   },
   createdAt: __t.timestamp(),
   isInternal: __t.bool(),
+  flightFilterMode: __t.option(__t.string()),
+  flightFilterBounds: __t.option(__t.string()),
+  showAllFlights: __t.bool(),
 });
 export type Event = __Infer<typeof Event>;
+
+export const EventOverlay = __t.object("EventOverlay", {
+  overlayId: __t.u64(),
+  eventId: __t.u64(),
+  name: __t.string(),
+  overlayType: __t.string(),
+  data: __t.string(),
+  config: __t.string(),
+  createdAt: __t.timestamp(),
+  updatedAt: __t.timestamp(),
+});
+export type EventOverlay = __Infer<typeof EventOverlay>;
 
 export const EventParticipant = __t.object("EventParticipant", {
   participationId: __t.u64(),
@@ -127,6 +142,8 @@ export const GroupCallsignFilter = __t.object("GroupCallsignFilter", {
   groupId: __t.u64(),
   words: __t.string(),
   createdAt: __t.timestamp(),
+  color: __t.option(__t.string()),
+  label: __t.option(__t.string()),
 });
 export type GroupCallsignFilter = __Infer<typeof GroupCallsignFilter>;
 

@@ -43,7 +43,10 @@ export interface CreateEventContextValue {
     state: SubEventFormState,
     previousSubEvent: SubEventFormData
   ) => SubEventFormData;
-  updateSubEventFromDialog: (index: number, formState: SubEventFormState) => void;
+  updateSubEventFromDialog: (
+    index: number,
+    formState: SubEventFormState
+  ) => void;
 
   handleSubmit: (e: React.FormEvent) => Promise<void>;
   onOpenChange: (open: boolean) => void;
@@ -56,9 +59,14 @@ interface CreateEventProviderProps {
   children: React.ReactNode;
 }
 
-export function CreateEventProvider({ value, children }: CreateEventProviderProps) {
+export function CreateEventProvider({
+  value,
+  children,
+}: CreateEventProviderProps) {
   return (
-    <CreateEventContext.Provider value={value}>{children}</CreateEventContext.Provider>
+    <CreateEventContext.Provider value={value}>
+      {children}
+    </CreateEventContext.Provider>
   );
 }
 
@@ -66,7 +74,9 @@ export function useCreateEventContext() {
   const context = useContext(CreateEventContext);
 
   if (!context) {
-    throw new Error("useCreateEventContext must be used within a CreateEventProvider");
+    throw new Error(
+      "useCreateEventContext must be used within a CreateEventProvider"
+    );
   }
 
   return context;

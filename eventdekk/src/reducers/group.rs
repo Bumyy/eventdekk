@@ -503,6 +503,8 @@ pub fn add_group_callsign_filter(
     ctx: &ReducerContext,
     group_id: u64,
     words: String,
+    color: Option<String>,
+    label: Option<String>,
 ) -> Result<(), String> {
     let sender_is_super_admin = is_super_admin(ctx, ctx.sender);
     if !sender_is_super_admin {
@@ -519,6 +521,8 @@ pub fn add_group_callsign_filter(
         group_id,
         words: trimmed.to_string(),
         created_at: ctx.timestamp,
+        color,
+        label,
     };
     ctx.db.group_callsign_filter().insert(filter);
     info!("Callsign filter '{}' added to group {}", trimmed, group_id);

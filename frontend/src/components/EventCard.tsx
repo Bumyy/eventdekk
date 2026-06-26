@@ -1,6 +1,9 @@
 import { Card } from "@/components/ui/card";
 import { Clock } from "lucide-react";
-import { useGroups, useEventParticipantsForEvent } from "@/hooks/spacetimeHooks";
+import {
+  useGroups,
+  useEventParticipantsForEvent,
+} from "@/hooks/spacetimeHooks";
 import { Infer } from "spacetimedb";
 import { Event } from "@/module_bindings";
 import { useUserTimezone, formatInTimezone } from "@/utils/timezoneUtils";

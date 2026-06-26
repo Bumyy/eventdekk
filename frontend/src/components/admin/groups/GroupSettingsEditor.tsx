@@ -58,6 +58,10 @@ export function GroupSettingsEditor({
     callsignFilters,
     newCallsignFilter,
     setNewCallsignFilter,
+    newFilterColor,
+    setNewFilterColor,
+    newFilterLabel,
+    setNewFilterLabel,
     isManagingCallsignFilter,
     addCallsignFilter,
     removeCallsignFilter,
@@ -312,23 +316,56 @@ export function GroupSettingsEditor({
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Input
-                value={newCallsignFilter}
-                onChange={(e) => setNewCallsignFilter(e.target.value)}
-                placeholder="Example: Qatari VA"
-              />
+            <div className="flex flex-col gap-4 border p-4 rounded-md bg-muted/20">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Callsign Words</label>
+                  <Input
+                    value={newCallsignFilter}
+                    onChange={(e) => setNewCallsignFilter(e.target.value)}
+                    placeholder="Example: Qatari VA"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Custom Color (Optional)</label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="color"
+                      value={newFilterColor || "#7A828D"}
+                      onChange={(e) => setNewFilterColor(e.target.value)}
+                      className="w-10 h-10 p-1 cursor-pointer shrink-0"
+                    />
+                    <Input
+                      type="text"
+                      value={newFilterColor}
+                      onChange={(e) => setNewFilterColor(e.target.value)}
+                      placeholder="#7A828D"
+                      className="flex-1 font-mono text-sm"
+                      pattern="^#([A-Fa-f0-9]{6})$"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground">Tactical Label (Optional)</label>
+                  <Input
+                    value={newFilterLabel}
+                    onChange={(e) => setNewFilterLabel(e.target.value)}
+                    placeholder="Example: Refueler"
+                  />
+                </div>
+              </div>
               <Button
                 type="button"
                 onClick={addCallsignFilter}
                 disabled={isManagingCallsignFilter || !newCallsignFilter.trim()}
+                className="w-full sm:w-auto self-end"
               >
                 {isManagingCallsignFilter ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
                     <Plus className="h-4 w-4 mr-2" />
-                    Add
+                    Add Callsign Format
                   </>
                 )}
               </Button>
@@ -345,7 +382,21 @@ export function GroupSettingsEditor({
                     key={filter.filterId.toString()}
                     className="flex items-center justify-between border rounded-md px-3 py-2"
                   >
-                    <span className="font-mono text-sm">{filter.words}</span>
+                    <div className="flex items-center gap-3">
+                      {filter.color && (
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-black/10 shrink-0"
+                          style={{ backgroundColor: filter.color }}
+                          title={filter.color}
+                        />
+                      )}
+                      <span className="font-mono text-sm">{filter.words}</span>
+                      {filter.label && (
+                        <span className="text-xs bg-muted text-muted-foreground px-2 py-0.5 rounded-full font-medium">
+                          {filter.label}
+                        </span>
+                      )}
+                    </div>
                     <Button
                       type="button"
                       variant="ghost"

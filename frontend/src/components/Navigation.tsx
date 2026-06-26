@@ -1,4 +1,9 @@
-import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Link,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
 import {
@@ -102,9 +107,15 @@ const Navigation = () => {
   ];
 
   // Admin Specific Links Context
-  const adminRootLinks = [{ name: "Select Group", path: "/admin", icon: Shield }];
+  const adminRootLinks = [
+    { name: "Select Group", path: "/admin", icon: Shield },
+  ];
   if (isSuperAdmin) {
-    adminRootLinks.push({ name: "Site Admin", path: "/admin/site", icon: Settings });
+    adminRootLinks.push({
+      name: "Site Admin",
+      path: "/admin/site",
+      icon: Settings,
+    });
   }
 
   const adminNavLinks = groupId

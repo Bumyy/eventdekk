@@ -8,7 +8,9 @@ const AuthCallbackPage: React.FC = () => {
   if (!isLoading && !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-5rem)]">
-        <p className="text-lg text-muted-foreground">Authentication failed. Redirecting...</p>
+        <p className="text-lg text-muted-foreground">
+          Authentication failed. Redirecting...
+        </p>
       </div>
     );
   }

@@ -3,26 +3,23 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import EditEvent from "./EditEvent";
 import { EventStatus } from "@/module_bindings/types";
 
-const {
-  mockNavigate,
-  mockUpdateEvent,
-  mockToastError,
-  mockHooks,
-} = vi.hoisted(() => ({
-  mockNavigate: vi.fn(),
-  mockUpdateEvent: vi.fn(),
-  mockToastError: vi.fn(),
-  mockHooks: {
-    useEvents: vi.fn(),
-    useSubEvents: vi.fn(() => []),
-    useGroups: vi.fn(() => []),
-    useFlightSignups: vi.fn(() => []),
-    useGroupLeadMembersForGroup: vi.fn(() => []),
-    useEventParticipantsForEvent: vi.fn(() => []),
-    useGroupMemberships: vi.fn(() => []),
-    useGroupById: vi.fn(() => null),
-  },
-}));
+const { mockNavigate, mockUpdateEvent, mockToastError, mockHooks } = vi.hoisted(
+  () => ({
+    mockNavigate: vi.fn(),
+    mockUpdateEvent: vi.fn(),
+    mockToastError: vi.fn(),
+    mockHooks: {
+      useEvents: vi.fn(),
+      useSubEvents: vi.fn(() => []),
+      useGroups: vi.fn(() => []),
+      useFlightSignups: vi.fn(() => []),
+      useGroupLeadMembersForGroup: vi.fn(() => []),
+      useEventParticipantsForEvent: vi.fn(() => []),
+      useGroupMemberships: vi.fn(() => []),
+      useGroupById: vi.fn(() => null),
+    },
+  })
+);
 
 vi.mock("react-router-dom", () => ({
   useParams: () => ({ eventId: "123", groupId: "77" }),
@@ -57,12 +54,15 @@ vi.mock("@/utils/timezoneUtils", async () => {
 });
 
 vi.mock("@/components/admin/events", () => ({
-  EditEventProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  EditEventProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
   EventDetailsFormCard: () => <div>EventDetailsFormCard</div>,
   SubEventsManagementCard: () => <div>SubEventsManagementCard</div>,
   InviteGroupsCard: () => <div>InviteGroupsCard</div>,
   ManageParticipantsCard: () => <div>ManageParticipantsCard</div>,
   ManageOwnFlightsCard: () => <div>ManageOwnFlightsCard</div>,
+  FlightTrackingSettingsCard: () => <div>FlightTrackingSettingsCard</div>,
 }));
 
 vi.mock("@/api/apiService", () => ({

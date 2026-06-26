@@ -87,8 +87,10 @@ function SubEventDialogFormFromContext({
 
   const contextTimezone = context?.userTimezone;
   const contextMembers = context?.memberOptions;
-  const contextForm = mode === "add" ? context?.subEventForm : context?.editSubEventForm;
-  const contextSetForm = mode === "add" ? context?.setSubEventForm : context?.setEditSubEventForm;
+  const contextForm =
+    mode === "add" ? context?.subEventForm : context?.editSubEventForm;
+  const contextSetForm =
+    mode === "add" ? context?.setSubEventForm : context?.setEditSubEventForm;
 
   if (!contextForm || !contextSetForm || !contextTimezone || !contextMembers) {
     throw new Error(
@@ -139,7 +141,9 @@ function SubEventDialogFormFields({
           <Input
             id={withPrefix("subEventName")}
             value={formState.name}
-            onChange={(e) => setFormState({ ...formState, name: e.target.value })}
+            onChange={(e) =>
+              setFormState({ ...formState, name: e.target.value })
+            }
             placeholder="Enter sub-event name"
           />
         </div>
@@ -174,7 +178,9 @@ function SubEventDialogFormFields({
           <Textarea
             id={withPrefix("subEventDescription")}
             value={formState.description}
-            onChange={(e) => setFormState({ ...formState, description: e.target.value })}
+            onChange={(e) =>
+              setFormState({ ...formState, description: e.target.value })
+            }
             placeholder="Enter sub-event description"
             rows={3}
           />
@@ -186,15 +192,25 @@ function SubEventDialogFormFields({
           <DateTimePicker
             label="Start Time"
             value={formState.startTime}
-            onChange={(date) => date && setFormState({ ...formState, startTime: date })}
-            placeholder={formatDateTimeInTimezone(formState.startTime, resolvedTimezone)}
+            onChange={(date) =>
+              date && setFormState({ ...formState, startTime: date })
+            }
+            placeholder={formatDateTimeInTimezone(
+              formState.startTime,
+              resolvedTimezone
+            )}
             timezone={resolvedTimezone}
           />
           <DateTimePicker
             label="End Time"
             value={formState.endTime}
-            onChange={(date) => date && setFormState({ ...formState, endTime: date })}
-            placeholder={formatDateTimeInTimezone(formState.endTime, resolvedTimezone)}
+            onChange={(date) =>
+              date && setFormState({ ...formState, endTime: date })
+            }
+            placeholder={formatDateTimeInTimezone(
+              formState.endTime,
+              resolvedTimezone
+            )}
             timezone={resolvedTimezone}
           />
         </div>
@@ -207,34 +223,52 @@ function SubEventDialogFormFields({
             id={withPrefix("hubIcao")}
             value={formState.hubIcao}
             onChange={(e) =>
-              setFormState({ ...formState, hubIcao: limitIcaoLength(e.target.value) })
+              setFormState({
+                ...formState,
+                hubIcao: limitIcaoLength(e.target.value),
+              })
             }
             placeholder="KJFK"
             maxLength={4}
-            className={!isIcaoLengthValid(formState.hubIcao) ? "border-destructive" : ""}
+            className={
+              !isIcaoLengthValid(formState.hubIcao) ? "border-destructive" : ""
+            }
           />
           {!isIcaoLengthValid(formState.hubIcao) && (
-            <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
+            <p className="text-xs text-destructive">
+              ICAO fields must be exactly 4 characters.
+            </p>
           )}
         </div>
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-                <Label htmlFor={withPrefix("departureIcao")}>Departure ICAO</Label>
-                <Input
-                  id={withPrefix("departureIcao")}
-                  value={formState.departureIcao}
-                  onChange={(e) =>
-                  setFormState({ ...formState, departureIcao: limitIcaoLength(e.target.value) })
-                  }
-                  placeholder="KJFK"
-                  maxLength={4}
-                  className={!isIcaoLengthValid(formState.departureIcao) ? "border-destructive" : ""}
-                />
-                {!isIcaoLengthValid(formState.departureIcao) && (
-                  <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
-                )}
+              <Label htmlFor={withPrefix("departureIcao")}>
+                Departure ICAO
+              </Label>
+              <Input
+                id={withPrefix("departureIcao")}
+                value={formState.departureIcao}
+                onChange={(e) =>
+                  setFormState({
+                    ...formState,
+                    departureIcao: limitIcaoLength(e.target.value),
+                  })
+                }
+                placeholder="KJFK"
+                maxLength={4}
+                className={
+                  !isIcaoLengthValid(formState.departureIcao)
+                    ? "border-destructive"
+                    : ""
+                }
+              />
+              {!isIcaoLengthValid(formState.departureIcao) && (
+                <p className="text-xs text-destructive">
+                  ICAO fields must be exactly 4 characters.
+                </p>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor={withPrefix("arrivalIcao")}>Arrival ICAO</Label>
@@ -242,14 +276,23 @@ function SubEventDialogFormFields({
                 id={withPrefix("arrivalIcao")}
                 value={formState.arrivalIcao}
                 onChange={(e) =>
-                  setFormState({ ...formState, arrivalIcao: limitIcaoLength(e.target.value) })
+                  setFormState({
+                    ...formState,
+                    arrivalIcao: limitIcaoLength(e.target.value),
+                  })
                 }
                 placeholder="KLAX"
                 maxLength={4}
-                className={!isIcaoLengthValid(formState.arrivalIcao) ? "border-destructive" : ""}
+                className={
+                  !isIcaoLengthValid(formState.arrivalIcao)
+                    ? "border-destructive"
+                    : ""
+                }
               />
               {!isIcaoLengthValid(formState.arrivalIcao) && (
-                <p className="text-xs text-destructive">ICAO fields must be exactly 4 characters.</p>
+                <p className="text-xs text-destructive">
+                  ICAO fields must be exactly 4 characters.
+                </p>
               )}
             </div>
           </div>
@@ -258,7 +301,9 @@ function SubEventDialogFormFields({
             <Input
               id={withPrefix("route")}
               value={formState.route}
-              onChange={(e) => setFormState({ ...formState, route: e.target.value })}
+              onChange={(e) =>
+                setFormState({ ...formState, route: e.target.value })
+              }
               placeholder="KJFK DCT KBOS DCT KLAX"
             />
           </div>
@@ -270,7 +315,9 @@ function SubEventDialogFormFields({
         <Textarea
           id={withPrefix("notes")}
           value={formState.notes}
-          onChange={(e) => setFormState({ ...formState, notes: e.target.value })}
+          onChange={(e) =>
+            setFormState({ ...formState, notes: e.target.value })
+          }
           placeholder="Any additional information"
           rows={2}
         />
@@ -280,7 +327,9 @@ function SubEventDialogFormFields({
         <Label htmlFor={withPrefix("eventLead")}>Event Lead (Optional)</Label>
         <Select
           value={formState.eventLeadHex}
-          onValueChange={(value) => setFormState({ ...formState, eventLeadHex: value })}
+          onValueChange={(value) =>
+            setFormState({ ...formState, eventLeadHex: value })
+          }
         >
           <SelectTrigger id={withPrefix("eventLead")}>
             <SelectValue placeholder="Select event lead" />

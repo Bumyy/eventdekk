@@ -23,6 +23,7 @@ export interface EventMapFlight {
   last_updated: string;
   matchedGroupId?: bigint;
   matchedColor?: string;
+  matchedLabel?: string;
 }
 
 export type ActivePopupInfo = {

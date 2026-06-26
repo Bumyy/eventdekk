@@ -7,7 +7,14 @@ describe("Avatar", () => {
     const { container } = render(<Avatar data-testid="avatar" />);
     const avatar = container.firstChild;
     expect(avatar).toHaveAttribute("data-slot", "avatar");
-    expect(avatar).toHaveClass("relative", "flex", "size-8", "shrink-0", "overflow-hidden", "rounded-full");
+    expect(avatar).toHaveClass(
+      "relative",
+      "flex",
+      "size-8",
+      "shrink-0",
+      "overflow-hidden",
+      "rounded-full"
+    );
   });
 
   it("merges custom className", () => {
@@ -18,7 +25,10 @@ describe("Avatar", () => {
 
   it("passes through additional props", () => {
     render(<Avatar data-testid="avatar" aria-label="User avatar" />);
-    expect(screen.getByTestId("avatar")).toHaveAttribute("aria-label", "User avatar");
+    expect(screen.getByTestId("avatar")).toHaveAttribute(
+      "aria-label",
+      "User avatar"
+    );
   });
 });
 
@@ -38,7 +48,7 @@ describe("AvatarFallback", () => {
         <AvatarFallback className="bg-blue-500">AB</AvatarFallback>
       </Avatar>
     );
-    expect(container.querySelector('.bg-blue-500')).toBeInTheDocument();
+    expect(container.querySelector(".bg-blue-500")).toBeInTheDocument();
   });
 });
 

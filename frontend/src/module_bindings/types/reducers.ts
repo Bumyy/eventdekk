@@ -7,6 +7,7 @@ import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
 import AddCohostToEventReducer from "../add_cohost_to_event_reducer";
+import AddEventOverlayReducer from "../add_event_overlay_reducer";
 import AddGroupCallsignFilterReducer from "../add_group_callsign_filter_reducer";
 import AddGroupMemberReducer from "../add_group_member_reducer";
 import AddLiveChatMessageReducer from "../add_live_chat_message_reducer";
@@ -15,6 +16,7 @@ import ApplyForGroupReducer from "../apply_for_group_reducer";
 import ApproveGroupApplicationReducer from "../approve_group_application_reducer";
 import CreateEventReducer from "../create_event_reducer";
 import DeleteEventReducer from "../delete_event_reducer";
+import DeleteEventOverlayReducer from "../delete_event_overlay_reducer";
 import DeleteFlightSignupReducer from "../delete_flight_signup_reducer";
 import DeleteLiveChatMessageReducer from "../delete_live_chat_message_reducer";
 import DeleteSubEventReducer from "../delete_sub_event_reducer";
@@ -32,6 +34,7 @@ import SetGroupDiscordWebhookReducer from "../set_group_discord_webhook_reducer"
 import SetUserProfileReducer from "../set_user_profile_reducer";
 import SignupForFlightReducer from "../signup_for_flight_reducer";
 import UpdateEventReducer from "../update_event_reducer";
+import UpdateEventOverlayReducer from "../update_event_overlay_reducer";
 import UpdateFlightSignupReducer from "../update_flight_signup_reducer";
 import UpdateGroupReducer from "../update_group_reducer";
 import UpdateLiveFlightsReducer from "../update_live_flights_reducer";
@@ -39,6 +42,7 @@ import UpdateParticipantRoleReducer from "../update_participant_role_reducer";
 import UpdateSubEventReducer from "../update_sub_event_reducer";
 
 export type AddCohostToEventParams = __Infer<typeof AddCohostToEventReducer>;
+export type AddEventOverlayParams = __Infer<typeof AddEventOverlayReducer>;
 export type AddGroupCallsignFilterParams = __Infer<typeof AddGroupCallsignFilterReducer>;
 export type AddGroupMemberParams = __Infer<typeof AddGroupMemberReducer>;
 export type AddLiveChatMessageParams = __Infer<typeof AddLiveChatMessageReducer>;
@@ -47,6 +51,7 @@ export type ApplyForGroupParams = __Infer<typeof ApplyForGroupReducer>;
 export type ApproveGroupApplicationParams = __Infer<typeof ApproveGroupApplicationReducer>;
 export type CreateEventParams = __Infer<typeof CreateEventReducer>;
 export type DeleteEventParams = __Infer<typeof DeleteEventReducer>;
+export type DeleteEventOverlayParams = __Infer<typeof DeleteEventOverlayReducer>;
 export type DeleteFlightSignupParams = __Infer<typeof DeleteFlightSignupReducer>;
 export type DeleteLiveChatMessageParams = __Infer<typeof DeleteLiveChatMessageReducer>;
 export type DeleteSubEventParams = __Infer<typeof DeleteSubEventReducer>;
@@ -64,6 +69,7 @@ export type SetGroupDiscordWebhookParams = __Infer<typeof SetGroupDiscordWebhook
 export type SetUserProfileParams = __Infer<typeof SetUserProfileReducer>;
 export type SignupForFlightParams = __Infer<typeof SignupForFlightReducer>;
 export type UpdateEventParams = __Infer<typeof UpdateEventReducer>;
+export type UpdateEventOverlayParams = __Infer<typeof UpdateEventOverlayReducer>;
 export type UpdateFlightSignupParams = __Infer<typeof UpdateFlightSignupReducer>;
 export type UpdateGroupParams = __Infer<typeof UpdateGroupReducer>;
 export type UpdateLiveFlightsParams = __Infer<typeof UpdateLiveFlightsReducer>;

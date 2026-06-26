@@ -28,4 +28,7 @@ export default __t.row({
   },
   createdAt: __t.timestamp().name("created_at"),
   isInternal: __t.bool().name("is_internal"),
+  flightFilterMode: __t.option(__t.string()).name("flight_filter_mode"),
+  flightFilterBounds: __t.option(__t.string()).name("flight_filter_bounds"),
+  showAllFlights: __t.bool().name("show_all_flights"),
 });

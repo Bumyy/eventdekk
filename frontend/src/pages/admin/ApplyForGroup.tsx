@@ -79,7 +79,9 @@ export default function ApplyForGroup() {
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData((prev) => ({ ...prev, name: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, name: e.target.value }))
+              }
               required
             />
           </div>
@@ -89,7 +91,9 @@ export default function ApplyForGroup() {
             <Input
               id="tag"
               value={formData.tag}
-              onChange={(e) => setFormData((prev) => ({ ...prev, tag: e.target.value }))}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, tag: e.target.value }))
+              }
               required
             />
           </div>
@@ -100,7 +104,10 @@ export default function ApplyForGroup() {
               id="description"
               value={formData.description}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, description: e.target.value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  description: e.target.value,
+                }))
               }
               required
             />
@@ -114,7 +121,10 @@ export default function ApplyForGroup() {
                 type="url"
                 value={formData.websiteUrl}
                 onChange={(e) =>
-                  setFormData((prev) => ({ ...prev, websiteUrl: e.target.value }))
+                  setFormData((prev) => ({
+                    ...prev,
+                    websiteUrl: e.target.value,
+                  }))
                 }
               />
             </div>
@@ -132,11 +142,22 @@ export default function ApplyForGroup() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={() => navigate("/admin")}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => navigate("/admin")}
+            >
               Back
             </Button>
-            <Button type="submit" disabled={isSubmitting || hasPending || !connection}>
-              {isSubmitting ? "Submitting..." : hasPending ? "Pending Review" : "Submit"}
+            <Button
+              type="submit"
+              disabled={isSubmitting || hasPending || !connection}
+            >
+              {isSubmitting
+                ? "Submitting..."
+                : hasPending
+                  ? "Pending Review"
+                  : "Submit"}
             </Button>
           </div>
         </form>
@@ -149,16 +170,25 @@ export default function ApplyForGroup() {
         ) : (
           <div className="space-y-3">
             {myApplications.map((app) => (
-              <div key={app.applicationId.toString()} className="border rounded-md p-3">
+              <div
+                key={app.applicationId.toString()}
+                className="border rounded-md p-3"
+              >
                 <div className="flex items-center justify-between">
                   <div className="font-medium">
                     {app.name} ({app.tag})
                   </div>
-                  <Badge variant={app.status.tag === "Approved" ? "secondary" : "outline"}>
+                  <Badge
+                    variant={
+                      app.status.tag === "Approved" ? "secondary" : "outline"
+                    }
+                  >
                     {app.status.tag}
                   </Badge>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{app.description}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {app.description}
+                </p>
                 {app.reviewNote && (
                   <p className="text-sm mt-2">Review: {app.reviewNote}</p>
                 )}

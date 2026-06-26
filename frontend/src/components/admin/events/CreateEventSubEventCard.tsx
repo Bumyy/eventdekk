@@ -11,7 +11,9 @@ interface CreateEventSubEventCardProps {
   index: number;
 }
 
-export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps) {
+export function CreateEventSubEventCard({
+  index,
+}: CreateEventSubEventCardProps) {
   const {
     subEvents,
     isAdvancedSubEventsMode,
@@ -134,16 +136,21 @@ export function CreateEventSubEventCard({ index }: CreateEventSubEventCardProps)
               subEvent.groupFlightDepartureIcao &&
               subEvent.groupFlightArrivalIcao && (
                 <span className="text-sm text-muted-foreground">
-                  {subEvent.groupFlightDepartureIcao} -&gt; {subEvent.groupFlightArrivalIcao}
+                  {subEvent.groupFlightDepartureIcao} -&gt;{" "}
+                  {subEvent.groupFlightArrivalIcao}
                 </span>
               )}
 
             {subEvent.subEventType.tag === "FlyIn" && subEvent.hubIcao && (
-              <span className="text-sm text-muted-foreground">To: {subEvent.hubIcao}</span>
+              <span className="text-sm text-muted-foreground">
+                To: {subEvent.hubIcao}
+              </span>
             )}
 
             {subEvent.subEventType.tag === "FlyOut" && subEvent.hubIcao && (
-              <span className="text-sm text-muted-foreground">From: {subEvent.hubIcao}</span>
+              <span className="text-sm text-muted-foreground">
+                From: {subEvent.hubIcao}
+              </span>
             )}
           </div>
 

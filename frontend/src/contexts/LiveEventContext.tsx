@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useCallback, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  ReactNode,
+} from "react";
 
 const STORAGE_KEY = "eventdekk_live_chat_event_id";
 
@@ -11,13 +17,17 @@ interface LiveEventContextType {
   clearCurrentEvent: () => void;
 }
 
-const LiveEventContext = createContext<LiveEventContextType | undefined>(undefined);
+const LiveEventContext = createContext<LiveEventContextType | undefined>(
+  undefined
+);
 
 export const LiveEventProvider = ({ children }: { children: ReactNode }) => {
-  const [currentEventId, setCurrentEventIdState] = useState<string | null>(() => {
-    if (typeof window === "undefined") return null;
-    return window.localStorage.getItem(STORAGE_KEY);
-  });
+  const [currentEventId, setCurrentEventIdState] = useState<string | null>(
+    () => {
+      if (typeof window === "undefined") return null;
+      return window.localStorage.getItem(STORAGE_KEY);
+    }
+  );
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
 
   const setCurrentEventId = useCallback((eventId: string | null) => {
@@ -62,7 +72,9 @@ export const LiveEventProvider = ({ children }: { children: ReactNode }) => {
 export const useLiveEventContext = () => {
   const context = useContext(LiveEventContext);
   if (!context) {
-    throw new Error("useLiveEventContext must be used within a LiveEventProvider");
+    throw new Error(
+      "useLiveEventContext must be used within a LiveEventProvider"
+    );
   }
   return context;
 };

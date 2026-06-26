@@ -78,23 +78,46 @@ pub fn signup_for_flight(
         }
     }
 
-    let new_signup = FlightSignup {
-        signup_id: 0,
-        sub_event_id,
-        group_id,
-        event_lead,
-        departure_icao: departure_icao_upper,
-        arrival_icao: arrival_icao_upper,
-        route_details,
-        callsign,
-        aircraft_type,
-        desired_departure_time,
-        desired_arrival_time,
-        created_at: ctx.timestamp,
-        livery_id,
-    };
-    ctx.db.flight_signup().insert(new_signup);
-    info!("Group {} signed up for SubEvent {}", group_id, sub_event_id);
+    let existing = ctx
+        .db
+        .flight_signup()
+        .iter()
+        .find(|s| s.sub_event_id == sub_event_id && s.group_id == group_id);
+
+    if let Some(existing_signup) = existing {
+        let updated_signup = FlightSignup {
+            departure_icao: departure_icao_upper,
+            arrival_icao: arrival_icao_upper,
+            event_lead,
+            route_details,
+            callsign,
+            aircraft_type,
+            desired_departure_time,
+            desired_arrival_time,
+            livery_id,
+            ..existing_signup
+        };
+        ctx.db.flight_signup().signup_id().update(updated_signup);
+        info!("Group {} updated existing flight signup for SubEvent {}", group_id, sub_event_id);
+    } else {
+        let new_signup = FlightSignup {
+            signup_id: 0,
+            sub_event_id,
+            group_id,
+            event_lead,
+            departure_icao: departure_icao_upper,
+            arrival_icao: arrival_icao_upper,
+            route_details,
+            callsign,
+            aircraft_type,
+            desired_departure_time,
+            desired_arrival_time,
+            created_at: ctx.timestamp,
+            livery_id,
+        };
+        ctx.db.flight_signup().insert(new_signup);
+        info!("Group {} signed up for SubEvent {}", group_id, sub_event_id);
+    }
     Ok(())
 }
 

@@ -57,10 +57,9 @@ describe("spacetimeHooks selectors", () => {
     const single = selectSubEventsForEvents([2n], singleRows, allSubEvents);
     const multi = selectSubEventsForEvents([2n, 4n], singleRows, allSubEvents);
 
-    expect(single.map((se) => se.scheduledStartTime.toDate().toISOString())).toEqual([
-      "2026-02-01T10:00:00.000Z",
-      "2026-02-01T15:00:00.000Z",
-    ]);
+    expect(
+      single.map((se) => se.scheduledStartTime.toDate().toISOString())
+    ).toEqual(["2026-02-01T10:00:00.000Z", "2026-02-01T15:00:00.000Z"]);
     expect(multi.map((se) => se.eventId)).toEqual([4n, 2n]);
   });
 
@@ -144,9 +143,21 @@ describe("spacetimeHooks selectors", () => {
 
   it("returns pending invitation events sorted by start time", () => {
     const events = [
-      { eventId: 10n, startTime: time("2026-06-01T11:00:00Z"), endTime: time("2026-06-02T11:00:00Z") },
-      { eventId: 9n, startTime: time("2026-06-01T09:00:00Z"), endTime: time("2026-06-02T09:00:00Z") },
-      { eventId: 8n, startTime: time("2026-06-01T10:00:00Z"), endTime: time("2026-06-02T10:00:00Z") },
+      {
+        eventId: 10n,
+        startTime: time("2026-06-01T11:00:00Z"),
+        endTime: time("2026-06-02T11:00:00Z"),
+      },
+      {
+        eventId: 9n,
+        startTime: time("2026-06-01T09:00:00Z"),
+        endTime: time("2026-06-02T09:00:00Z"),
+      },
+      {
+        eventId: 8n,
+        startTime: time("2026-06-01T10:00:00Z"),
+        endTime: time("2026-06-02T10:00:00Z"),
+      },
     ];
     const eventParticipants = [
       { eventId: 8n, status: { tag: "Pending" } },

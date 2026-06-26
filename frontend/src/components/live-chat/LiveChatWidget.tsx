@@ -1,6 +1,12 @@
 import { useMemo, useRef, useEffect, useState } from "react";
 import { useLocation } from "react-router-dom";
-import { useEvents, useLiveChatMessages, useUsers, useGroupMemberships, useAllActiveEvents } from "@/hooks/spacetimeHooks";
+import {
+  useEvents,
+  useLiveChatMessages,
+  useUsers,
+  useGroupMemberships,
+  useAllActiveEvents,
+} from "@/hooks/spacetimeHooks";
 import { MessageCircle, X } from "lucide-react";
 import { useLiveEventContext } from "@/contexts/LiveEventContext";
 import { useSpacetimeDB } from "spacetimedb/react";
@@ -9,7 +15,10 @@ import { toUserTimezoneDate } from "@/utils/timezoneUtils";
 
 const STORAGE_KEY_PREFIX = "eventdekk_chat_seen_";
 
-const isEventLive = (event: { startTime: { toDate: () => Date }; endTime: { toDate: () => Date } }) => {
+const isEventLive = (event: {
+  startTime: { toDate: () => Date };
+  endTime: { toDate: () => Date };
+}) => {
   const now = new Date();
   const startDate = toUserTimezoneDate(event.startTime);
   const endDate = toUserTimezoneDate(event.endTime);
@@ -18,7 +27,8 @@ const isEventLive = (event: { startTime: { toDate: () => Date }; endTime: { toDa
 
 export const LiveChatWidget = () => {
   const location = useLocation();
-  const { currentEventId, isWidgetOpen, setIsWidgetOpen, clearCurrentEvent } = useLiveEventContext();
+  const { currentEventId, isWidgetOpen, setIsWidgetOpen, clearCurrentEvent } =
+    useLiveEventContext();
   const { identity } = useSpacetimeDB();
   const events = useEvents();
   const users = useUsers();
@@ -75,7 +85,7 @@ export const LiveChatWidget = () => {
     if (!currentEventId || !identity) return;
 
     const storageKey = `${STORAGE_KEY_PREFIX}${currentEventId}_${identity.toHexString()}`;
-    
+
     if (!isInitializedRef.current) {
       const stored = localStorage.getItem(storageKey);
       if (stored) {
@@ -94,10 +104,13 @@ export const LiveChatWidget = () => {
     if (isWidgetOpen) {
       lastSeenRef.current = eventMessages.length;
       setUnreadCount(0);
-      localStorage.setItem(storageKey, JSON.stringify({
-        lastSeenCount: eventMessages.length,
-        unreadCount: 0
-      }));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          lastSeenCount: eventMessages.length,
+          unreadCount: 0,
+        })
+      );
       return;
     }
 
@@ -111,12 +124,15 @@ export const LiveChatWidget = () => {
     if (incoming > 0) {
       const newUnread = unreadCount + incoming;
       setUnreadCount(newUnread);
-      localStorage.setItem(storageKey, JSON.stringify({
-        lastSeenCount: eventMessages.length,
-        unreadCount: newUnread
-      }));
+      localStorage.setItem(
+        storageKey,
+        JSON.stringify({
+          lastSeenCount: eventMessages.length,
+          unreadCount: newUnread,
+        })
+      );
     }
-    
+
     lastSeenRef.current = eventMessages.length;
   }, [eventMessages, isWidgetOpen, identity, currentEventId, unreadCount]);
 
@@ -129,22 +145,31 @@ export const LiveChatWidget = () => {
 
   const isOnLiveEventPage = location.pathname.startsWith("/live-event/");
 
-  if (!identity ||!hasLiveEventInUsersGroup || !currentEventId || isEventFinished || isOnLiveEventPage) return null;
+  if (
+    !identity ||
+    !hasLiveEventInUsersGroup ||
+    !currentEventId ||
+    isEventFinished ||
+    isOnLiveEventPage
+  )
+    return null;
 
   return (
     <>
       {isWidgetOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/20 z-40 md:hidden"
           onClick={() => setIsWidgetOpen(false)}
         />
       )}
-      
+
       <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-3">
         {isWidgetOpen && (
           <div className="w-[420px] max-w-[calc(100vw-2rem)] h-[560px] max-h-[calc(100dvh-6rem)] bg-card rounded-xl shadow-xl border overflow-hidden flex flex-col">
             <div className="h-11 px-3 border-b flex items-center justify-between bg-card/95">
-              <span className="font-medium text-sm truncate">{currentEvent?.name}</span>
+              <span className="font-medium text-sm truncate">
+                {currentEvent?.name}
+              </span>
               <button
                 onClick={() => setIsWidgetOpen(false)}
                 className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted"
@@ -159,18 +184,14 @@ export const LiveChatWidget = () => {
         <button
           onClick={() => setIsWidgetOpen(!isWidgetOpen)}
           className={`relative h-12 w-12 flex items-center justify-center rounded-full shadow-lg transition-transform hover:scale-105 ${
-            isWidgetOpen 
-              ? "bg-muted text-foreground" 
+            isWidgetOpen
+              ? "bg-muted text-foreground"
               : "bg-primary text-primary-foreground"
           }`}
           aria-label={isWidgetOpen ? "Close chat" : "Open chat"}
         >
-          {isWidgetOpen ? (
-            <X size={22} />
-          ) : (
-            <MessageCircle size={22} />
-          )}
-          
+          {isWidgetOpen ? <X size={22} /> : <MessageCircle size={22} />}
+
           {!isWidgetOpen && unreadCount > 0 && (
             <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
               {unreadCount > 99 ? "99+" : unreadCount}

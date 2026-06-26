@@ -12,10 +12,10 @@ export const MapPopup: React.FC<{
   if (!activePopupInfo) return null;
   const { type, data, longitude, latitude } = activePopupInfo;
 
-  const PopupContainer: React.FC<{ title: string; children: React.ReactNode }> = ({
-    title,
-    children,
-  }) => (
+  const PopupContainer: React.FC<{
+    title: string;
+    children: React.ReactNode;
+  }> = ({ title, children }) => (
     <div className="event-map-popup-content">
       <h3 className="font-semibold text-base mb-2">{title}</h3>
       {children}
@@ -38,7 +38,11 @@ export const MapPopup: React.FC<{
           {typeLabel} for: {subEvent.name}
         </p>
         <p>
-          Time: {context.formatTimeRange(subEvent.scheduledStartTime, subEvent.scheduledEndTime)}
+          Time:{" "}
+          {context.formatTimeRange(
+            subEvent.scheduledStartTime,
+            subEvent.scheduledEndTime
+          )}
         </p>
       </PopupContainer>
     );
@@ -86,7 +90,11 @@ export const MapPopup: React.FC<{
           </p>
           {routeSignup?.callsign && <p>Callsign: {routeSignup.callsign}</p>}
           <p>
-            Time: {context.formatTimeRange(routeSubEvent.scheduledStartTime, routeSubEvent.scheduledEndTime)}
+            Time:{" "}
+            {context.formatTimeRange(
+              routeSubEvent.scheduledStartTime,
+              routeSubEvent.scheduledEndTime
+            )}
           </p>
         </PopupContainer>
       );

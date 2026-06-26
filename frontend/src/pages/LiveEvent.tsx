@@ -8,13 +8,27 @@ import {
 } from "@/hooks/useEventFlightFiltering";
 import "leaflet/dist/leaflet.css";
 import { useLiveEventContext } from "@/contexts/LiveEventContext";
+import { useSpacetimeDB } from "spacetimedb/react";
+import { useIsSuperAdmin, useGroupMemberships, useEventOverlays } from "@/hooks/spacetimeHooks";
+import { LiveOverlayController } from "@/components/map/event-map/LiveOverlayController";
 
 const PilotCountBadge = ({ count }: { count: number }) => (
   <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5">
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3.5 w-3.5"
+    >
       <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9 0-1.2.3l-.3.3c-.3.3-.3.8 0 1.1L8 12l-4 4c-1 1-1 2.5 0 3.5s2.5 1 3.5 0l4-4 4.1 4.7c.3.3.8.3 1.1 0l.3-.3c.3-.3.4-.7.3-1.2Z" />
     </svg>
-    <span>{count} pilot{count !== 1 ? "s" : ""}</span>
+    <span>
+      {count} pilot{count !== 1 ? "s" : ""}
+    </span>
   </span>
 );
 
@@ -27,6 +41,31 @@ const LiveEvent = () => {
       setCurrentEventId(eventId);
     }
   }, [eventId, setCurrentEventId]);
+
+  const isSuperAdmin = useIsSuperAdmin();
+  const { getConnection } = useSpacetimeDB();
+  const connection = getConnection();
+  const memberships = useGroupMemberships();
+
+  const eventIdBigInt = useMemo(() => {
+    if (!eventId) return null;
+    try {
+      return BigInt(eventId);
+    } catch {
+      return null;
+    }
+  }, [eventId]);
+
+  const overlays = useEventOverlays(eventIdBigInt);
+
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [drawTool, setDrawTool] = useState("freehand");
+  const [drawLabel, setDrawLabel] = useState("");
+  const [activeDrawingPoints, setActiveDrawingPoints] = useState<[number, number][]>([]);
+  const [drawStartPoint, setDrawStartPoint] = useState<[number, number] | null>(null);
+  const [strokeColor, setStrokeColor] = useState("#3B82F6");
+  const isDrawingRef = useRef(false);
+  const lastClickTimeRef = useRef(0);
 
   const sheetRef = useRef<HTMLDivElement>(null);
   const [flights, setFlights] = useState<ApiFlight[]>([]);
@@ -50,7 +89,7 @@ const LiveEvent = () => {
   const SHEET_HEIGHTS = useMemo(() => {
     const expanded = Math.max(320, mobileViewportHeight - NAV_HEIGHT);
     const partial = Math.min(380, Math.max(220, Math.round(expanded * 0.6)));
-    return { collapsed: 60, partial, expanded };
+    return { collapsed: 72, partial, expanded };
   }, [mobileViewportHeight]);
 
   const handleSheetDragStart = useCallback(
@@ -181,6 +220,183 @@ const LiveEvent = () => {
     filteredFlights,
   } = useEventFlightFiltering(eventId, flights);
 
+  const isHostStaff = useMemo(() => {
+    if (isSuperAdmin) return true;
+    if (!event || !connection) return false;
+    const userHex = connection.identity?.toHexString();
+    if (!userHex) return false;
+    const membership = memberships.find(
+      (m) =>
+        m.groupId === event.creatorGroupId &&
+        m.userIdentity.toHexString() === userHex
+    );
+    if (!membership) return false;
+    return (
+      membership.permissionLevel.tag === "Staff" ||
+      membership.permissionLevel.tag === "Ceo"
+    );
+  }, [event, connection, memberships, isSuperAdmin]);
+
+  const saveDrawingAsOverlay = useCallback(async (geojsonData: any) => {
+    if (!connection || !eventId) return;
+    try {
+      const props = geojsonData.properties || {};
+      if (drawLabel.trim()) {
+        props.label = drawLabel.trim();
+      }
+      const config = JSON.stringify({
+        opacity: 0.8,
+        strokeColor: strokeColor,
+        strokeWidth: 3,
+      });
+      await connection.reducers.addEventOverlay({
+        eventId: BigInt(eventId),
+        name: drawLabel.trim() || `Drawing ${new Date().toLocaleTimeString()}`,
+        overlayType: "draw",
+        data: JSON.stringify({
+          ...geojsonData,
+          properties: props,
+        }),
+        config,
+      });
+      toast.success("Drawing saved");
+    } catch (err) {
+      console.error("Failed to save drawing:", err);
+    }
+  }, [connection, eventId, strokeColor, drawLabel]);
+
+  const generateCirclePolygon = useCallback((center: [number, number], edge: [number, number]): [number, number][] => {
+    const R = 6371000; // Earth radius in meters
+    const toRad = (deg: number) => (deg * Math.PI) / 180;
+    const toDeg = (rad: number) => (rad * 180) / Math.PI;
+
+    const [lon1, lat1] = [toRad(center[0]), toRad(center[1])];
+    const [lon2, lat2] = [toRad(edge[0]), toRad(edge[1])];
+
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLon / 2) ** 2;
+    const radiusM = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    const segments = 64;
+    const coords: [number, number][] = [];
+    for (let i = 0; i <= segments; i++) {
+      const bearing = (i / segments) * 2 * Math.PI;
+      const lat3 = Math.asin(
+        Math.sin(lat1) * Math.cos(radiusM / R) +
+        Math.cos(lat1) * Math.sin(radiusM / R) * Math.cos(bearing)
+      );
+      const lon3 = lon1 + Math.atan2(
+        Math.sin(bearing) * Math.sin(radiusM / R) * Math.cos(lat1),
+        Math.cos(radiusM / R) - Math.sin(lat1) * Math.sin(lat3)
+      );
+      coords.push([toDeg(lon3), toDeg(lat3)]);
+    }
+    return coords;
+  }, []);
+
+  const handleMapMouseDown = useCallback((e: any) => {
+    if (!isDrawingMode || !isHostStaff) return;
+    const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+
+    if (drawTool === "freehand") {
+      isDrawingRef.current = true;
+      setActiveDrawingPoints([coords]);
+    } else if (drawTool === "line") {
+      if (!drawStartPoint) {
+        setDrawStartPoint(coords);
+        setActiveDrawingPoints([coords]);
+      } else {
+        saveDrawingAsOverlay({
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: [drawStartPoint, coords] },
+          properties: {},
+        });
+        setDrawStartPoint(null);
+        setActiveDrawingPoints([]);
+      }
+    } else if (drawTool === "circle") {
+      isDrawingRef.current = true;
+      setDrawStartPoint(coords);
+      setActiveDrawingPoints([coords]);
+    } else if (drawTool === "rectangle") {
+      isDrawingRef.current = true;
+      setDrawStartPoint(coords);
+      setActiveDrawingPoints([coords]);
+    } else if (drawTool === "polygon") {
+      const now = Date.now();
+      if (now - lastClickTimeRef.current < 300 && activeDrawingPoints.length > 2) {
+        const closed = [...activeDrawingPoints, activeDrawingPoints[0]];
+        saveDrawingAsOverlay({
+          type: "Feature",
+          geometry: { type: "Polygon", coordinates: [closed] },
+          properties: {},
+        });
+        setActiveDrawingPoints([]);
+        lastClickTimeRef.current = 0;
+        return;
+      }
+      lastClickTimeRef.current = now;
+      setActiveDrawingPoints((prev) => [...prev, coords]);
+    }
+  }, [isDrawingMode, isHostStaff, drawTool, drawStartPoint, saveDrawingAsOverlay]);
+
+  const handleMapMouseMove = useCallback((e: any) => {
+    if (!isDrawingMode || !isDrawingRef.current || !isHostStaff) return;
+    if (drawTool === "polygon") return;
+    const coords: [number, number] = [e.lngLat.lng, e.lngLat.lat];
+
+    if (drawTool === "freehand") {
+      setActiveDrawingPoints((prev) => [...prev, coords]);
+    } else if (drawTool === "circle" && drawStartPoint) {
+      setActiveDrawingPoints([drawStartPoint, coords]);
+    } else if (drawTool === "rectangle" && drawStartPoint) {
+      setActiveDrawingPoints([drawStartPoint, coords]);
+    }
+  }, [isDrawingMode, isHostStaff, drawTool, drawStartPoint]);
+
+  const handleMapMouseUp = useCallback(async () => {
+    if (!isDrawingMode || !isDrawingRef.current || !isHostStaff) return;
+    isDrawingRef.current = false;
+
+    if (drawTool === "freehand" && activeDrawingPoints.length > 1) {
+      await saveDrawingAsOverlay({
+        type: "Feature",
+        geometry: { type: "LineString", coordinates: activeDrawingPoints },
+        properties: {},
+      });
+    } else if (drawTool === "circle" && drawStartPoint && activeDrawingPoints.length === 2) {
+      const circleCoords = generateCirclePolygon(drawStartPoint, activeDrawingPoints[1]);
+      if (circleCoords.length > 2) {
+        await saveDrawingAsOverlay({
+          type: "Feature",
+          geometry: { type: "Polygon", coordinates: [circleCoords] },
+          properties: {},
+        });
+      }
+    } else if (drawTool === "rectangle" && drawStartPoint && activeDrawingPoints.length === 2) {
+      const [lng1, lat1] = drawStartPoint;
+      const [lng2, lat2] = activeDrawingPoints[1];
+      const rectCoords: [number, number][] = [
+        [lng1, lat1],
+        [lng2, lat1],
+        [lng2, lat2],
+        [lng1, lat2],
+        [lng1, lat1],
+      ];
+      await saveDrawingAsOverlay({
+        type: "Feature",
+        geometry: { type: "Polygon", coordinates: [rectCoords] },
+        properties: {},
+      });
+    }
+
+    if (drawTool !== "line" && drawTool !== "polygon") {
+      setActiveDrawingPoints([]);
+      setDrawStartPoint(null);
+    }
+  }, [isDrawingMode, isHostStaff, drawTool, activeDrawingPoints, drawStartPoint, saveDrawingAsOverlay, generateCirclePolygon]);
+
   // Fetch flight data from API
   const fetchFlightData = async () => {
     try {
@@ -249,6 +465,11 @@ const LiveEvent = () => {
               groupMap={groupMap}
               flights={filteredFlights}
               className="w-full h-full z-0"
+              onMouseDown={handleMapMouseDown}
+              onMouseMove={handleMapMouseMove}
+              onMouseUp={handleMapMouseUp}
+              dragPan={!isDrawingMode}
+              activeDrawingPoints={activeDrawingPoints}
             />
           </div>
         </div>
@@ -271,6 +492,11 @@ const LiveEvent = () => {
             groupMap={groupMap}
             flights={filteredFlights}
             className="w-full h-full"
+            onMouseDown={handleMapMouseDown}
+            onMouseMove={handleMapMouseMove}
+            onMouseUp={handleMapMouseUp}
+            dragPan={!isDrawingMode}
+            activeDrawingPoints={activeDrawingPoints}
           />
         </div>
 
@@ -296,14 +522,12 @@ const LiveEvent = () => {
           }}
         >
           {/* Drag handle */}
-          <div className="flex justify-center py-2">
-            <div
-              className="h-8 w-24 cursor-grab touch-none select-none flex items-center justify-center"
-              onMouseDown={handleSheetDragStart}
-              onTouchStart={handleSheetDragStart}
-            >
-              <div className="w-14 h-1.5 bg-muted-foreground/40 rounded-full" />
-            </div>
+          <div
+            className="w-full cursor-grab active:cursor-grabbing touch-none select-none flex justify-center py-2.5"
+            onMouseDown={handleSheetDragStart}
+            onTouchStart={handleSheetDragStart}
+          >
+            <div className="w-10 h-1 bg-muted-foreground/35 rounded-full" />
           </div>
 
           <div className="flex-1 overflow-hidden flex flex-col min-h-0">
@@ -311,6 +535,21 @@ const LiveEvent = () => {
           </div>
         </div>
       </div>
+
+      {isHostStaff && eventId && (
+        <LiveOverlayController
+          eventId={eventId}
+          overlays={overlays}
+          isDrawingMode={isDrawingMode}
+          setIsDrawingMode={setIsDrawingMode}
+          strokeColor={strokeColor}
+          setStrokeColor={setStrokeColor}
+          drawTool={drawTool}
+          setDrawTool={setDrawTool}
+          drawLabel={drawLabel}
+          setDrawLabel={setDrawLabel}
+        />
+      )}
     </>
   );
 };

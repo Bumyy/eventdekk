@@ -1,19 +1,32 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
-import MapGL, {
-  Source,
-  Layer,
-  MapRef,
-} from "react-map-gl/maplibre";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+  memo,
+} from "react";
+import MapGL, { Source, Layer, MapRef } from "react-map-gl/maplibre";
 import type { LayerProps } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bbox from "@turf/bbox";
 import { WebMercatorViewport } from "@deck.gl/core";
 
-import { SubEventType, Group, FlightSignup, SubEvent } from "@/module_bindings/types";
+import {
+  SubEventType,
+  Group,
+  FlightSignup,
+  SubEvent,
+} from "@/module_bindings/types";
 import { Timestamp } from "spacetimedb";
 import { useTheme } from "../ThemeProvider";
 import { fetchAirportsByIcao } from "../../services/airportService";
-import { AirportMarkers, AirportIcaoLabels, SmallAirportMarkers } from "./event-map/MapMarkers";
+import { useEventOverlays } from "../../hooks/spacetimeHooks";
+import {
+  AirportMarkers,
+  AirportIcaoLabels,
+  SmallAirportMarkers,
+} from "./event-map/MapMarkers";
 import { MapPopup } from "./event-map/MapPopup";
 import { ActivePopupInfo, Airport } from "./event-map/types";
 
@@ -25,9 +38,16 @@ export interface EventBaseMapProps {
   className?: string;
   showSignupRoutes?: boolean;
   children?: React.ReactNode;
+  eventId?: string;
+  onMouseDown?: (e: any) => void;
+  onMouseMove?: (e: any) => void;
+  onMouseUp?: (e: any) => void;
+  dragPan?: boolean;
+  activeDrawingPoints?: [number, number][];
 }
 
-const MAPTILER_API_KEY = import.meta.env.VITE_MAPTILER_API_KEY || "YOUR_FALLBACK_MAPTILER_KEY";
+const MAPTILER_API_KEY =
+  import.meta.env.VITE_MAPTILER_API_KEY || "YOUR_FALLBACK_MAPTILER_KEY";
 
 const EventBaseMap: React.FC<EventBaseMapProps> = ({
   subEvents,
@@ -37,9 +57,26 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
   className,
   showSignupRoutes = true,
   children,
+  eventId,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  dragPan = true,
+  activeDrawingPoints,
 }) => {
   const { theme } = useTheme();
   const mapRef = useRef<MapRef | null>(null);
+
+  const eventIdBigInt = useMemo(() => {
+    if (!eventId) return null;
+    try {
+      return BigInt(eventId);
+    } catch {
+      return null;
+    }
+  }, [eventId]);
+
+  const overlays = useEventOverlays(eventIdBigInt);
 
   const currentResolvedTheme = useMemo(
     (): "light" | "dark" =>
@@ -51,7 +88,9 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
     [theme]
   );
 
-  const [airportData, setAirportData] = useState<Map<string, Airport>>(new Map());
+  const [airportData, setAirportData] = useState<Map<string, Airport>>(
+    new Map()
+  );
   const [loadingAirports, setLoadingAirports] = useState(true);
   const [airportError, setAirportError] = useState<string | null>(null);
   const [activePopupInfo, setActivePopupInfo] = useState<ActivePopupInfo>(null);
@@ -92,55 +131,53 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
 
   const prevIcaosRef = useRef<string[]>([]);
 
-  const fitMapToData = useCallback(
-    (airportsToFit: Airport[]) => {
-      if (!mapRef.current || airportsToFit.length === 0) return;
+  const fitMapToData = useCallback((airportsToFit: Airport[]) => {
+    if (!mapRef.current || airportsToFit.length === 0) return;
 
-      const points: [number, number][] = [];
-      airportsToFit.forEach((ap) => points.push([ap.longitude, ap.latitude]));
+    const points: [number, number][] = [];
+    airportsToFit.forEach((ap) => points.push([ap.longitude, ap.latitude]));
 
-      if (points.length === 0) return;
-      if (points.length === 1) {
-        mapRef.current.flyTo({ center: points[0], zoom: 10 });
-        return;
-      }
+    if (points.length === 0) return;
+    if (points.length === 1) {
+      mapRef.current.flyTo({ center: points[0], zoom: 10 });
+      return;
+    }
 
-      const featureCollection = {
-        type: "FeatureCollection" as const,
-        features: points.map((p) => ({
-          type: "Feature" as const,
-          geometry: { type: "Point" as const, coordinates: p },
-          properties: {},
-        })),
-      };
-      const [minLng, minLat, maxLng, maxLat] = bbox(featureCollection);
+    const featureCollection = {
+      type: "FeatureCollection" as const,
+      features: points.map((p) => ({
+        type: "Feature" as const,
+        geometry: { type: "Point" as const, coordinates: p },
+        properties: {},
+      })),
+    };
+    const [minLng, minLat, maxLng, maxLat] = bbox(featureCollection);
 
-      const viewport = new WebMercatorViewport({
-        width: mapRef.current.getMap().getCanvas().width,
-        height: mapRef.current.getMap().getCanvas().height,
-      });
-      const { longitude, latitude, zoom } = viewport.fitBounds(
-        [
-          [minLng, minLat],
-          [maxLng, maxLat],
-        ],
-        { padding: 80 }
-      );
+    const viewport = new WebMercatorViewport({
+      width: mapRef.current.getMap().getCanvas().width,
+      height: mapRef.current.getMap().getCanvas().height,
+    });
+    const { longitude, latitude, zoom } = viewport.fitBounds(
+      [
+        [minLng, minLat],
+        [maxLng, maxLat],
+      ],
+      { padding: 80 }
+    );
 
-      mapRef.current.flyTo({
-        center: [longitude, latitude],
-        zoom: Math.min(zoom, 15),
-        duration: 1000,
-      });
-    },
-    []
-  );
+    mapRef.current.flyTo({
+      center: [longitude, latitude],
+      zoom: Math.min(zoom, 15),
+      duration: 1000,
+    });
+  }, []);
 
   useEffect(() => {
     const sortedPrev = prevIcaosRef.current;
-    const changed = icaos.length !== sortedPrev.length ||
+    const changed =
+      icaos.length !== sortedPrev.length ||
       icaos.some((icao, i) => icao !== sortedPrev[i]);
-    
+
     if (!changed) return;
     prevIcaosRef.current = icaos;
 
@@ -247,7 +284,13 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
       }
     });
     return markers;
-  }, [subEvents, airportData, groupMap, creatorGroupId, defaultGroupFlightColor]);
+  }, [
+    subEvents,
+    airportData,
+    groupMap,
+    creatorGroupId,
+    defaultGroupFlightColor,
+  ]);
 
   const { airportIcaoLabels, signupIcaoLabels, signupMarkers } = useMemo(() => {
     const airportLabels: Array<{
@@ -280,8 +323,10 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
 
     subEvents.forEach((subEvent) => {
       if (subEvent.subEventType.tag === SubEventType.GroupFlight.tag) {
-        if (subEvent.groupFlightDepartureIcao) eventAirportIcaos.add(subEvent.groupFlightDepartureIcao);
-        if (subEvent.groupFlightArrivalIcao) eventAirportIcaos.add(subEvent.groupFlightArrivalIcao);
+        if (subEvent.groupFlightDepartureIcao)
+          eventAirportIcaos.add(subEvent.groupFlightDepartureIcao);
+        if (subEvent.groupFlightArrivalIcao)
+          eventAirportIcaos.add(subEvent.groupFlightArrivalIcao);
       } else if (subEvent.hubIcao) {
         eventAirportIcaos.add(subEvent.hubIcao);
       }
@@ -290,7 +335,11 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
     const labelSlotByAirport = new Map<string, number>();
     const renderedEventAirportLabels = new Set<string>();
 
-    const nextAirportOffset = (icao: string, baseX: number, stepY: number): [number, number] => {
+    const nextAirportOffset = (
+      icao: string,
+      baseX: number,
+      stepY: number
+    ): [number, number] => {
       const slot = labelSlotByAirport.get(icao) || 0;
       labelSlotByAirport.set(icao, slot + 1);
 
@@ -343,11 +392,19 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
       flightSignups.forEach((signup) => {
         const group = groupMap.get(signup.groupId.toString());
         const color = group?.color || defaultSignupFlightColor;
-        const subEvent = subEvents.find((se) => se.subEventId === signup.subEventId);
+        const subEvent = subEvents.find(
+          (se) => se.subEventId === signup.subEventId
+        );
         if (!subEvent) return;
 
-        if (subEvent.subEventType.tag === SubEventType.FlyIn.tag && signup.departureIcao) {
-          if (!eventAirportIcaos.has(signup.departureIcao) && !renderedSignupIcaos.has(signup.departureIcao)) {
+        if (
+          subEvent.subEventType.tag === SubEventType.FlyIn.tag &&
+          signup.departureIcao
+        ) {
+          if (
+            !eventAirportIcaos.has(signup.departureIcao) &&
+            !renderedSignupIcaos.has(signup.departureIcao)
+          ) {
             const airport = getAirport(signup.departureIcao);
             if (airport) {
               signupLabels.push({
@@ -369,8 +426,14 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
           }
         }
 
-        if (subEvent.subEventType.tag === SubEventType.FlyOut.tag && signup.arrivalIcao) {
-          if (!eventAirportIcaos.has(signup.arrivalIcao) && !renderedSignupIcaos.has(signup.arrivalIcao)) {
+        if (
+          subEvent.subEventType.tag === SubEventType.FlyOut.tag &&
+          signup.arrivalIcao
+        ) {
+          if (
+            !eventAirportIcaos.has(signup.arrivalIcao) &&
+            !renderedSignupIcaos.has(signup.arrivalIcao)
+          ) {
             const airport = getAirport(signup.arrivalIcao);
             if (airport) {
               signupLabels.push({
@@ -546,27 +609,25 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
     setMapReady(true);
   }, []);
 
-  const handleMapClick = useCallback(
-    (event: mapboxgl.MapLayerMouseEvent) => {
-      if (event.features && event.features.length > 0) {
-        const feature = event.features[0];
-        const layerId = feature.layer?.id;
-        if (
-          (layerId === "group-flight-paths" || layerId === "signup-flight-paths") &&
-          feature.properties
-        ) {
-          setActivePopupInfo({
-            type: "route",
-            data: feature.properties,
-            longitude: event.lngLat.lng,
-            latitude: event.lngLat.lat,
-          });
-          return;
-        }
+  const handleMapClick = useCallback((event: mapboxgl.MapLayerMouseEvent) => {
+    if (event.features && event.features.length > 0) {
+      const feature = event.features[0];
+      const layerId = feature.layer?.id;
+      if (
+        (layerId === "group-flight-paths" ||
+          layerId === "signup-flight-paths") &&
+        feature.properties
+      ) {
+        setActivePopupInfo({
+          type: "route",
+          data: feature.properties,
+          longitude: event.lngLat.lng,
+          latitude: event.lngLat.lat,
+        });
+        return;
       }
-    },
-    []
-  );
+    }
+  }, []);
 
   const mapStyleUrl = useMemo(() => {
     const styleName =
@@ -634,14 +695,19 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
         mapStyle={mapStyleUrl}
         onLoad={handleMapLoad}
         onClick={handleMapClick}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        dragPan={dragPan}
         interactiveLayerIds={["group-flight-paths", "signup-flight-paths"]}
         attributionControl={false}
       >
-        {showSignupRoutes && (
-          <SmallAirportMarkers markers={signupMarkers} />
-        )}
+        {showSignupRoutes && <SmallAirportMarkers markers={signupMarkers} />}
 
-        <AirportMarkers markers={airportMarkers} resolvedTheme={currentResolvedTheme} />
+        <AirportMarkers
+          markers={airportMarkers}
+          resolvedTheme={currentResolvedTheme}
+        />
 
         {showSignupRoutes && (
           <AirportIcaoLabels labels={signupIcaoLabels} compact />
@@ -649,14 +715,153 @@ const EventBaseMap: React.FC<EventBaseMapProps> = ({
 
         <AirportIcaoLabels labels={airportIcaoLabels} />
 
+        {overlays.map((overlay: any) => {
+          if (overlay.overlayType === "image") {
+            let bounds: [[number, number], [number, number], [number, number], [number, number]] | null = null;
+            let opacity = 0.5;
+            try {
+              const configObj = JSON.parse(overlay.config);
+              bounds = configObj.bounds;
+              opacity = configObj.opacity !== undefined ? configObj.opacity : 0.5;
+            } catch (e) {
+              // ignore
+            }
+            return bounds ? (
+              <Source
+                key={overlay.overlayId.toString()}
+                id={`overlay-img-src-${overlay.overlayId}`}
+                type="image"
+                url={overlay.data}
+                coordinates={bounds}
+              >
+                <Layer
+                  id={`overlay-img-layer-${overlay.overlayId}`}
+                  type="raster"
+                  paint={{ "raster-opacity": opacity }}
+                />
+              </Source>
+            ) : null;
+          } else {
+            let geojson = null;
+            let opacity = 0.5;
+            let strokeColor = "#3B82F6";
+            let strokeWidth = 3;
+            let fillColor = "#3B82F6";
+            try {
+              geojson = JSON.parse(overlay.data);
+              const configObj = JSON.parse(overlay.config || "{}");
+              opacity = configObj.opacity !== undefined ? configObj.opacity : 0.5;
+              strokeColor = configObj.strokeColor || "#3B82F6";
+              strokeWidth = configObj.strokeWidth || 3;
+              fillColor = configObj.fillColor || "#3B82F6";
+            } catch (e) {
+              // ignore
+            }
+            return geojson ? (
+              <React.Fragment key={overlay.overlayId.toString()}>
+                <Source
+                  id={`overlay-geo-src-${overlay.overlayId}`}
+                  type="geojson"
+                  data={geojson}
+                >
+                  <Layer
+                    id={`overlay-geo-layer-fill-${overlay.overlayId}`}
+                    type="fill"
+                    filter={["==", "$type", "Polygon"]}
+                    paint={{
+                      "fill-color": fillColor,
+                      "fill-opacity": opacity * 0.4,
+                    }}
+                  />
+                  <Layer
+                    id={`overlay-geo-layer-line-${overlay.overlayId}`}
+                    type="line"
+                    filter={["in", "$type", "LineString", "Polygon"]}
+                    paint={{
+                      "line-color": strokeColor,
+                      "line-width": strokeWidth,
+                      "line-opacity": opacity,
+                    }}
+                    layout={{
+                      "line-join": "round",
+                      "line-cap": "round",
+                    }}
+                  />
+                  <Layer
+                    id={`overlay-geo-layer-circle-${overlay.overlayId}`}
+                    type="circle"
+                    filter={["==", "$type", "Point"]}
+                    paint={{
+                      "circle-radius": 6,
+                      "circle-color": strokeColor,
+                      "circle-opacity": opacity,
+                      "circle-stroke-width": 1.5,
+                      "circle-stroke-color": "#FFFFFF",
+                    }}
+                  />
+                  <Layer
+                    id={`overlay-geo-layer-label-${overlay.overlayId}`}
+                    type="symbol"
+                    filter={["has", "label"]}
+                    layout={{
+                      "text-field": ["get", "label"],
+                      "text-size": 12,
+                      "text-offset": [0, 1.5],
+                      "text-anchor": "top",
+                    }}
+                    paint={{
+                      "text-color": "#FFFFFF",
+                      "text-halo-color": "#000000",
+                      "text-halo-width": 1.5,
+                    }}
+                  />
+                </Source>
+              </React.Fragment>
+            ) : null;
+          }
+        })}
+
+        {activeDrawingPoints && activeDrawingPoints.length > 1 && (
+          <Source
+            id="drawing-in-progress-src"
+            type="geojson"
+            data={{
+              type: "Feature",
+              geometry: {
+                type: "LineString",
+                coordinates: activeDrawingPoints,
+              },
+              properties: {},
+            }}
+          >
+            <Layer
+              id="drawing-in-progress-layer"
+              type="line"
+              paint={{
+                "line-color": "#FF0000",
+                "line-width": 3,
+                "line-dasharray": [2, 1],
+              }}
+            />
+          </Source>
+        )}
+
         {children}
 
-        <Source id="group-flight-paths-source" type="geojson" data={groupFlightPaths}>
+        <Source
+          id="group-flight-paths-source"
+          type="geojson"
+          data={groupFlightPaths}
+        >
           <Layer {...groupFlightLayerStyle} />
         </Source>
 
         {showSignupRoutes && (
-          <Source id="signup-flight-paths-source" type="geojson" data={signupFlightPaths}>
+          <Source
+            id="signup-flight-paths-source"
+            type="geojson"
+            data={signupFlightPaths}
+          >
             <Layer {...signupFlightLayerStyle} />
           </Source>
         )}
@@ -703,7 +908,8 @@ const EventBaseMapMemo = memo(EventBaseMap, (prevProps, nextProps) => {
   if (prevProps.children !== nextProps.children) return false;
 
   if (!arraysEqual(prevProps.subEvents, nextProps.subEvents)) return false;
-  if (!arraysEqual(prevProps.flightSignups, nextProps.flightSignups)) return false;
+  if (!arraysEqual(prevProps.flightSignups, nextProps.flightSignups))
+    return false;
   if (!groupMapsEqual(prevProps.groupMap, nextProps.groupMap)) return false;
 
   return true;

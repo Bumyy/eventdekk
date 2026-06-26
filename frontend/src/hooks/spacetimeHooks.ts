@@ -117,7 +117,7 @@ export const selectUpcomingAttendingEvents = <
 export const selectPendingEventInvitations = <
   TParticipant extends { eventId: bigint; status: { tag: string } },
   TEvent extends {
-eventId: bigint;
+    eventId: bigint;
     startTime: DateLike;
     endTime: DateLike;
     status?: { tag: string };
@@ -137,7 +137,7 @@ eventId: bigint;
     .filter(
       (e) =>
         pendingEventIds.has(e.eventId) &&
-        e.status?.tag !== "Cancelled"&&
+        e.status?.tag !== "Cancelled" &&
         toMillis(e.endTime) > now
     )
     .sort((a, b) => toMillis(a.startTime) - toMillis(b.startTime));
@@ -794,4 +794,12 @@ export const useOnlineAttendingUsers = (eventId: bigint | null) => {
       users: onlineUsers,
     };
   }, [eventId, events, eventParticipants, groupMembers, users]);
+};
+
+export const useEventOverlays = (eventId: bigint | null) => {
+  const [rows] = useTable((tables as any).event_overlay || []);
+  return useMemo(() => {
+    if (!eventId) return [];
+    return rows.filter((r: any) => r.eventId === eventId);
+  }, [rows, eventId]);
 };

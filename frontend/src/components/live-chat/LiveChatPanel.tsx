@@ -46,7 +46,9 @@ export const LiveChatPanel = ({
   const userTimezone = useUserTimezone();
 
   const [newMessage, setNewMessage] = useState("");
-  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(null);
+  const [editingMessage, setEditingMessage] = useState<ChatMessage | null>(
+    null
+  );
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
@@ -63,9 +65,8 @@ export const LiveChatPanel = ({
     }
   }, [eventId]);
 
-  const { count: onlineUsersCount, users: onlineUsers } = useOnlineAttendingUsers(
-    eventIdBigInt
-  );
+  const { count: onlineUsersCount, users: onlineUsers } =
+    useOnlineAttendingUsers(eventIdBigInt);
 
   const userGroups = useMemo(() => {
     if (!identity) return [];
@@ -203,7 +204,7 @@ export const LiveChatPanel = ({
   };
 
   const handleDeleteMessage = (messageId: bigint) => {
-    connection?.reducers.deleteLiveChatMessage(messageId);
+    connection?.reducers.deleteLiveChatMessage({ messageId });
   };
 
   const handleEditMessage = (message: ChatMessage) => {
@@ -342,7 +343,9 @@ export const LiveChatPanel = ({
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center mb-1 flex-wrap">
-                      <span className="font-semibold text-sm mr-2">{user.name}</span>
+                      <span className="font-semibold text-sm mr-2">
+                        {user.name}
+                      </span>
 
                       <span
                         className="text-xs rounded-full pl-0.5 pr-1 py-0.5 flex items-center mr-2"
@@ -372,17 +375,24 @@ export const LiveChatPanel = ({
                       )}
 
                       <span className="text-xs text-muted-foreground">
-                        {formatInTimezone(firstMessage.timestamp, userTimezone, {
-                          hour: "numeric",
-                          minute: "2-digit",
-                          hour12: true,
-                        })}
+                        {formatInTimezone(
+                          firstMessage.timestamp,
+                          userTimezone,
+                          {
+                            hour: "numeric",
+                            minute: "2-digit",
+                            hour12: true,
+                          }
+                        )}
                       </span>
                     </div>
 
                     <div className="space-y-1">
                       {group.messages.map((message) => (
-                        <div key={message.messageId.toString()} className="group relative">
+                        <div
+                          key={message.messageId.toString()}
+                          className="group relative"
+                        >
                           <p className="text-sm break-words whitespace-pre-wrap">
                             {message.message}
                           </p>
@@ -397,7 +407,9 @@ export const LiveChatPanel = ({
                                 <Pencil size={14} />
                               </button>
                               <button
-                                onClick={() => handleDeleteMessage(message.messageId)}
+                                onClick={() =>
+                                  handleDeleteMessage(message.messageId)
+                                }
                                 className="text-destructive hover:text-destructive/90 p-0.5 rounded-sm hover:bg-red-100/30"
                                 title="Delete message"
                               >
@@ -447,7 +459,11 @@ export const LiveChatPanel = ({
               }
             }}
           />
-          <Button onClick={handleSendMessage} className="shrink-0" disabled={!selectedGroupId}>
+          <Button
+            onClick={handleSendMessage}
+            className="shrink-0"
+            disabled={!selectedGroupId}
+          >
             {editingMessage ? "Update" : "Send"}
           </Button>
         </div>

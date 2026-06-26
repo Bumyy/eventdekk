@@ -21,7 +21,9 @@ describe("EventBannerField", () => {
       />
     );
 
-    const fileInput = screen.getByLabelText("Upload New Banner") as HTMLInputElement;
+    const fileInput = screen.getByLabelText(
+      "Upload New Banner"
+    ) as HTMLInputElement;
     const file = new File(["data"], "banner.png", { type: "image/png" });
     fireEvent.change(fileInput, { target: { files: [file] } });
     expect(onFileChange).toHaveBeenCalled();
@@ -30,7 +32,9 @@ describe("EventBannerField", () => {
     expect(onClear).toHaveBeenCalled();
 
     const urlInput = screen.getByLabelText("Or Enter Image URL Directly");
-    fireEvent.change(urlInput, { target: { value: "https://new-url.com/x.png" } });
+    fireEvent.change(urlInput, {
+      target: { value: "https://new-url.com/x.png" },
+    });
     expect(onBannerUrlChange).toHaveBeenCalledWith("https://new-url.com/x.png");
   });
 

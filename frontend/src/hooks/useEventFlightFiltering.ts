@@ -197,7 +197,10 @@ export const useEventFlightFiltering = (
         subEvent.subEventType.tag === SubEventType.FlyIn.tag &&
         subEvent.hubIcao
       ) {
-        // For Fly-In, only show traffic for explicit signup routes.
+        if (signupsForSubEvent.length === 0) {
+          getInbound(subEvent.hubIcao).forEach((id) => nextIds.add(id));
+          return;
+        }
         signupsForSubEvent.forEach((signup) => {
           addRoutePair(signup.departureIcao, subEvent.hubIcao);
         });
@@ -223,10 +226,18 @@ export const useEventFlightFiltering = (
       const [depIcao, arrIcao] = routeKey.split("->");
       const outbound = getOutbound(depIcao);
       const inbound = getInbound(arrIcao);
-      intersection(outbound, inbound).forEach((id) => nextIds.add(id));
+      outbound.forEach((id) => nextIds.add(id));
+      inbound.forEach((id) => nextIds.add(id));
     });
 
     setCandidateFlightIds(nextIds);
+    console.log("[flightFilter] candidateIds built:", {
+      subEvents: eventSubEvents.length,
+      signups: eventFlightSignups.length,
+      relevantIcaos,
+      candidateFlightIds: nextIds.size,
+      sampleIds: [...nextIds].slice(0, 3),
+    });
   }, [eventSubEvents, eventFlightSignups, airportStatuses]);
 
   const attendingGroupIds = useMemo(() => {
@@ -251,12 +262,12 @@ export const useEventFlightFiltering = (
   );
 
   const callsignFiltersByGroup = useMemo(() => {
-    const map = new Map<string, string[]>();
+    const map = new Map<string, typeof callsignFilters>();
     for (const filter of callsignFilters) {
       const groupId = filter.groupId.toString();
       if (!attendingGroupIds.has(groupId)) continue;
       const current = map.get(groupId) || [];
-      current.push(filter.words);
+      current.push(filter);
       map.set(groupId, current);
     }
     return map;
@@ -275,41 +286,75 @@ export const useEventFlightFiltering = (
       ApiFlight & {
         matchedGroupId?: bigint;
         matchedColor: string;
+        matchedLabel?: string;
       }
     > = [];
 
-    const requiresAirportFilter = relevantIcaos.length > 0;
-    const candidateFilteredFlights = requiresAirportFilter
-      ? flights.filter((flight) =>
-          candidateFlightIds.has(String(flight.flight_id).toLowerCase())
-        )
-      : [];
+    if (!event) return results;
+
+    const mode = event.flightFilterMode || "Airports";
+    const showAll = event.showAllFlights ?? true;
+
+    console.log("[flightFilter] mode:", mode, "showAll:", showAll, "total flights:", flights.length, "candidateIds:", candidateFlightIds.size);
+
+    let geoFilteredFlights = flights;
+    if (mode === "Airports" && relevantIcaos.length > 0) {
+      geoFilteredFlights = flights.filter((flight) =>
+        candidateFlightIds.has(String(flight.flight_id).toLowerCase())
+      );
+    } else if (mode === "Region" && event?.flightFilterBounds) {
+
+    console.log("[flightFilter] after geoFilter:", geoFilteredFlights.length, "sample:", geoFilteredFlights.slice(0, 2).map(f => f.flight_id));
+
+    console.log("[flightFilter] after geoFilter:", geoFilteredFlights.length, "sample:", geoFilteredFlights.slice(0, 2).map(f => f.flight_id));
+      try {
+        const [minLng, minLat, maxLng, maxLat] = JSON.parse(event.flightFilterBounds);
+        geoFilteredFlights = flights.filter(
+          (f) =>
+            f.longitude >= minLng &&
+            f.longitude <= maxLng &&
+            f.latitude >= minLat &&
+            f.latitude <= maxLat
+        );
+      } catch (e) {
+        console.error("Error parsing flightFilterBounds:", e);
+        geoFilteredFlights = [];
+      }
+    }
 
     const defaultUnmatchedColor = "#7A828D";
 
-    for (const flight of candidateFilteredFlights) {
+    for (const flight of geoFilteredFlights) {
       let matchedGroupId: bigint | null = null;
       let matchedColor = defaultUnmatchedColor;
+      let matchedLabel: string | undefined = undefined;
+      let isMatched = false;
 
       for (const [groupId, filters] of callsignFiltersByGroup.entries()) {
-        if (
-          filters.some((filter) =>
-            callsignMatchesFilter(flight.callsign, filter)
-          )
-        ) {
+        const match = filters.find((f) =>
+          callsignMatchesFilter(flight.callsign, f.words)
+        );
+        if (match) {
           const group = groupMap.get(groupId);
           matchedGroupId = group?.groupId || null;
-          matchedColor = group?.color || defaultUnmatchedColor;
+          matchedColor = match.color || group?.color || defaultUnmatchedColor;
+          matchedLabel = match.label || undefined;
+          isMatched = true;
           break;
         }
       }
 
-      results.push({
-        ...flight,
-        matchedGroupId: matchedGroupId || undefined,
-        matchedColor,
-      });
+      if (isMatched || showAll) {
+        results.push({
+          ...flight,
+          matchedGroupId: matchedGroupId || undefined,
+          matchedColor,
+          matchedLabel,
+        });
+      }
     }
+
+    console.log("[flightFilter] result:", results.length, "flights");
 
     return results;
   }, [
@@ -318,6 +363,7 @@ export const useEventFlightFiltering = (
     groupMap,
     candidateFlightIds,
     relevantIcaos,
+    event,
   ]);
 
   return {

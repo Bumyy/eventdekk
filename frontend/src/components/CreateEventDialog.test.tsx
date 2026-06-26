@@ -36,11 +36,21 @@ vi.mock("@/components/ui/datetime-picker", () => ({
 vi.mock("@/components/ui/dialog", () => ({
   Dialog: ({ open, children }: { open: boolean; children: React.ReactNode }) =>
     open ? <div>{children}</div> : null,
-  DialogContent: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogHeader: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
-  DialogTitle: ({ children }: { children: React.ReactNode }) => <h2>{children}</h2>,
-  DialogDescription: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
-  DialogFooter: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  DialogContent: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogHeader: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
+  DialogTitle: ({ children }: { children: React.ReactNode }) => (
+    <h2>{children}</h2>
+  ),
+  DialogDescription: ({ children }: { children: React.ReactNode }) => (
+    <p>{children}</p>
+  ),
+  DialogFooter: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 describe("CreateEventDialog", () => {
@@ -117,10 +127,14 @@ describe("CreateEventDialog", () => {
 
     await waitFor(() => expect(mockUploadImage).toHaveBeenCalledTimes(1));
     expect(mockUploadImage).toHaveBeenCalledWith(file, "Banner Event");
-    expect(mockToastSuccess).toHaveBeenCalledWith("Banner image uploaded successfully!");
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      "Banner image uploaded successfully!"
+    );
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalledTimes(1));
-    expect(onSubmit.mock.calls[0][0].bannerUrl).toBe("https://cdn.example/banner.png");
+    expect(onSubmit.mock.calls[0][0].bannerUrl).toBe(
+      "https://cdn.example/banner.png"
+    );
   });
 
   it("shows upload error and does not submit on upload failure", async () => {
@@ -153,7 +167,9 @@ describe("CreateEventDialog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create Event" }));
 
     await waitFor(() => expect(mockToastError).toHaveBeenCalled());
-    expect(mockToastError).toHaveBeenCalledWith("Image upload failed: Upload failed");
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Image upload failed: Upload failed"
+    );
     expect(onSubmit).not.toHaveBeenCalled();
   });
 });

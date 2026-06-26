@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AddCohostToEventReducer from "./add_cohost_to_event_reducer";
+import AddEventOverlayReducer from "./add_event_overlay_reducer";
 import AddGroupCallsignFilterReducer from "./add_group_callsign_filter_reducer";
 import AddGroupMemberReducer from "./add_group_member_reducer";
 import AddLiveChatMessageReducer from "./add_live_chat_message_reducer";
@@ -43,6 +44,7 @@ import ApplyForGroupReducer from "./apply_for_group_reducer";
 import ApproveGroupApplicationReducer from "./approve_group_application_reducer";
 import CreateEventReducer from "./create_event_reducer";
 import DeleteEventReducer from "./delete_event_reducer";
+import DeleteEventOverlayReducer from "./delete_event_overlay_reducer";
 import DeleteFlightSignupReducer from "./delete_flight_signup_reducer";
 import DeleteLiveChatMessageReducer from "./delete_live_chat_message_reducer";
 import DeleteSubEventReducer from "./delete_sub_event_reducer";
@@ -60,6 +62,7 @@ import SetGroupDiscordWebhookReducer from "./set_group_discord_webhook_reducer";
 import SetUserProfileReducer from "./set_user_profile_reducer";
 import SignupForFlightReducer from "./signup_for_flight_reducer";
 import UpdateEventReducer from "./update_event_reducer";
+import UpdateEventOverlayReducer from "./update_event_overlay_reducer";
 import UpdateFlightSignupReducer from "./update_flight_signup_reducer";
 import UpdateGroupReducer from "./update_group_reducer";
 import UpdateLiveFlightsReducer from "./update_live_flights_reducer";
@@ -74,6 +77,7 @@ import * as RespondToEventInvitationAndNotifyProcedure from "./respond_to_event_
 import DiscoveryEventRow from "./discovery_event_table";
 import DiscoveryFeedRow from "./discovery_feed_table";
 import EventRow from "./event_table";
+import EventOverlayRow from "./event_overlay_table";
 import EventParticipantRow from "./event_participant_table";
 import FlightSignupRow from "./flight_signup_table";
 import GroupRow from "./group_table";
@@ -125,6 +129,20 @@ const tablesSchema = __schema({
       { name: 'event_event_id_key', constraint: 'unique', columns: ['eventId'] },
     ],
   }, EventRow),
+  event_overlay: __table({
+    name: 'event_overlay',
+    indexes: [
+      { accessor: 'idx_event', name: 'event_overlay_event_id_idx_btree', algorithm: 'btree', columns: [
+        'eventId',
+      ] },
+      { accessor: 'overlay_id', name: 'event_overlay_overlay_id_idx_btree', algorithm: 'btree', columns: [
+        'overlayId',
+      ] },
+    ],
+    constraints: [
+      { name: 'event_overlay_overlay_id_key', constraint: 'unique', columns: ['overlayId'] },
+    ],
+  }, EventOverlayRow),
   event_participant: __table({
     name: 'event_participant',
     indexes: [
@@ -327,6 +345,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("add_cohost_to_event", AddCohostToEventReducer),
+  __reducerSchema("add_event_overlay", AddEventOverlayReducer),
   __reducerSchema("add_group_callsign_filter", AddGroupCallsignFilterReducer),
   __reducerSchema("add_group_member", AddGroupMemberReducer),
   __reducerSchema("add_live_chat_message", AddLiveChatMessageReducer),
@@ -335,6 +354,7 @@ const reducersSchema = __reducers(
   __reducerSchema("approve_group_application", ApproveGroupApplicationReducer),
   __reducerSchema("create_event", CreateEventReducer),
   __reducerSchema("delete_event", DeleteEventReducer),
+  __reducerSchema("delete_event_overlay", DeleteEventOverlayReducer),
   __reducerSchema("delete_flight_signup", DeleteFlightSignupReducer),
   __reducerSchema("delete_live_chat_message", DeleteLiveChatMessageReducer),
   __reducerSchema("delete_sub_event", DeleteSubEventReducer),
@@ -352,6 +372,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_user_profile", SetUserProfileReducer),
   __reducerSchema("signup_for_flight", SignupForFlightReducer),
   __reducerSchema("update_event", UpdateEventReducer),
+  __reducerSchema("update_event_overlay", UpdateEventOverlayReducer),
   __reducerSchema("update_flight_signup", UpdateFlightSignupReducer),
   __reducerSchema("update_group", UpdateGroupReducer),
   __reducerSchema("update_live_flights", UpdateLiveFlightsReducer),

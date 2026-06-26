@@ -380,26 +380,39 @@ const Profile = () => {
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-lg font-semibold">Linked Accounts</h3>
               <p className="text-sm text-muted-foreground">
-                Link your Google or Discord account to sign in with either provider.
+                Link your Google or Discord account to sign in with either
+                provider.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
                   type="button"
-                  variant={linkedAccounts.some((a) => a.type === "google") ? "outline" : "default"}
+                  variant={
+                    linkedAccounts.some((a) => a.type === "google")
+                      ? "outline"
+                      : "default"
+                  }
                   size="sm"
                   disabled={linkedAccounts.some((a) => a.type === "google")}
                   onClick={linkGoogle}
                 >
-                  {linkedAccounts.some((a) => a.type === "google") ? "Google Linked" : "Link Google"}
+                  {linkedAccounts.some((a) => a.type === "google")
+                    ? "Google Linked"
+                    : "Link Google"}
                 </Button>
                 <Button
                   type="button"
-                  variant={linkedAccounts.some((a) => a.type === "discord") ? "outline" : "default"}
+                  variant={
+                    linkedAccounts.some((a) => a.type === "discord")
+                      ? "outline"
+                      : "default"
+                  }
                   size="sm"
                   disabled={linkedAccounts.some((a) => a.type === "discord")}
                   onClick={linkDiscord}
                 >
-                  {linkedAccounts.some((a) => a.type === "discord") ? "Discord Linked" : "Link Discord"}
+                  {linkedAccounts.some((a) => a.type === "discord")
+                    ? "Discord Linked"
+                    : "Link Discord"}
                 </Button>
               </div>
             </div>

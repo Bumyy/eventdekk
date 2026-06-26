@@ -1,10 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { CreateEventProvider, CreateEventContextValue } from "./CreateEventContext";
+import {
+  CreateEventProvider,
+  CreateEventContextValue,
+} from "./CreateEventContext";
 import { CreateEventSubEventsSection } from "./CreateEventSubEventsSection";
 
 vi.mock("./CreateEventSubEventCard", () => ({
-  CreateEventSubEventCard: ({ index }: { index: number }) => <div>Sub Event Card {index}</div>,
+  CreateEventSubEventCard: ({ index }: { index: number }) => (
+    <div>Sub Event Card {index}</div>
+  ),
 }));
 
 vi.mock("./SubEventDialogForm", () => ({

@@ -6,7 +6,7 @@ describe("EventDateTimeInfo", () => {
   it("renders formatted date and time", () => {
     const startTime = new Date("2026-03-22T10:00:00Z");
     const endTime = new Date("2026-03-22T18:00:00Z");
-    
+
     render(
       <EventDateTimeInfo
         startTime={startTime}
@@ -24,7 +24,7 @@ describe("EventDateTimeInfo", () => {
   it("displays singular labels for 1 group and 1 signup", () => {
     const startTime = new Date("2026-03-22T10:00:00Z");
     const endTime = new Date("2026-03-22T18:00:00Z");
-    
+
     render(
       <EventDateTimeInfo
         startTime={startTime}
@@ -42,7 +42,7 @@ describe("EventDateTimeInfo", () => {
   it("displays plural labels for multiple groups and signups", () => {
     const startTime = new Date("2026-03-22T10:00:00Z");
     const endTime = new Date("2026-03-22T18:00:00Z");
-    
+
     render(
       <EventDateTimeInfo
         startTime={startTime}

@@ -1,5 +1,11 @@
 import { createContext, useContext } from "react";
-import { Group, FlightSignup, SubEvent, SubEventType, EventParticipant } from "@/module_bindings/types";
+import {
+  Group,
+  FlightSignup,
+  SubEvent,
+  SubEventType,
+  EventParticipant,
+} from "@/module_bindings/types";
 import { MemberOption, SelectedGroup, SubEventFormState } from "./types";
 
 interface EditEventContextValue {
@@ -11,6 +17,9 @@ interface EditEventContextValue {
   endTime: Date | null;
   ifcEventLink: string;
   isInternal: boolean;
+  flightFilterMode: string;
+  flightFilterBounds: string;
+  showAllFlights: boolean;
   previewUrl: string | null;
   bannerUrl: string;
   selectedFile: File | null;
@@ -24,6 +33,9 @@ interface EditEventContextValue {
   setEndTime: (value: Date | null) => void;
   setIfcEventLink: (value: string) => void;
   setIsInternal: (value: boolean) => void;
+  setFlightFilterMode: (value: string) => void;
+  setFlightFilterBounds: (value: string) => void;
+  setShowAllFlights: (value: boolean) => void;
   handleFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setBannerUrl: (value: string) => void;
   clearBanner: () => void;
@@ -46,11 +58,15 @@ interface EditEventContextValue {
   editSubEventForm: SubEventFormState;
   setEditSubEventForm: (form: SubEventFormState) => void;
   handleAddSubEvent: (formOverride?: SubEventFormState) => void | Promise<void>;
-  handleUpdateSubEvent: (formOverride?: SubEventFormState) => void | Promise<void>;
+  handleUpdateSubEvent: (
+    formOverride?: SubEventFormState
+  ) => void | Promise<void>;
   handleEditSubEventClick: (subEvent: SubEvent) => void;
   handleDeleteSubEvent: (subEventId: bigint) => void | Promise<void>;
   toSubEventFormState: (subEvent: SubEvent) => SubEventFormState;
-  updateFirstSubEventFromForm: (formState: SubEventFormState) => void | Promise<void>;
+  updateFirstSubEventFromForm: (
+    formState: SubEventFormState
+  ) => void | Promise<void>;
   firstWaveForm: SubEventFormState | null;
   setFirstWaveForm: (form: SubEventFormState | null) => void;
 
@@ -68,7 +84,10 @@ interface EditEventContextValue {
   participants: EventParticipant[];
   handleAddCohost: (groupId: bigint) => void | Promise<void>;
   handleRemoveParticipant: (groupId: bigint) => void | Promise<void>;
-  handleUpdateParticipantRole: (groupId: bigint, newRole: "Host" | "Participant") => void | Promise<void>;
+  handleUpdateParticipantRole: (
+    groupId: bigint,
+    newRole: "Host" | "Participant"
+  ) => void | Promise<void>;
 
   showManageOwnFlightsDialog: boolean;
   setShowManageOwnFlightsDialog: (open: boolean) => void;
@@ -76,7 +95,11 @@ interface EditEventContextValue {
   ownFlightDetails: Record<string, any>;
   isSubmittingFlights: boolean;
   handleToggleOwnSubEvent: (subEventId: bigint) => void;
-  updateOwnFlightDetail: (subEventId: string, field: string, value: string) => void;
+  updateOwnFlightDetail: (
+    subEventId: string,
+    field: string,
+    value: string
+  ) => void;
   handleSubmitOwnFlights: () => void | Promise<void>;
 }
 
@@ -89,7 +112,9 @@ interface EditEventProviderProps {
 
 export function EditEventProvider({ value, children }: EditEventProviderProps) {
   return (
-    <EditEventContext.Provider value={value}>{children}</EditEventContext.Provider>
+    <EditEventContext.Provider value={value}>
+      {children}
+    </EditEventContext.Provider>
   );
 }
 
@@ -97,7 +122,9 @@ export function useEditEventContext() {
   const context = useContext(EditEventContext);
 
   if (!context) {
-    throw new Error("useEditEventContext must be used within an EditEventProvider");
+    throw new Error(
+      "useEditEventContext must be used within an EditEventProvider"
+    );
   }
 
   return context;

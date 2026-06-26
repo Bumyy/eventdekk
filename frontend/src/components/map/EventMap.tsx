@@ -13,15 +13,26 @@ interface EventMapProps {
   groupMap: Map<string, Group>;
   flights?: EventMapFlight[];
   className?: string;
+  onMouseDown?: (e: any) => void;
+  onMouseMove?: (e: any) => void;
+  onMouseUp?: (e: any) => void;
+  dragPan?: boolean;
+  activeDrawingPoints?: [number, number][];
 }
 
 const EventMap: React.FC<EventMapProps> = ({
   subEvents,
   flightSignups,
+  eventId,
   creatorGroupId,
   groupMap,
   flights = [],
   className,
+  onMouseDown,
+  onMouseMove,
+  onMouseUp,
+  dragPan = true,
+  activeDrawingPoints,
 }) => {
   const { theme } = useTheme();
 
@@ -35,9 +46,8 @@ const EventMap: React.FC<EventMapProps> = ({
   const aircraftMarkerStroke =
     currentResolvedTheme === "dark" ? "#2D3748" : "#E2E8F0";
 
-  const [activeFlightPopup, setActiveFlightPopup] = useState<EventMapFlight | null>(
-    null
-  );
+  const [activeFlightPopup, setActiveFlightPopup] =
+    useState<EventMapFlight | null>(null);
 
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
@@ -47,6 +57,12 @@ const EventMap: React.FC<EventMapProps> = ({
         creatorGroupId={creatorGroupId}
         groupMap={groupMap}
         className={className}
+        eventId={eventId}
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        dragPan={dragPan}
+        activeDrawingPoints={activeDrawingPoints}
       >
         <FlightMarkers
           flights={flights}
@@ -69,8 +85,20 @@ const EventMap: React.FC<EventMapProps> = ({
             boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
           }}
         >
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>
-            {activeFlightPopup.callsign}
+          <div style={{ fontWeight: 600, marginBottom: 4, display: "flex", gap: "6px", alignItems: "center" }}>
+            <span>{activeFlightPopup.callsign}</span>
+            {activeFlightPopup.matchedLabel && (
+              <span style={{
+                fontSize: 10,
+                background: "hsl(var(--primary) / 0.1)",
+                color: "hsl(var(--primary))",
+                padding: "2px 6px",
+                borderRadius: "9999px",
+                fontWeight: 500
+              }}>
+                {activeFlightPopup.matchedLabel}
+              </span>
+            )}
           </div>
           <div style={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }}>
             <div>Altitude: {Math.round(activeFlightPopup.altitude)} ft</div>

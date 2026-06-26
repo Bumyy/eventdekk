@@ -40,7 +40,9 @@ export function EventBanner({
         <h1 className="text-white text-xl sm:text-3xl font-bold leading-tight">
           {event.name}
         </h1>
-        <p className="text-white/90 text-sm line-clamp-2">{event.description}</p>
+        <p className="text-white/90 text-sm line-clamp-2">
+          {event.description}
+        </p>
         <div className="mt-1.5">
           <HostsDisplay
             hostGroup={hostGroup}
@@ -52,7 +54,10 @@ export function EventBanner({
           />
         </div>
       </div>
-      <div className="absolute bottom-0 left-0 right-0 h-1" style={bottomBarStyle} />
+      <div
+        className="absolute bottom-0 left-0 right-0 h-1"
+        style={bottomBarStyle}
+      />
     </div>
   );
 }

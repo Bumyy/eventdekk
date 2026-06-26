@@ -149,7 +149,10 @@ export function CreateEventDialog({
           ]
         : subEvents;
 
-    setSubEvents([...subEventsWithFirstUpdated, createDefaultSubEvent(startDateTime, endDateTime)]);
+    setSubEvents([
+      ...subEventsWithFirstUpdated,
+      createDefaultSubEvent(startDateTime, endDateTime),
+    ]);
     setExpandedSubEvents((prev) => {
       const expandedIndices = [...prev, newIndex];
       if (subEvents.length === 1 && !subEvents[0].name) {
@@ -174,7 +177,10 @@ export function CreateEventDialog({
     }
   };
 
-  const handleUpdateSubEvent = (index: number, data: Partial<SubEventFormData>) => {
+  const handleUpdateSubEvent = (
+    index: number,
+    data: Partial<SubEventFormData>
+  ) => {
     setSubEvents(
       subEvents.map((event, i) => (i === index ? { ...event, ...data } : event))
     );
@@ -202,7 +208,9 @@ export function CreateEventDialog({
     return icao.trim().length === 4;
   };
 
-  const toDialogSubEventFormState = (subEvent: SubEventFormData): SubEventFormState => {
+  const toDialogSubEventFormState = (
+    subEvent: SubEventFormData
+  ): SubEventFormState => {
     const mappedType: SubEventFormState["type"] =
       subEvent.subEventType.tag === "GroupFlight"
         ? "GroupFlight"
@@ -243,19 +251,29 @@ export function CreateEventDialog({
           ? limitIcaoLength(state.hubIcao)
           : undefined,
       groupFlightDepartureIcao:
-        state.type === "GroupFlight" ? limitIcaoLength(state.departureIcao) : undefined,
+        state.type === "GroupFlight"
+          ? limitIcaoLength(state.departureIcao)
+          : undefined,
       groupFlightArrivalIcao:
-        state.type === "GroupFlight" ? limitIcaoLength(state.arrivalIcao) : undefined,
+        state.type === "GroupFlight"
+          ? limitIcaoLength(state.arrivalIcao)
+          : undefined,
       groupFlightRoute: state.type === "GroupFlight" ? state.route : undefined,
       notes: state.notes || undefined,
       eventLeadHex: state.eventLeadHex,
     };
   };
 
-  const updateSubEventFromDialog = (index: number, formState: SubEventFormState) => {
+  const updateSubEventFromDialog = (
+    index: number,
+    formState: SubEventFormState
+  ) => {
     const previousSubEvent = subEvents[index];
     if (!previousSubEvent) return;
-    handleUpdateSubEvent(index, fromDialogSubEventFormState(formState, previousSubEvent));
+    handleUpdateSubEvent(
+      index,
+      fromDialogSubEventFormState(formState, previousSubEvent)
+    );
   };
 
   const memberOptions: MemberOption[] = members.flatMap((m) => {
@@ -297,10 +315,14 @@ export function CreateEventDialog({
     }
 
     const eventStartTime = new Date(
-      Math.min(...subEvents.map((subEvent) => subEvent.scheduledStartTime.getTime()))
+      Math.min(
+        ...subEvents.map((subEvent) => subEvent.scheduledStartTime.getTime())
+      )
     );
     const eventEndTime = new Date(
-      Math.max(...subEvents.map((subEvent) => subEvent.scheduledEndTime.getTime()))
+      Math.max(
+        ...subEvents.map((subEvent) => subEvent.scheduledEndTime.getTime())
+      )
     );
 
     if (isCreating) return;
@@ -311,7 +333,10 @@ export function CreateEventDialog({
     if (selectedFile) {
       try {
         setIsUploading(true);
-        finalBannerUrl = await uploadImage(selectedFile, name || "Event Banner");
+        finalBannerUrl = await uploadImage(
+          selectedFile,
+          name || "Event Banner"
+        );
         toast.success("Banner image uploaded successfully!");
       } catch (error: any) {
         toast.error(`Image upload failed: ${error.message}`);
@@ -335,11 +360,14 @@ export function CreateEventDialog({
           const leadMember = members.find(
             (m) => m.user?.identity.toHexString() === event.eventLeadHex
           );
-          const shouldMirrorMainDetails = !isAdvancedSubEventsMode && index === 0;
+          const shouldMirrorMainDetails =
+            !isAdvancedSubEventsMode && index === 0;
           return {
             ...event,
             name: shouldMirrorMainDetails ? name : event.name,
-            description: shouldMirrorMainDetails ? description : event.description,
+            description: shouldMirrorMainDetails
+              ? description
+              : event.description,
             scheduledStartTime: event.scheduledStartTime,
             scheduledEndTime: event.scheduledEndTime,
             eventLead: leadMember?.user?.identity,
@@ -349,7 +377,9 @@ export function CreateEventDialog({
 
       setName("");
       setDescription("");
-      setStartDateTime(prefillStartTime ? new Date(prefillStartTime) : undefined);
+      setStartDateTime(
+        prefillStartTime ? new Date(prefillStartTime) : undefined
+      );
       setEndDateTime(prefillEndTime ? new Date(prefillEndTime) : undefined);
       setIsInternal(false);
       setIfcEventLink("");
@@ -379,7 +409,8 @@ export function CreateEventDialog({
           <DialogHeader>
             <DialogTitle>Create New Event</DialogTitle>
             <DialogDescription>
-              Create your event with one default wave, then add more waves if needed.
+              Create your event with one default wave, then add more waves if
+              needed.
             </DialogDescription>
           </DialogHeader>
 

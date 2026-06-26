@@ -202,7 +202,11 @@ export function EventInvitationsSection({
             );
 
             return (
-              <Card key={event.eventId.toString()} className={`overflow-hidden p-0${onEventClick ? " cursor-pointer" : ""}`} onClick={() => onEventClick?.(event)}>
+              <Card
+                key={event.eventId.toString()}
+                className={`overflow-hidden p-0${onEventClick ? " cursor-pointer" : ""}`}
+                onClick={() => onEventClick?.(event)}
+              >
                 <div className="flex flex-col sm:flex-row">
                   {event.bannerUrl && (
                     <div className="relative h-32 sm:h-auto sm:w-44 md:w-56 shrink-0">
@@ -213,7 +217,9 @@ export function EventInvitationsSection({
                       />
                       <div className="absolute inset-0 bg-gradient-to-r from-black/55 via-black/25 to-transparent sm:bg-gradient-to-b sm:from-black/50 sm:to-transparent" />
                       <div className="absolute bottom-2 left-3 right-3 text-white sm:hidden">
-                        <p className="text-sm font-semibold line-clamp-1">{event.name}</p>
+                        <p className="text-sm font-semibold line-clamp-1">
+                          {event.name}
+                        </p>
                       </div>
                     </div>
                   )}
@@ -222,7 +228,9 @@ export function EventInvitationsSection({
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <h2 className="text-xl font-semibold">{event.name}</h2>
+                          <h2 className="text-xl font-semibold">
+                            {event.name}
+                          </h2>
                           {hasConflicts && (
                             <Badge
                               variant="destructive"
@@ -238,8 +246,8 @@ export function EventInvitationsSection({
                               className="flex items-center gap-1 border-yellow-500 text-yellow-600 dark:text-yellow-400"
                             >
                               <Calendar className="h-3 w-3" />
-                              {sameDayCount} event{sameDayCount !== 1 ? "s" : ""}{" "}
-                              same day
+                              {sameDayCount} event
+                              {sameDayCount !== 1 ? "s" : ""} same day
                             </Badge>
                           )}
                         </div>
@@ -248,11 +256,17 @@ export function EventInvitationsSection({
                         </p>
                         <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
                           <span>
-                            {formatDateInTimezone(event.startTime, userTimezone)}
+                            {formatDateInTimezone(
+                              event.startTime,
+                              userTimezone
+                            )}
                           </span>
                           <span>•</span>
                           <span>
-                            {formatTimeInTimezone(event.startTime, userTimezone)}
+                            {formatTimeInTimezone(
+                              event.startTime,
+                              userTimezone
+                            )}
                           </span>
                           <span>•</span>
                           <Badge
@@ -279,7 +293,13 @@ export function EventInvitationsSection({
                         </div>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" onClick={(e) => {e.stopPropagation(); onRespond(event);}}>
+                        <Button
+                          variant="outline"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onRespond(event);
+                          }}
+                        >
                           Respond
                         </Button>
                       </div>

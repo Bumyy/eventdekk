@@ -54,10 +54,13 @@ export function ParticipantList({
             {signup.aircraftType && (
               <div className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
                 <Plane className="h-3 w-3" />
-                <span className="truncate max-w-[80px]">{signup.aircraftType}</span>
+                <span className="truncate max-w-[80px]">
+                  {signup.aircraftType}
+                </span>
               </div>
             )}
-            {(subEventType?.tag === "FlyIn" || subEventType?.tag === "FlyOut") && (
+            {(subEventType?.tag === "FlyIn" ||
+              subEventType?.tag === "FlyOut") && (
               <div className="flex items-center gap-0.5 text-[10px] font-mono">
                 {subEventType.tag === "FlyIn" && (
                   <>

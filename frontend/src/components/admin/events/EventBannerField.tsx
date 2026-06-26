@@ -20,10 +20,16 @@ export function EventBannerField(props: EventBannerFieldProps = {}) {
 
   const previewUrl = context ? context.previewUrl : (props.previewUrl ?? null);
   const bannerUrl = context ? context.bannerUrl : (props.bannerUrl ?? "");
-  const selectedFile = context ? context.selectedFile : (props.selectedFile ?? null);
-  const isUploading = context ? context.isUploading : (props.isUploading ?? false);
+  const selectedFile = context
+    ? context.selectedFile
+    : (props.selectedFile ?? null);
+  const isUploading = context
+    ? context.isUploading
+    : (props.isUploading ?? false);
   const isLoading = context ? context.isLoading : (props.isLoading ?? false);
-  const handleFileChange = context ? context.handleFileChange : props.onFileChange;
+  const handleFileChange = context
+    ? context.handleFileChange
+    : props.onFileChange;
   const setBannerUrl = context ? context.setBannerUrl : props.onBannerUrlChange;
   const clearBanner = context ? context.clearBanner : props.onClear;
 
@@ -59,7 +65,10 @@ export function EventBannerField(props: EventBannerFieldProps = {}) {
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="space-y-2 flex-1">
-          <Label htmlFor="bannerImageFile" className="text-sm font-medium mb-2 block">
+          <Label
+            htmlFor="bannerImageFile"
+            className="text-sm font-medium mb-2 block"
+          >
             Upload New Banner
           </Label>
           <div className="flex items-center gap-2">

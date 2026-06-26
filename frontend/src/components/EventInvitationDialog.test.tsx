@@ -3,7 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import { EventInvitationDialog } from "./EventInvitationDialog";
 
 vi.mock("@/components/events/SubEventFlightForm", () => ({
-  SubEventFlightForm: () => <div data-testid="sub-event-flight-form">Flight Form</div>,
+  SubEventFlightForm: () => (
+    <div data-testid="sub-event-flight-form">Flight Form</div>
+  ),
 }));
 
 vi.mock("@/components/ui/dialog", () => ({

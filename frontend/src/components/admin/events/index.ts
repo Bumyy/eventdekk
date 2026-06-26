@@ -8,7 +8,11 @@ export { SubEventsManagementCard } from "./SubEventsManagementCard";
 export { InviteGroupsCard } from "./InviteGroupsCard";
 export { ManageParticipantsCard } from "./ManageParticipantsCard";
 export { ManageOwnFlightsCard } from "./ManageOwnFlightsCard";
-export { CreateEventProvider, useCreateEventContext } from "./CreateEventContext";
+export { FlightTrackingSettingsCard } from "./FlightTrackingSettingsCard";
+export {
+  CreateEventProvider,
+  useCreateEventContext,
+} from "./CreateEventContext";
 export { CreateEventMainDetailsSection } from "./CreateEventMainDetailsSection";
 export { CreateEventSubEventsSection } from "./CreateEventSubEventsSection";
 export { CreateEventSubEventCard } from "./CreateEventSubEventCard";

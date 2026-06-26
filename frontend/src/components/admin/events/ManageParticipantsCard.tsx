@@ -1,6 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -17,7 +23,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChevronDown, Crown, Users, MoreVertical, UserPlus } from "lucide-react";
+import {
+  ChevronDown,
+  Crown,
+  Users,
+  MoreVertical,
+  UserPlus,
+} from "lucide-react";
 import { useState } from "react";
 import { useEditEventContext } from "./EditEventContext";
 import { ParticipantRole } from "@/module_bindings/types";
@@ -36,7 +48,9 @@ export function ManageParticipantsCard() {
   } = useEditEventContext();
 
   const [showAddCohostDialog, setShowAddCohostDialog] = useState(false);
-  const [selectedCohostGroupId, setSelectedCohostGroupId] = useState<bigint | null>(null);
+  const [selectedCohostGroupId, setSelectedCohostGroupId] = useState<
+    bigint | null
+  >(null);
 
   const getGroupName = (groupId: bigint) => {
     const group = groups.find((g) => g.groupId === groupId);
@@ -45,9 +59,14 @@ export function ManageParticipantsCard() {
 
   const availableGroupsForCohost = groups.filter((group) => {
     if (group.groupId === currentGroupId) return false;
-    const existingParticipant = eventParticipants.find((p) => p.groupId === group.groupId);
+    const existingParticipant = eventParticipants.find(
+      (p) => p.groupId === group.groupId
+    );
     if (!existingParticipant) return true;
-    return existingParticipant.role.tag !== "Host" && existingParticipant.status.tag === "Accepted";
+    return (
+      existingParticipant.role.tag !== "Host" &&
+      existingParticipant.status.tag === "Accepted"
+    );
   });
 
   const onAddCohost = async () => {
@@ -66,7 +85,10 @@ export function ManageParticipantsCard() {
             Manage co-hosts and participants for this event
           </CardDescription>
         </div>
-        <Dialog open={showAddCohostDialog} onOpenChange={setShowAddCohostDialog}>
+        <Dialog
+          open={showAddCohostDialog}
+          onOpenChange={setShowAddCohostDialog}
+        >
           <DialogTrigger asChild>
             <Button variant="outline" size="sm">
               <UserPlus className="h-4 w-4 mr-2" />
@@ -82,12 +104,16 @@ export function ManageParticipantsCard() {
                 <Label>Select Group to Add as Co-host</Label>
                 {availableGroupsForCohost.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No available groups to add as co-host. Groups must be participants first.
+                    No available groups to add as co-host. Groups must be
+                    participants first.
                   </p>
                 ) : (
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" className="w-full justify-between">
+                      <Button
+                        variant="outline"
+                        className="w-full justify-between"
+                      >
                         {selectedCohostGroupId
                           ? getGroupName(selectedCohostGroupId)
                           : "Select Group"}
@@ -99,7 +125,9 @@ export function ManageParticipantsCard() {
                         {availableGroupsForCohost.map((group) => (
                           <DropdownMenuItem
                             key={group.groupId.toString()}
-                            onClick={() => setSelectedCohostGroupId(group.groupId)}
+                            onClick={() =>
+                              setSelectedCohostGroupId(group.groupId)
+                            }
                           >
                             {group.name}
                           </DropdownMenuItem>
@@ -111,13 +139,13 @@ export function ManageParticipantsCard() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddCohostDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddCohostDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button
-                onClick={onAddCohost}
-                disabled={!selectedCohostGroupId}
-              >
+              <Button onClick={onAddCohost} disabled={!selectedCohostGroupId}>
                 Add as Co-host
               </Button>
             </DialogFooter>
@@ -138,7 +166,9 @@ export function ManageParticipantsCard() {
                 className="flex items-center justify-between p-2 rounded-md bg-muted/50"
               >
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{getGroupName(host.groupId)}</span>
+                  <span className="font-medium">
+                    {getGroupName(host.groupId)}
+                  </span>
                   {host.groupId === creatorGroupId && (
                     <Badge variant="outline" className="text-xs">
                       Creator
@@ -154,7 +184,12 @@ export function ManageParticipantsCard() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem
-                        onClick={() => handleUpdateParticipantRole(host.groupId, "Participant")}
+                        onClick={() =>
+                          handleUpdateParticipantRole(
+                            host.groupId,
+                            "Participant"
+                          )
+                        }
                       >
                         <Users className="h-4 w-4 mr-2" />
                         Demote to Participant
@@ -181,7 +216,9 @@ export function ManageParticipantsCard() {
           </div>
           <div className="space-y-2">
             {participants.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No participants yet</p>
+              <p className="text-sm text-muted-foreground">
+                No participants yet
+              </p>
             ) : (
               participants.map((participant) => (
                 <div
@@ -189,16 +226,22 @@ export function ManageParticipantsCard() {
                   className="flex items-center justify-between p-2 rounded-md bg-muted/50"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium">{getGroupName(participant.groupId)}</span>
+                    <span className="font-medium">
+                      {getGroupName(participant.groupId)}
+                    </span>
                     <Badge
-                      variant={participant.status.tag === "Accepted" ? "default" : "secondary"}
+                      variant={
+                        participant.status.tag === "Accepted"
+                          ? "default"
+                          : "secondary"
+                      }
                       className="text-xs"
                     >
                       {participant.status.tag === "Pending"
                         ? "Pending"
                         : participant.status.tag === "Accepted"
-                        ? "Accepted"
-                        : "Declined"}
+                          ? "Accepted"
+                          : "Declined"}
                     </Badge>
                   </div>
                   {participant.status.tag === "Accepted" && (
@@ -210,14 +253,21 @@ export function ManageParticipantsCard() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
-                          onClick={() => handleUpdateParticipantRole(participant.groupId, "Host")}
+                          onClick={() =>
+                            handleUpdateParticipantRole(
+                              participant.groupId,
+                              "Host"
+                            )
+                          }
                         >
                           <Crown className="h-4 w-4 mr-2" />
                           Promote to Co-host
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive"
-                          onClick={() => handleRemoveParticipant(participant.groupId)}
+                          onClick={() =>
+                            handleRemoveParticipant(participant.groupId)
+                          }
                         >
                           Remove from Event
                         </DropdownMenuItem>

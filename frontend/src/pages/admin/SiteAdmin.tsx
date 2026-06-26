@@ -93,7 +93,8 @@ export default function SiteAdmin() {
   );
 
   const availableUsers = useMemo(
-    () => users.filter((u) => !superAdminIdentitySet.has(u.identity.toHexString())),
+    () =>
+      users.filter((u) => !superAdminIdentitySet.has(u.identity.toHexString())),
     [users, superAdminIdentitySet]
   );
 
@@ -148,11 +149,15 @@ export default function SiteAdmin() {
   if (!isSuperAdmin) {
     return (
       <Card className="p-6 max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-2">Global Admin Access Required</h1>
+        <h1 className="text-2xl font-bold mb-2">
+          Global Admin Access Required
+        </h1>
         <p className="text-muted-foreground mb-4">
           You need super admin permissions to access this page.
         </p>
-        <Button variant="outline" onClick={() => navigate("/admin")}>Back to Admin</Button>
+        <Button variant="outline" onClick={() => navigate("/admin")}>
+          Back to Admin
+        </Button>
       </Card>
     );
   }
@@ -162,8 +167,8 @@ export default function SiteAdmin() {
       {!hasSuperAdmins && (
         <Card className="p-4 border-yellow-500/40 bg-yellow-500/10">
           <p className="text-sm">
-            Bootstrap mode: no super admins exist yet. The first super-admin action
-            performed here will initialize your account as super admin.
+            Bootstrap mode: no super admins exist yet. The first super-admin
+            action performed here will initialize your account as super admin.
           </p>
         </Card>
       )}
@@ -182,7 +187,9 @@ export default function SiteAdmin() {
       <Card className="p-6 space-y-4">
         <h2 className="text-xl font-semibold">Pending Group Applications</h2>
         {pendingApplications.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No pending applications.</p>
+          <p className="text-sm text-muted-foreground">
+            No pending applications.
+          </p>
         ) : (
           <div className="space-y-4">
             {pendingApplications.map((app) => {
@@ -192,9 +199,12 @@ export default function SiteAdmin() {
                 <div key={key} className="border rounded-lg p-4 space-y-3">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="font-semibold">{app.name} ({app.tag})</p>
+                      <p className="font-semibold">
+                        {app.name} ({app.tag})
+                      </p>
                       <p className="text-sm text-muted-foreground">
-                        Applicant: {resolveUserName(applicantHex)} ({applicantHex.slice(0, 16)}...)
+                        Applicant: {resolveUserName(applicantHex)} (
+                        {applicantHex.slice(0, 16)}...)
                       </p>
                     </div>
                     <Badge>Pending</Badge>
@@ -205,18 +215,26 @@ export default function SiteAdmin() {
                     <div>Logo: {app.logoUrl || "-"}</div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor={`review-${key}`}>Review Note (Optional)</Label>
+                    <Label htmlFor={`review-${key}`}>
+                      Review Note (Optional)
+                    </Label>
                     <Textarea
                       id={`review-${key}`}
                       value={reviewNotes[key] || ""}
                       onChange={(e) =>
-                        setReviewNotes((prev) => ({ ...prev, [key]: e.target.value }))
+                        setReviewNotes((prev) => ({
+                          ...prev,
+                          [key]: e.target.value,
+                        }))
                       }
                       rows={2}
                     />
                   </div>
                   <div className="flex gap-2 justify-end">
-                    <Button variant="outline" onClick={() => onReject(app.applicationId)}>
+                    <Button
+                      variant="outline"
+                      onClick={() => onReject(app.applicationId)}
+                    >
                       <X className="h-4 w-4 mr-1" /> Reject
                     </Button>
                     <Button onClick={() => onApprove(app.applicationId)}>
@@ -243,7 +261,10 @@ export default function SiteAdmin() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="super-admin-user">Select User</Label>
-                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                <Select
+                  value={selectedUserId}
+                  onValueChange={setSelectedUserId}
+                >
                   <SelectTrigger id="super-admin-user">
                     <SelectValue placeholder="Select a user" />
                   </SelectTrigger>
@@ -282,7 +303,11 @@ export default function SiteAdmin() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button onClick={onGrantSuperAdmin} className="w-full" disabled={!selectedUserId}>
+              <Button
+                onClick={onGrantSuperAdmin}
+                className="w-full"
+                disabled={!selectedUserId}
+              >
                 Grant Super Admin
               </Button>
             </div>
@@ -293,7 +318,10 @@ export default function SiteAdmin() {
             const idHex = admin.identity.toHexString();
             const isSelf = identity?.toHexString() === idHex;
             return (
-              <div key={idHex} className="flex items-center justify-between border rounded-md p-3">
+              <div
+                key={idHex}
+                className="flex items-center justify-between border rounded-md p-3"
+              >
                 <div className="text-sm">
                   <div className="font-medium">{resolveUserName(idHex)}</div>
                   <div className="text-muted-foreground">{idHex}</div>
@@ -337,7 +365,9 @@ export default function SiteAdmin() {
               <div className="flex gap-2">
                 <Button
                   variant="outline"
-                  onClick={() => navigate(`/admin/groups/${group.groupId}/edit`)}
+                  onClick={() =>
+                    navigate(`/admin/groups/${group.groupId}/edit`)
+                  }
                 >
                   Edit Group
                 </Button>
@@ -350,26 +380,36 @@ export default function SiteAdmin() {
       <Card className="p-6 space-y-3">
         <h2 className="text-xl font-semibold">Application History</h2>
         {allApplications.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No applications found.</p>
+          <p className="text-sm text-muted-foreground">
+            No applications found.
+          </p>
         ) : (
           <div className="space-y-2">
             {allApplications.map((app) => {
               const reviewerHex = app.reviewedBy?.toHexString();
               return (
-                <div key={app.applicationId.toString()} className="text-sm border rounded-md p-3">
+                <div
+                  key={app.applicationId.toString()}
+                  className="text-sm border rounded-md p-3"
+                >
                   <div className="flex items-center justify-between">
-                    <span className="font-medium">{app.name} ({app.tag})</span>
+                    <span className="font-medium">
+                      {app.name} ({app.tag})
+                    </span>
                     <Badge variant="outline">{app.status.tag}</Badge>
                   </div>
                   <div className="text-muted-foreground mt-1">
-                    Applicant: {resolveUserName(app.applicantIdentity.toHexString())}
+                    Applicant:{" "}
+                    {resolveUserName(app.applicantIdentity.toHexString())}
                   </div>
                   {reviewerHex && (
                     <div className="text-muted-foreground">
                       Reviewed by: {resolveUserName(reviewerHex)}
                     </div>
                   )}
-                  {app.reviewNote && <div className="mt-1">Note: {app.reviewNote}</div>}
+                  {app.reviewNote && (
+                    <div className="mt-1">Note: {app.reviewNote}</div>
+                  )}
                 </div>
               );
             })}

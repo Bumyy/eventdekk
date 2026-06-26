@@ -44,6 +44,9 @@ pub fn create_event(
         status: event_status,
         is_internal,
         created_at: ctx.timestamp,
+        flight_filter_mode: Some("Airports".to_string()),
+        flight_filter_bounds: None,
+        show_all_flights: false,
     };
     let inserted_event = ctx.db.event().insert(new_event);
     let new_event_id = inserted_event.event_id;
@@ -161,6 +164,9 @@ pub fn update_event(
     banner_url: Option<String>,
     status: EventStatus,
     is_internal: bool,
+    flight_filter_mode: Option<String>,
+    flight_filter_bounds: Option<String>,
+    show_all_flights: bool,
 ) -> Result<(), String> {
     is_event_host_staff_or_ceo(ctx, event_id)?;
     let mut event = find_event_or_err(ctx, event_id)?;
@@ -184,6 +190,9 @@ pub fn update_event(
     event.banner_url = banner_url;
     event.status = status;
     event.is_internal = is_internal;
+    event.flight_filter_mode = flight_filter_mode;
+    event.flight_filter_bounds = flight_filter_bounds;
+    event.show_all_flights = show_all_flights;
 
     ctx.db.event().event_id().update(event);
     info!("Event {} updated by user {:?}", event_id, ctx.sender);
@@ -577,5 +586,68 @@ pub fn update_participant_role(
         "Group {} role updated to {:?} in event {}",
         group_id, new_role, event_id
     );
+    Ok(())
+}
+
+#[reducer]
+pub fn add_event_overlay(
+    ctx: &ReducerContext,
+    event_id: u64,
+    name: String,
+    overlay_type: String,
+    data: String,
+    config: String,
+) -> Result<(), String> {
+    is_event_host_staff_or_ceo(ctx, event_id)?;
+    let new_overlay = EventOverlay {
+        overlay_id: 0,
+        event_id,
+        name,
+        overlay_type,
+        data,
+        config,
+        created_at: ctx.timestamp,
+        updated_at: ctx.timestamp,
+    };
+    ctx.db.event_overlay().insert(new_overlay);
+    Ok(())
+}
+
+#[reducer]
+pub fn update_event_overlay(
+    ctx: &ReducerContext,
+    overlay_id: u64,
+    name: String,
+    data: String,
+    config: String,
+) -> Result<(), String> {
+    let mut overlay = ctx
+        .db
+        .event_overlay()
+        .overlay_id()
+        .find(overlay_id)
+        .ok_or_else(|| format!("Overlay {} not found.", overlay_id))?;
+    is_event_host_staff_or_ceo(ctx, overlay.event_id)?;
+
+    overlay.name = name;
+    overlay.data = data;
+    overlay.config = config;
+    overlay.updated_at = ctx.timestamp;
+
+    ctx.db.event_overlay().overlay_id().update(overlay);
+    Ok(())
+}
+
+#[reducer]
+pub fn delete_event_overlay(ctx: &ReducerContext, overlay_id: u64) -> Result<(), String> {
+    let overlay = ctx
+        .db
+        .event_overlay()
+        .overlay_id()
+        .find(overlay_id)
+        .ok_or_else(|| format!("Overlay {} not found.", overlay_id))?;
+    is_event_host_staff_or_ceo(ctx, overlay.event_id)?;
+
+    ctx.db.event_overlay().overlay_id().delete(overlay_id);
     Ok(())
 }

@@ -32,7 +32,12 @@ export function CreateEventSubEventsSection() {
           idPrefix="create-default-wave-"
         />
 
-        <Button type="button" variant="outline" size="sm" onClick={handleAddSubEvent}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddSubEvent}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add Another Wave
         </Button>
@@ -57,10 +62,7 @@ export function CreateEventSubEventsSection() {
 
       <div className="space-y-4">
         {subEvents.map((subEvent, index) => (
-          <CreateEventSubEventCard
-            key={`create-wave-${index}`}
-            index={index}
-          />
+          <CreateEventSubEventCard key={`create-wave-${index}`} index={index} />
         ))}
       </div>
     </div>

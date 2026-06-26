@@ -3,7 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 import { EventSidebar } from "./EventSidebar";
 
 vi.mock("@/hooks/useCopyToClipboard", () => ({
-  useCopyToClipboard: vi.fn(() => ({ copied: false, copyToClipboard: vi.fn() })),
+  useCopyToClipboard: vi.fn(() => ({
+    copied: false,
+    copyToClipboard: vi.fn(),
+  })),
 }));
 
 describe("EventSidebar", () => {
@@ -68,7 +71,7 @@ describe("EventSidebar", () => {
 
   it("renders register button when canRegister is true and onRegister is provided", () => {
     const onRegister = vi.fn();
-    
+
     render(
       <EventSidebar
         eventId={BigInt(1)}
@@ -102,7 +105,7 @@ describe("EventSidebar", () => {
 
   it("calls onRegister when register button is clicked", () => {
     const onRegister = vi.fn();
-    
+
     render(
       <EventSidebar
         eventId={BigInt(1)}
@@ -123,11 +126,14 @@ describe("EventSidebar", () => {
     const mockCopyToClipboard = vi.fn();
     vi.clearAllMocks();
     vi.doMock("@/hooks/useCopyToClipboard", () => ({
-      useCopyToClipboard: vi.fn(() => ({ copied: false, copyToClipboard: mockCopyToClipboard })),
+      useCopyToClipboard: vi.fn(() => ({
+        copied: false,
+        copyToClipboard: mockCopyToClipboard,
+      })),
     }));
 
     const { EventSidebar: EventSidebarFresh } = await import("./EventSidebar");
-    
+
     render(
       <EventSidebarFresh
         eventId={BigInt(1)}

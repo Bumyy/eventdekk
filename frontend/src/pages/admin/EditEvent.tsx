@@ -15,13 +15,19 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { Identity, SenderError, Timestamp } from "spacetimedb";
-import { EventStatus, Event, SubEventType, ParticipantRole } from "@/module_bindings/types";
+import {
+  EventStatus,
+  Event,
+  SubEventType,
+  ParticipantRole,
+} from "@/module_bindings/types";
 import { uploadImage } from "@/api/apiService";
 import { useSpacetimeDB } from "spacetimedb/react";
 import { useUserTimezone } from "@/utils/timezoneUtils";
 import {
   EditEventProvider,
   EventDetailsFormCard,
+  FlightTrackingSettingsCard,
   InviteGroupsCard,
   ManageOwnFlightsCard,
   ManageParticipantsCard,
@@ -31,7 +37,10 @@ import {
 
 export default function EditEvent() {
   const { eventId, groupId } = useParams();
-  const eventIdBigInt = useMemo(() => (eventId ? BigInt(eventId) : null), [eventId]);
+  const eventIdBigInt = useMemo(
+    () => (eventId ? BigInt(eventId) : null),
+    [eventId]
+  );
   const currentGroupId = groupId ? BigInt(groupId) : null;
   const navigate = useNavigate();
   const events = useEvents();
@@ -74,6 +83,9 @@ export default function EditEvent() {
   const [ifcEventLink, setIfcEventLink] = useState("");
   const [bannerUrl, setBannerUrl] = useState("");
   const [eventStatus, setEventStatus] = useState<EventStatus | null>(null);
+  const [flightFilterMode, setFlightFilterMode] = useState<string>("Airports");
+  const [flightFilterBounds, setFlightFilterBounds] = useState<string>("");
+  const [showAllFlights, setShowAllFlights] = useState<boolean>(false);
 
   // Image upload related state
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -110,9 +122,11 @@ export default function EditEvent() {
   const [editingSubEventId, setEditingSubEventId] = useState<bigint | null>(
     null
   );
-const [editSubEventForm, setEditSubEventForm] =
+  const [editSubEventForm, setEditSubEventForm] =
     useState<SubEventFormState>(initialSubEventForm);
-  const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(null);
+  const [firstWaveForm, setFirstWaveForm] = useState<SubEventFormState | null>(
+    null
+  );
 
   // New state for managing own flights dialog
   const [showManageOwnFlightsDialog, setShowManageOwnFlightsDialog] =
@@ -131,8 +145,11 @@ const [editSubEventForm, setEditSubEventForm] =
   const limitIcaoLength = (icao: string) => icao.slice(0, 4);
 
   const isSchemaDeserializeError = (error: unknown) => {
-    const message = error instanceof Error ? error.message : String(error || "");
-    return message.includes("Can't deserialize") || message.includes("deserialize");
+    const message =
+      error instanceof Error ? error.message : String(error || "");
+    return (
+      message.includes("Can't deserialize") || message.includes("deserialize")
+    );
   };
 
   const signupForFlightCompat = async (payload: any) => {
@@ -140,8 +157,6 @@ const [editSubEventForm, setEditSubEventForm] =
       await (connection?.reducers as any).signupForFlight(payload);
     } catch (error) {
       if (!isSchemaDeserializeError(error)) throw error;
-      const { liveryId, ...fallbackPayload } = payload;
-      await (connection?.reducers as any).signupForFlight(fallbackPayload);
     }
   };
 
@@ -155,7 +170,7 @@ const [editSubEventForm, setEditSubEventForm] =
     }
   };
 
-const inviteGroupToEventCompat = async (payload: {
+  const inviteGroupToEventCompat = async (payload: {
     eventId: bigint;
     invitedGroupId: bigint;
   }) => {
@@ -222,7 +237,7 @@ const inviteGroupToEventCompat = async (payload: {
     }
   };
 
-// Load event data
+  // Load event data
   useEffect(() => {
     if (!events || !eventId || events.length === 0) return;
     const event = events.find((e: Event) => e.eventId.toString() === eventId);
@@ -242,6 +257,9 @@ const inviteGroupToEventCompat = async (payload: {
     setIfcEventLink(event.ifcEventLink || "");
     setBannerUrl(event.bannerUrl || "");
     setEventStatus(event.status);
+    setFlightFilterMode(event.flightFilterMode || "Airports");
+    setFlightFilterBounds(event.flightFilterBounds || "");
+    setShowAllFlights(event.showAllFlights || false);
   }, [events, eventId, navigate]);
 
   const currentEvent = useMemo(() => {
@@ -271,7 +289,10 @@ const inviteGroupToEventCompat = async (payload: {
       const formState: SubEventFormState = {
         name: firstSubEvent.name,
         description: firstSubEvent.description || "",
-        type: firstSubEvent.subEventType.tag as "GroupFlight" | "FlyIn" | "FlyOut",
+        type: firstSubEvent.subEventType.tag as
+          | "GroupFlight"
+          | "FlyIn"
+          | "FlyOut",
         startTime: firstSubEvent.scheduledStartTime.toDate(),
         endTime: firstSubEvent.scheduledEndTime.toDate(),
         hubIcao: firstSubEvent.hubIcao || "",
@@ -291,7 +312,9 @@ const inviteGroupToEventCompat = async (payload: {
   const eventSignups = useMemo(
     () =>
       flightSignups.filter((signup) =>
-        eventSubEvents.some((subEvent) => subEvent.subEventId === signup.subEventId)
+        eventSubEvents.some(
+          (subEvent) => subEvent.subEventId === signup.subEventId
+        )
       ),
     [flightSignups, eventSubEvents]
   );
@@ -332,20 +355,22 @@ const inviteGroupToEventCompat = async (payload: {
       const signedUpSubEventIds = ownSignups.map((signup) => signup.subEventId);
       setSelectedOwnSubEvents(signedUpSubEventIds);
 
-      const firstLeadHex = ownSignups.find((signup) => signup.eventLead)?.eventLead?.toHexString();
+      const firstLeadHex = ownSignups
+        .find((signup) => signup.eventLead)
+        ?.eventLead?.toHexString();
       setSelectedOwnGroupLeadHex(firstLeadHex || "none");
 
       // Populate flight details from existing signups
       const detailsMap: Record<string, any> = {};
-        ownSignups.forEach((signup) => {
-          detailsMap[signup.subEventId.toString()] = {
-            eventLeadHex: signup.eventLead
-              ? signup.eventLead.toHexString()
-              : "none",
-            callsign: signup.callsign || "",
-            aircraftType: signup.aircraftType || "",
-            liveryId: signup.liveryId || "",
-            departureTime: signup.desiredDepartureTime
+      ownSignups.forEach((signup) => {
+        detailsMap[signup.subEventId.toString()] = {
+          eventLeadHex: signup.eventLead
+            ? signup.eventLead.toHexString()
+            : "none",
+          callsign: signup.callsign || "",
+          aircraftType: signup.aircraftType || "",
+          liveryId: signup.liveryId || "",
+          departureTime: signup.desiredDepartureTime
             ? format(signup.desiredDepartureTime.toDate(), "yyyy-MM-dd'T'HH:mm")
             : "",
           arrivalTime: signup.desiredArrivalTime
@@ -372,7 +397,7 @@ const inviteGroupToEventCompat = async (payload: {
       }
     });
 
-// Initialize flight details for this sub-event if not already done
+    // Initialize flight details for this sub-event if not already done
     const subEvent = subEvents.find((se) => se.subEventId === subEventId);
     if (subEvent) {
       setOwnFlightDetails((prev) => {
@@ -386,8 +411,14 @@ const inviteGroupToEventCompat = async (payload: {
             route: "",
             customDepartureIcao: "",
             customArrivalIcao: "",
-            departureTime: format(subEvent.scheduledStartTime.toDate(), "yyyy-MM-dd'T'HH:mm"),
-            arrivalTime: format(subEvent.scheduledEndTime.toDate(), "yyyy-MM-dd'T'HH:mm"),
+            departureTime: format(
+              subEvent.scheduledStartTime.toDate(),
+              "yyyy-MM-dd'T'HH:mm"
+            ),
+            arrivalTime: format(
+              subEvent.scheduledEndTime.toDate(),
+              "yyyy-MM-dd'T'HH:mm"
+            ),
           };
 
           return {
@@ -515,7 +546,9 @@ const inviteGroupToEventCompat = async (payload: {
         let arrivalIcao = "";
 
         if (isGroupFlight) {
-          departureIcao = limitIcaoLength(subEvent.groupFlightDepartureIcao || "");
+          departureIcao = limitIcaoLength(
+            subEvent.groupFlightDepartureIcao || ""
+          );
           arrivalIcao = limitIcaoLength(subEvent.groupFlightArrivalIcao || "");
         } else if (isFlyIn) {
           departureIcao = limitIcaoLength(details.customDepartureIcao || "");
@@ -654,10 +687,16 @@ const inviteGroupToEventCompat = async (payload: {
 
     if (eventSubEvents.length > 0) {
       const minStartTime = new Date(
-        Math.min(...eventSubEvents.map(se => se.scheduledStartTime.toDate().getTime()))
+        Math.min(
+          ...eventSubEvents.map((se) =>
+            se.scheduledStartTime.toDate().getTime()
+          )
+        )
       );
       const maxEndTime = new Date(
-        Math.max(...eventSubEvents.map(se => se.scheduledEndTime.toDate().getTime()))
+        Math.max(
+          ...eventSubEvents.map((se) => se.scheduledEndTime.toDate().getTime())
+        )
       );
       eventStartTime = minStartTime;
       eventEndTime = maxEndTime;
@@ -677,10 +716,17 @@ const inviteGroupToEventCompat = async (payload: {
         bannerUrl: finalBannerUrl || null,
         status: newStatus,
         isInternal: isInternal,
+        flightFilterMode: flightFilterMode,
+        flightFilterBounds: flightFilterBounds || null,
+        showAllFlights: showAllFlights,
       });
 
       // If in simple mode (single sub-event), update the sub-event too
-      if (!isAdvancedSubEventsMode && eventSubEvents.length === 1 && firstWaveForm) {
+      if (
+        !isAdvancedSubEventsMode &&
+        eventSubEvents.length === 1 &&
+        firstWaveForm
+      ) {
         await updateFirstSubEventFromForm(firstWaveForm);
       }
 
@@ -707,7 +753,7 @@ const inviteGroupToEventCompat = async (payload: {
     }
   };
 
-const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
+  const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !eventId) return;
 
     const formData = formOverride ?? subEventForm;
@@ -767,7 +813,11 @@ const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
       });
 
       setShowAddSubEventDialog(false);
-      setSubEventForm({ ...initialSubEventForm, startTime: new Date(), endTime: new Date() });
+      setSubEventForm({
+        ...initialSubEventForm,
+        startTime: new Date(),
+        endTime: new Date(),
+      });
 
       toast.success("Sub-event added", {
         description: "The sub-event was added successfully.",
@@ -786,167 +836,176 @@ const handleAddSubEvent = async (formOverride?: SubEventFormState) => {
     }
   };
 
-const handleDeleteSubEvent = useCallback(async (subEventId: bigint) => {
-    if (!connection) return;
-    if (confirm("Are you sure you want to delete this sub-event?")) {
-      try {
-        await connection.reducers.deleteSubEvent({ subEventId: subEventId });
-        if (eventSubEvents.length - 1 <= 1) {
-          setIsAdvancedSubEventsMode(false);
+  const handleDeleteSubEvent = useCallback(
+    async (subEventId: bigint) => {
+      if (!connection) return;
+      if (confirm("Are you sure you want to delete this sub-event?")) {
+        try {
+          await connection.reducers.deleteSubEvent({ subEventId: subEventId });
+          if (eventSubEvents.length - 1 <= 1) {
+            setIsAdvancedSubEventsMode(false);
+          }
+          toast.success("Sub-event deleted", {
+            description: "The sub-event was deleted successfully.",
+          });
+        } catch (error) {
+          if (error instanceof SenderError) {
+            toast.error("Error deleting sub-event", {
+              description: `${error.message}`,
+            });
+          } else {
+            toast.error("Error deleting sub-event", {
+              description: "There was a problem deleting the sub-event.",
+            });
+          }
+          console.error("Error deleting sub-event:", error);
         }
-        toast.success("Sub-event deleted", {
-          description: "The sub-event was deleted successfully.",
+      }
+    },
+    [connection, eventSubEvents.length]
+  );
+
+  const handleEditSubEventClick = useCallback(
+    (subEvent: {
+      subEventType: SubEventType;
+      name: string;
+      description?: string | null;
+      scheduledStartTime: { toDate: () => Date };
+      scheduledEndTime: { toDate: () => Date };
+      hubIcao?: string | null;
+      groupFlightDepartureIcao?: string | null;
+      groupFlightArrivalIcao?: string | null;
+      groupFlightRoute?: string | null;
+      notes?: string | null;
+      eventLead?: { toHexString: () => string } | null;
+      subEventId: bigint;
+    }) => {
+      const typeStr = subEvent.subEventType.tag;
+      setEditSubEventForm({
+        name: subEvent.name,
+        description: subEvent.description || "",
+        type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
+        startTime: subEvent.scheduledStartTime.toDate(),
+        endTime: subEvent.scheduledEndTime.toDate(),
+        hubIcao: subEvent.hubIcao || "",
+        departureIcao: subEvent.groupFlightDepartureIcao || "",
+        arrivalIcao: subEvent.groupFlightArrivalIcao || "",
+        route: subEvent.groupFlightRoute || "",
+        notes: subEvent.notes || "",
+        eventLeadHex: subEvent.eventLead
+          ? subEvent.eventLead.toHexString()
+          : "none",
+      });
+      setEditingSubEventId(subEvent.subEventId);
+      setShowEditSubEventDialog(true);
+    },
+    []
+  );
+
+  const toSubEventFormState = useCallback(
+    (subEvent: {
+      subEventType: SubEventType;
+      name: string;
+      description?: string | null;
+      scheduledStartTime: { toDate: () => Date };
+      scheduledEndTime: { toDate: () => Date };
+      hubIcao?: string | null;
+      groupFlightDepartureIcao?: string | null;
+      groupFlightArrivalIcao?: string | null;
+      groupFlightRoute?: string | null;
+      notes?: string | null;
+      eventLead?: { toHexString: () => string } | null;
+      subEventId: bigint;
+    }): SubEventFormState => {
+      const typeStr = subEvent.subEventType.tag;
+      return {
+        name: subEvent.name,
+        description: subEvent.description || "",
+        type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
+        startTime: subEvent.scheduledStartTime.toDate(),
+        endTime: subEvent.scheduledEndTime.toDate(),
+        hubIcao: subEvent.hubIcao || "",
+        departureIcao: subEvent.groupFlightDepartureIcao || "",
+        arrivalIcao: subEvent.groupFlightArrivalIcao || "",
+        route: subEvent.groupFlightRoute || "",
+        notes: subEvent.notes || "",
+        eventLeadHex: subEvent.eventLead
+          ? subEvent.eventLead.toHexString()
+          : "none",
+      };
+    },
+    []
+  );
+
+  const updateFirstSubEventFromForm = useCallback(
+    async (formState: SubEventFormState) => {
+      if (!connection || !eventId || eventSubEvents.length === 0) return;
+
+      const hasInvalidIcaoLength =
+        !isIcaoLengthValid(formState.hubIcao) ||
+        !isIcaoLengthValid(formState.departureIcao) ||
+        !isIcaoLengthValid(formState.arrivalIcao);
+      if (hasInvalidIcaoLength) {
+        toast.error("ICAO fields must be exactly 4 characters.");
+        return;
+      }
+
+      const firstSubEvent = eventSubEvents[0];
+
+      let subEventType: SubEventType;
+      switch (formState.type) {
+        case "GroupFlight":
+          subEventType = { tag: "GroupFlight" };
+          break;
+        case "FlyIn":
+          subEventType = { tag: "FlyIn" };
+          break;
+        case "FlyOut":
+          subEventType = { tag: "FlyOut" };
+          break;
+      }
+
+      const leadMember = members.find(
+        (m) => m.user?.identity.toHexString() === formState.eventLeadHex
+      );
+
+      try {
+        await connection.reducers.updateSubEvent({
+          subEventId: firstSubEvent.subEventId,
+          name: formState.name,
+          description: formState.description || undefined,
+          subEventType: subEventType,
+          scheduledStartTime: Timestamp.fromDate(formState.startTime),
+          scheduledEndTime: Timestamp.fromDate(formState.endTime),
+          hubIcao:
+            formState.type === "FlyIn" || formState.type === "FlyOut"
+              ? limitIcaoLength(formState.hubIcao)
+              : undefined,
+          groupFlightDepartureIcao:
+            formState.type === "GroupFlight"
+              ? limitIcaoLength(formState.departureIcao)
+              : undefined,
+          groupFlightArrivalIcao:
+            formState.type === "GroupFlight"
+              ? limitIcaoLength(formState.arrivalIcao)
+              : undefined,
+          groupFlightRoute:
+            formState.type === "GroupFlight" ? formState.route : undefined,
+          notes: formState.notes || undefined,
+          eventLead: leadMember?.user?.identity || undefined,
         });
       } catch (error) {
         if (error instanceof SenderError) {
-          toast.error("Error deleting sub-event", {
+          toast.error("Error updating wave", {
             description: `${error.message}`,
           });
         } else {
-          toast.error("Error deleting sub-event", {
-            description: "There was a problem deleting the sub-event.",
-          });
+          toast.error("Error updating wave");
         }
-        console.error("Error deleting sub-event:", error);
       }
-    }
-  }, [connection, eventSubEvents.length]);
-
-const handleEditSubEventClick = useCallback((subEvent: {
-    subEventType: SubEventType;
-    name: string;
-    description?: string | null;
-    scheduledStartTime: { toDate: () => Date };
-    scheduledEndTime: { toDate: () => Date };
-    hubIcao?: string | null;
-    groupFlightDepartureIcao?: string | null;
-    groupFlightArrivalIcao?: string | null;
-    groupFlightRoute?: string | null;
-    notes?: string | null;
-    eventLead?: { toHexString: () => string } | null;
-    subEventId: bigint;
-  }) => {
-    const typeStr = subEvent.subEventType.tag;
-    setEditSubEventForm({
-      name: subEvent.name,
-      description: subEvent.description || "",
-      type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
-      startTime: subEvent.scheduledStartTime.toDate(),
-      endTime: subEvent.scheduledEndTime.toDate(),
-      hubIcao: subEvent.hubIcao || "",
-      departureIcao: subEvent.groupFlightDepartureIcao || "",
-      arrivalIcao: subEvent.groupFlightArrivalIcao || "",
-      route: subEvent.groupFlightRoute || "",
-      notes: subEvent.notes || "",
-      eventLeadHex: subEvent.eventLead
-        ? subEvent.eventLead.toHexString()
-        : "none",
-    });
-    setEditingSubEventId(subEvent.subEventId);
-    setShowEditSubEventDialog(true);
-  }, []);
-
-  const toSubEventFormState = useCallback((subEvent: {
-    subEventType: SubEventType;
-    name: string;
-    description?: string | null;
-    scheduledStartTime: { toDate: () => Date };
-    scheduledEndTime: { toDate: () => Date };
-    hubIcao?: string | null;
-    groupFlightDepartureIcao?: string | null;
-    groupFlightArrivalIcao?: string | null;
-    groupFlightRoute?: string | null;
-    notes?: string | null;
-    eventLead?: { toHexString: () => string } | null;
-    subEventId: bigint;
-  }): SubEventFormState => {
-    const typeStr = subEvent.subEventType.tag;
-    return {
-      name: subEvent.name,
-      description: subEvent.description || "",
-      type: typeStr as "GroupFlight" | "FlyIn" | "FlyOut",
-      startTime: subEvent.scheduledStartTime.toDate(),
-      endTime: subEvent.scheduledEndTime.toDate(),
-      hubIcao: subEvent.hubIcao || "",
-      departureIcao: subEvent.groupFlightDepartureIcao || "",
-      arrivalIcao: subEvent.groupFlightArrivalIcao || "",
-      route: subEvent.groupFlightRoute || "",
-      notes: subEvent.notes || "",
-      eventLeadHex: subEvent.eventLead
-        ? subEvent.eventLead.toHexString()
-        : "none",
-    };
-  }, []);
-
-  const updateFirstSubEventFromForm = useCallback(async (formState: SubEventFormState) => {
-    if (!connection || !eventId || eventSubEvents.length === 0) return;
-
-    const hasInvalidIcaoLength =
-      !isIcaoLengthValid(formState.hubIcao) ||
-      !isIcaoLengthValid(formState.departureIcao) ||
-      !isIcaoLengthValid(formState.arrivalIcao);
-    if (hasInvalidIcaoLength) {
-      toast.error("ICAO fields must be exactly 4 characters.");
-      return;
-    }
-    
-    const firstSubEvent = eventSubEvents[0];
-    
-    let subEventType: SubEventType;
-    switch (formState.type) {
-      case "GroupFlight":
-        subEventType = { tag: "GroupFlight" };
-        break;
-      case "FlyIn":
-        subEventType = { tag: "FlyIn" };
-        break;
-      case "FlyOut":
-        subEventType = { tag: "FlyOut" };
-        break;
-    }
-
-    const leadMember = members.find(
-      (m) => m.user?.identity.toHexString() === formState.eventLeadHex
-    );
-
-    try {
-      await connection.reducers.updateSubEvent({
-        subEventId: firstSubEvent.subEventId,
-        name: formState.name,
-        description: formState.description || undefined,
-        subEventType: subEventType,
-        scheduledStartTime: Timestamp.fromDate(formState.startTime),
-        scheduledEndTime: Timestamp.fromDate(formState.endTime),
-        hubIcao:
-          formState.type === "FlyIn" ||
-          formState.type === "FlyOut"
-            ? limitIcaoLength(formState.hubIcao)
-            : undefined,
-        groupFlightDepartureIcao:
-          formState.type === "GroupFlight"
-            ? limitIcaoLength(formState.departureIcao)
-            : undefined,
-        groupFlightArrivalIcao:
-          formState.type === "GroupFlight"
-            ? limitIcaoLength(formState.arrivalIcao)
-            : undefined,
-        groupFlightRoute:
-          formState.type === "GroupFlight"
-            ? formState.route
-            : undefined,
-        notes: formState.notes || undefined,
-        eventLead: leadMember?.user?.identity || undefined,
-      });
-    } catch (error) {
-      if (error instanceof SenderError) {
-        toast.error("Error updating wave", {
-          description: `${error.message}`,
-        });
-      } else {
-        toast.error("Error updating wave");
-      }
-    }
-  }, [connection, eventId, eventSubEvents, members]);
+    },
+    [connection, eventId, eventSubEvents, members]
+  );
 
   const handleUpdateSubEvent = async (formOverride?: SubEventFormState) => {
     if (!connection || !editingSubEventId) return;
@@ -988,8 +1047,7 @@ const handleEditSubEventClick = useCallback((subEvent: {
         scheduledStartTime: Timestamp.fromDate(formData.startTime),
         scheduledEndTime: Timestamp.fromDate(formData.endTime),
         hubIcao:
-          formData.type === "FlyIn" ||
-          formData.type === "FlyOut"
+          formData.type === "FlyIn" || formData.type === "FlyOut"
             ? limitIcaoLength(formData.hubIcao)
             : undefined,
         groupFlightDepartureIcao:
@@ -1001,9 +1059,7 @@ const handleEditSubEventClick = useCallback((subEvent: {
             ? limitIcaoLength(formData.arrivalIcao)
             : undefined,
         groupFlightRoute:
-          formData.type === "GroupFlight"
-            ? formData.route
-            : undefined,
+          formData.type === "GroupFlight" ? formData.route : undefined,
         notes: formData.notes || undefined,
         eventLead: leadMember?.user?.identity || undefined,
       });
@@ -1083,8 +1139,10 @@ const handleEditSubEventClick = useCallback((subEvent: {
     [members]
   );
 
-const availableInviteGroups = useMemo(() => {
-    const invitedGroupIds = new Set(eventParticipants.map((participant) => participant.groupId));
+  const availableInviteGroups = useMemo(() => {
+    const invitedGroupIds = new Set(
+      eventParticipants.map((participant) => participant.groupId)
+    );
 
     return groups.filter(
       (group) =>
@@ -1101,8 +1159,7 @@ const availableInviteGroups = useMemo(() => {
   );
 
   const participants = useMemo(
-    () =>
-      eventParticipants.filter((p) => p.role.tag === "Participant"),
+    () => eventParticipants.filter((p) => p.role.tag === "Participant"),
     [eventParticipants]
   );
 
@@ -1134,7 +1191,9 @@ const availableInviteGroups = useMemo(() => {
   const handleRemoveParticipant = async (groupId: bigint) => {
     if (!connection || !eventId) return;
 
-    if (!confirm("Are you sure you want to remove this group from the event?")) {
+    if (
+      !confirm("Are you sure you want to remove this group from the event?")
+    ) {
       return;
     }
 
@@ -1201,7 +1260,7 @@ const availableInviteGroups = useMemo(() => {
     return <div>Loading...</div>;
   }
 
-return (
+  return (
     <EditEventProvider
       value={{
         userTimezone,
@@ -1211,6 +1270,9 @@ return (
         endTime,
         ifcEventLink,
         isInternal,
+        flightFilterMode,
+        flightFilterBounds,
+        showAllFlights,
         previewUrl,
         bannerUrl,
         selectedFile,
@@ -1223,6 +1285,9 @@ return (
         setEndTime,
         setIfcEventLink,
         setIsInternal,
+        setFlightFilterMode,
+        setFlightFilterBounds,
+        setShowAllFlights,
         handleFileChange,
         setBannerUrl,
         clearBanner,
@@ -1275,57 +1340,61 @@ return (
       }}
     >
       <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-3xl font-bold">Edit Event</h1>
-        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
-          <Button
-            variant="outline"
-            onClick={() => navigate(`/admin/events/${groupId}`)}
-            className="w-full sm:w-auto"
-          >
-            Cancel
-          </Button>
-          {eventStatus?.tag === "Draft" && canPublishEvents && (
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <h1 className="text-3xl font-bold">Edit Event</h1>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
             <Button
-              variant="default"
-              onClick={() => handleUpdateEvent(true)}
+              variant="outline"
+              onClick={() => navigate(`/admin/events/${groupId}`)}
+              className="w-full sm:w-auto"
+            >
+              Cancel
+            </Button>
+            {eventStatus?.tag === "Draft" && canPublishEvents && (
+              <Button
+                variant="default"
+                onClick={() => handleUpdateEvent(true)}
+                disabled={isLoading || isUploading}
+                className="w-full sm:w-auto"
+              >
+                {isLoading || isUploading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Publish
+                  </>
+                ) : (
+                  "Publish"
+                )}
+              </Button>
+            )}
+            <Button
+              onClick={() => handleUpdateEvent(false)}
               disabled={isLoading || isUploading}
               className="w-full sm:w-auto"
             >
               {isLoading || isUploading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Publish
+                  Save
                 </>
-              ) : "Publish"}
+              ) : (
+                "Save"
+              )}
             </Button>
-          )}
-          <Button
-            onClick={() => handleUpdateEvent(false)}
-            disabled={isLoading || isUploading}
-            className="w-full sm:w-auto"
-          >
-            {isLoading || isUploading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Save
-              </>
-            ) : (
-              "Save"
-            )}
-          </Button>
+          </div>
         </div>
-      </div>
 
         <EventDetailsFormCard />
 
         <SubEventsManagementCard />
 
-<InviteGroupsCard />
+        <InviteGroupsCard />
 
         <ManageParticipantsCard />
 
         <ManageOwnFlightsCard />
+
+        <FlightTrackingSettingsCard />
       </div>
     </EditEventProvider>
   );

@@ -13,4 +13,6 @@ import {
 export default {
   groupId: __t.u64(),
   words: __t.string(),
+  color: __t.option(__t.string()),
+  label: __t.option(__t.string()),
 };

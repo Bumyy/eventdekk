@@ -26,4 +26,7 @@ export default {
     return EventStatus;
   },
   isInternal: __t.bool(),
+  flightFilterMode: __t.option(__t.string()),
+  flightFilterBounds: __t.option(__t.string()),
+  showAllFlights: __t.bool(),
 };

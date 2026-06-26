@@ -208,7 +208,10 @@ export default function AdminEvents() {
         await (connection?.reducers as any).signupForFlight(attempts[i]);
         return;
       } catch (error) {
-        if (!isRetryableSignupReducerError(error) || i === attempts.length - 1) {
+        if (
+          !isRetryableSignupReducerError(error) ||
+          i === attempts.length - 1
+        ) {
           throw error;
         }
       }
@@ -223,14 +226,17 @@ export default function AdminEvents() {
         await (connection?.reducers as any).updateFlightSignup(attempts[i]);
         return;
       } catch (error) {
-        if (!isRetryableSignupReducerError(error) || i === attempts.length - 1) {
+        if (
+          !isRetryableSignupReducerError(error) ||
+          i === attempts.length - 1
+        ) {
           throw error;
         }
       }
     }
   };
 
-const respondToEventInvitationCompat = async (payload: {
+  const respondToEventInvitationCompat = async (payload: {
     eventId: bigint;
     groupId: bigint;
     response: { tag: "Accepted" | "Declined" | "Pending" };

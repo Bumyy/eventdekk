@@ -23,8 +23,14 @@ export const OAuthProfileSync: React.FC<{ children: React.ReactNode }> = ({
     const existingDisplayName = currentUser.displayName;
     const existingProfilePicture = currentUser.ifcProfileUrl;
 
-    const shouldUpdateDisplayName = isNewUser && !!incomingDisplayName && incomingDisplayName !== existingDisplayName;
-    const shouldUpdateProfilePicture = isNewUser && !!incomingProfilePicture && incomingProfilePicture !== existingProfilePicture;
+    const shouldUpdateDisplayName =
+      isNewUser &&
+      !!incomingDisplayName &&
+      incomingDisplayName !== existingDisplayName;
+    const shouldUpdateProfilePicture =
+      isNewUser &&
+      !!incomingProfilePicture &&
+      incomingProfilePicture !== existingProfilePicture;
 
     if (!shouldUpdateDisplayName && !shouldUpdateProfilePicture) {
       clearPendingOAuthProfile();
@@ -42,7 +48,9 @@ export const OAuthProfileSync: React.FC<{ children: React.ReactNode }> = ({
 
     connection.reducers.setUserProfile({
       displayName: nextDisplayName,
-      ifcProfileUrl: shouldUpdateProfilePicture ? incomingProfilePicture : existingProfilePicture || null,
+      ifcProfileUrl: shouldUpdateProfilePicture
+        ? incomingProfilePicture
+        : existingProfilePicture || null,
       ifcCallsignPrefix: currentUser.ifcCallsignPrefix || null,
       timezone: currentUser.timezone || null,
     });

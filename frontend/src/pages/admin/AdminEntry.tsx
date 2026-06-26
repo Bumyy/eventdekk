@@ -10,7 +10,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { useSpacetimeDB } from "spacetimedb/react";
 
-function getRoleLabel(role: { tag: "Ceo" | "Staff" | "Member" }, isCeo: boolean) {
+function getRoleLabel(
+  role: { tag: "Ceo" | "Staff" | "Member" },
+  isCeo: boolean
+) {
   if (isCeo) return "CEO";
   if (role.tag === "Ceo") return "Admin";
   return role.tag;
@@ -108,7 +111,12 @@ export default function AdminEntry() {
                     </Badge>
                   </div>
                   <p className="text-muted-foreground">
-                    {group.memberCount} members • {getRoleLabel(group.role, group.ceoIdentity.toHexString() === identity?.toHexString())}
+                    {group.memberCount} members •{" "}
+                    {getRoleLabel(
+                      group.role,
+                      group.ceoIdentity.toHexString() ===
+                        identity?.toHexString()
+                    )}
                   </p>
                 </div>
               </div>

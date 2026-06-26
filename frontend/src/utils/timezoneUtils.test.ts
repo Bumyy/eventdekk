@@ -68,9 +68,12 @@ describe("timezoneUtils", () => {
   describe("detectUserTimezone", () => {
     it("returns user timezone when in supported list", () => {
       const originalResolvedOptions = Intl.DateTimeFormat().resolvedOptions;
-      vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue(
-        { timeZone: "America/New_York" } as Intl.ResolvedDateTimeFormatOptions
-      );
+      vi.spyOn(
+        Intl.DateTimeFormat.prototype,
+        "resolvedOptions"
+      ).mockReturnValue({
+        timeZone: "America/New_York",
+      } as Intl.ResolvedDateTimeFormatOptions);
 
       const result = detectUserTimezone();
       expect(result).toBe("America/New_York");
@@ -79,9 +82,12 @@ describe("timezoneUtils", () => {
     });
 
     it("returns UTC when user timezone is not in supported list", () => {
-      vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue(
-        { timeZone: "Unknown/Timezone" } as Intl.ResolvedDateTimeFormatOptions
-      );
+      vi.spyOn(
+        Intl.DateTimeFormat.prototype,
+        "resolvedOptions"
+      ).mockReturnValue({
+        timeZone: "Unknown/Timezone",
+      } as Intl.ResolvedDateTimeFormatOptions);
 
       const result = detectUserTimezone();
       expect(result).toBe("UTC");
@@ -257,9 +263,12 @@ describe("timezoneUtils", () => {
       const mockUser = { timezone: null };
       (useCurrentUser as ReturnType<typeof vi.fn>).mockReturnValue(mockUser);
 
-      vi.spyOn(Intl.DateTimeFormat.prototype, "resolvedOptions").mockReturnValue(
-        { timeZone: "America/Los_Angeles" } as Intl.ResolvedDateTimeFormatOptions
-      );
+      vi.spyOn(
+        Intl.DateTimeFormat.prototype,
+        "resolvedOptions"
+      ).mockReturnValue({
+        timeZone: "America/Los_Angeles",
+      } as Intl.ResolvedDateTimeFormatOptions);
 
       const { result } = renderHook(() => useUserTimezone());
 
@@ -285,10 +294,13 @@ describe("timezoneUtils", () => {
     it("returns detected timezone when user is undefined", () => {
       (useCurrentUser as ReturnType<typeof vi.fn>).mockReturnValue(undefined);
 
-      const originalResolvedOptions = Intl.DateTimeFormat.prototype.resolvedOptions;
-      Intl.DateTimeFormat.prototype.resolvedOptions = vi.fn().mockReturnValue(
-        { timeZone: "Asia/Tokyo" } as Intl.ResolvedDateTimeFormatOptions
-      ) as unknown as typeof originalResolvedOptions;
+      const originalResolvedOptions =
+        Intl.DateTimeFormat.prototype.resolvedOptions;
+      Intl.DateTimeFormat.prototype.resolvedOptions = vi
+        .fn()
+        .mockReturnValue({
+          timeZone: "Asia/Tokyo",
+        } as Intl.ResolvedDateTimeFormatOptions) as unknown as typeof originalResolvedOptions;
 
       const { result } = renderHook(() => useUserTimezone());
 

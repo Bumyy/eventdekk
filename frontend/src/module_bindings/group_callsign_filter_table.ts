@@ -15,4 +15,6 @@ export default __t.row({
   groupId: __t.u64().name("group_id"),
   words: __t.string(),
   createdAt: __t.timestamp().name("created_at"),
+  color: __t.option(__t.string()),
+  label: __t.option(__t.string()),
 });

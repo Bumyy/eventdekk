@@ -33,6 +33,7 @@ interface SubEventFlightFormProps {
   route: string;
   departureTime?: string;
   arrivalTime?: string;
+  timezone?: string;
   onCallsignChange: (value: string) => void;
   onAircraftChange: (value: AircraftLiveryValue) => void;
   onDepartureIcaoChange: (value: string) => void;
@@ -54,6 +55,7 @@ export function SubEventFlightForm({
   route,
   departureTime,
   arrivalTime,
+  timezone,
   onCallsignChange,
   onAircraftChange,
   onDepartureIcaoChange,
@@ -68,11 +70,17 @@ export function SubEventFlightForm({
   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
 
   const departureIcaoError =
-    !isGroupFlight && !isFlyOut && departureIcao.trim().length > 0 && departureIcao.trim().length !== 4
+    !isGroupFlight &&
+    !isFlyOut &&
+    departureIcao.trim().length > 0 &&
+    departureIcao.trim().length !== 4
       ? "ICAO must be exactly 4 characters."
       : undefined;
   const arrivalIcaoError =
-    !isGroupFlight && !isFlyIn && arrivalIcao.trim().length > 0 && arrivalIcao.trim().length !== 4
+    !isGroupFlight &&
+    !isFlyIn &&
+    arrivalIcao.trim().length > 0 &&
+    arrivalIcao.trim().length !== 4
       ? "ICAO must be exactly 4 characters."
       : undefined;
 
@@ -114,7 +122,9 @@ export function SubEventFlightForm({
           </Label>
           <Input
             value={departureIcao}
-            onChange={(e) => onDepartureIcaoChange(limitIcaoLength(e.target.value))}
+            onChange={(e) =>
+              onDepartureIcaoChange(limitIcaoLength(e.target.value))
+            }
             placeholder={
               isGroupFlight || isFlyOut
                 ? isGroupFlight
@@ -127,7 +137,9 @@ export function SubEventFlightForm({
             aria-invalid={!!departureIcaoError}
           />
           {departureIcaoError && (
-            <p className="text-xs text-destructive mt-1">{departureIcaoError}</p>
+            <p className="text-xs text-destructive mt-1">
+              {departureIcaoError}
+            </p>
           )}
           {(isGroupFlight || isFlyOut) && (
             <p className="text-xs text-muted-foreground mt-1">
@@ -149,7 +161,9 @@ export function SubEventFlightForm({
           </Label>
           <Input
             value={arrivalIcao}
-            onChange={(e) => onArrivalIcaoChange(limitIcaoLength(e.target.value))}
+            onChange={(e) =>
+              onArrivalIcaoChange(limitIcaoLength(e.target.value))
+            }
             placeholder={
               isGroupFlight || isFlyIn
                 ? isGroupFlight
@@ -207,6 +221,7 @@ export function SubEventFlightForm({
               onDepartureTimeChange(date ? date.toISOString() : undefined)
             }
             disabled={disabled}
+            timezone={timezone}
           />
         </div>
 
@@ -218,6 +233,7 @@ export function SubEventFlightForm({
               onArrivalTimeChange(date ? date.toISOString() : undefined)
             }
             disabled={disabled}
+            timezone={timezone}
           />
         </div>
       </div>

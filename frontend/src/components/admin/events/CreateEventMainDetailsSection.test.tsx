@@ -1,7 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CreateEventMainDetailsSection } from "./CreateEventMainDetailsSection";
-import { CreateEventProvider, CreateEventContextValue } from "./CreateEventContext";
+import {
+  CreateEventProvider,
+  CreateEventContextValue,
+} from "./CreateEventContext";
 
 vi.mock("@/components/ui/datetime-picker", () => ({
   DateTimePicker: ({ label }: { label: string }) => <div>{label}</div>,

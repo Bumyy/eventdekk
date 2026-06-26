@@ -1,6 +1,12 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
@@ -24,7 +30,10 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { formatDateInTimezone, formatTimeInTimezone } from "@/utils/timezoneUtils";
+import {
+  formatDateInTimezone,
+  formatTimeInTimezone,
+} from "@/utils/timezoneUtils";
 import { SubEventDialogForm } from "./SubEventDialogForm";
 import { SubEventTypeBadge } from "./SubEventTypeBadge";
 import { useEditEventContext } from "./EditEventContext";
@@ -53,8 +62,10 @@ export function SubEventsManagementCard() {
     setFirstWaveForm,
   } = useEditEventContext();
 
-  const [addFormDraft, setAddFormDraft] = useState<SubEventFormState>(subEventForm);
-  const [editFormDraft, setEditFormDraft] = useState<SubEventFormState>(editSubEventForm);
+  const [addFormDraft, setAddFormDraft] =
+    useState<SubEventFormState>(subEventForm);
+  const [editFormDraft, setEditFormDraft] =
+    useState<SubEventFormState>(editSubEventForm);
   const wasAddDialogOpen = useRef(false);
   const wasEditDialogOpen = useRef(false);
 
@@ -79,27 +90,37 @@ export function SubEventsManagementCard() {
 
   const subEventCards = useMemo(() => {
     if (eventSubEvents.length === 0) {
-      return <p className="text-muted-foreground">No sub-events. Add one to get started!</p>;
+      return (
+        <p className="text-muted-foreground">
+          No sub-events. Add one to get started!
+        </p>
+      );
     }
 
     return (
       <div className="grid grid-cols-1 gap-6">
         {eventSubEvents.map((subEvent, index) => {
-          const subEventSignups = signupsBySubEvent[subEvent.subEventId.toString()] || [];
+          const subEventSignups =
+            signupsBySubEvent[subEvent.subEventId.toString()] || [];
           const isGroupFlight = subEvent.subEventType.tag === "GroupFlight";
           const isFlyIn = subEvent.subEventType.tag === "FlyIn";
           const isFlyOut = subEvent.subEventType.tag === "FlyOut";
 
           const completeSignups = subEventSignups.filter((signup) => {
             if (isGroupFlight) return !!signup.desiredDepartureTime;
-            if (isFlyIn) return !!signup.departureIcao && !!signup.desiredArrivalTime;
-            if (isFlyOut) return !!signup.arrivalIcao && !!signup.desiredDepartureTime;
+            if (isFlyIn)
+              return !!signup.departureIcao && !!signup.desiredArrivalTime;
+            if (isFlyOut)
+              return !!signup.arrivalIcao && !!signup.desiredDepartureTime;
             return false;
           });
 
-          const pendingSignups = subEventSignups.length - completeSignups.length;
+          const pendingSignups =
+            subEventSignups.length - completeSignups.length;
 
-          const leadHex = subEvent.eventLead ? subEvent.eventLead.toHexString() : null;
+          const leadHex = subEvent.eventLead
+            ? subEvent.eventLead.toHexString()
+            : null;
           const leadUser = leadHex
             ? memberOptions.find((m) => m.identityHex === leadHex)
             : null;
@@ -118,7 +139,9 @@ export function SubEventsManagementCard() {
                         </Badge>
                       )}
                     </div>
-                    <h3 className="font-semibold text-lg truncate">{subEvent.name || `Wave ${index + 1}`}</h3>
+                    <h3 className="font-semibold text-lg truncate">
+                      {subEvent.name || `Wave ${index + 1}`}
+                    </h3>
                     {subEvent.description && (
                       <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
                         {subEvent.description}
@@ -156,7 +179,10 @@ export function SubEventsManagementCard() {
                     <div>
                       <div className="text-xs text-muted-foreground">Date</div>
                       <div className="font-medium text-sm">
-                        {formatDateInTimezone(subEvent.scheduledStartTime.toDate(), userTimezone)}
+                        {formatDateInTimezone(
+                          subEvent.scheduledStartTime.toDate(),
+                          userTimezone
+                        )}
                       </div>
                     </div>
                   </div>
@@ -168,7 +194,10 @@ export function SubEventsManagementCard() {
                     <div>
                       <div className="text-xs text-muted-foreground">Time</div>
                       <div className="font-medium text-sm">
-                        {formatTimeInTimezone(subEvent.scheduledStartTime.toDate(), userTimezone)}
+                        {formatTimeInTimezone(
+                          subEvent.scheduledStartTime.toDate(),
+                          userTimezone
+                        )}
                       </div>
                     </div>
                   </div>
@@ -207,8 +236,12 @@ export function SubEventsManagementCard() {
                       <Users className="h-4 w-4 text-[#3e57d8] dark:text-[#a2aeec]" />
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Signups</div>
-                      <div className="font-medium text-sm">{subEventSignups.length} total</div>
+                      <div className="text-xs text-muted-foreground">
+                        Signups
+                      </div>
+                      <div className="font-medium text-sm">
+                        {subEventSignups.length} total
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -238,7 +271,9 @@ export function SubEventsManagementCard() {
 
                   <div className="space-y-2">
                     {subEventSignups.map((signup) => {
-                      const group = groups.find((g) => g.groupId === signup.groupId);
+                      const group = groups.find(
+                        (g) => g.groupId === signup.groupId
+                      );
                       const groupTag = group?.tag || "N/A";
                       const groupLogo = group?.logoUrl;
 
@@ -246,16 +281,24 @@ export function SubEventsManagementCard() {
                       if (isGroupFlight) {
                         isComplete = !!signup.desiredDepartureTime;
                       } else if (isFlyIn) {
-                        isComplete = !!signup.departureIcao && !!signup.desiredArrivalTime;
+                        isComplete =
+                          !!signup.departureIcao && !!signup.desiredArrivalTime;
                       } else if (isFlyOut) {
-                        isComplete = !!signup.arrivalIcao && !!signup.desiredDepartureTime;
+                        isComplete =
+                          !!signup.arrivalIcao && !!signup.desiredDepartureTime;
                       }
 
                       const departureTime = signup.desiredDepartureTime
-                        ? formatTimeInTimezone(signup.desiredDepartureTime.toDate(), userTimezone)
+                        ? formatTimeInTimezone(
+                            signup.desiredDepartureTime.toDate(),
+                            userTimezone
+                          )
                         : null;
                       const arrivalTime = signup.desiredArrivalTime
-                        ? formatTimeInTimezone(signup.desiredArrivalTime.toDate(), userTimezone)
+                        ? formatTimeInTimezone(
+                            signup.desiredArrivalTime.toDate(),
+                            userTimezone
+                          )
                         : null;
 
                       return (
@@ -281,11 +324,14 @@ export function SubEventsManagementCard() {
                                 </div>
                               )}
                               <div>
-                                <div className="font-medium text-sm">{groupTag}</div>
+                                <div className="font-medium text-sm">
+                                  {groupTag}
+                                </div>
                                 {signup.callsign && (
                                   <div className="text-xs text-muted-foreground">
                                     {signup.callsign}
-                                    {signup.aircraftType && ` • ${signup.aircraftType}`}
+                                    {signup.aircraftType &&
+                                      ` • ${signup.aircraftType}`}
                                   </div>
                                 )}
                               </div>
@@ -353,7 +399,9 @@ export function SubEventsManagementCard() {
                             {signup.routeDetails && (
                               <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
                                 <ArrowRight className="h-3.5 w-3.5" />
-                                <span className="truncate">{signup.routeDetails}</span>
+                                <span className="truncate">
+                                  {signup.routeDetails}
+                                </span>
                               </div>
                             )}
                           </div>
@@ -396,19 +444,21 @@ export function SubEventsManagementCard() {
     const completeSignups = firstSubEventSignups.filter((signup) => {
       if (isGroupFlight) return !!signup.desiredDepartureTime;
       if (isFlyIn) return !!signup.departureIcao && !!signup.desiredArrivalTime;
-      if (isFlyOut) return !!signup.arrivalIcao && !!signup.desiredDepartureTime;
+      if (isFlyOut)
+        return !!signup.arrivalIcao && !!signup.desiredDepartureTime;
       return false;
     });
 
     const pendingSignups = firstSubEventSignups.length - completeSignups.length;
-    
+
     return (
       <Card className="py-4">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Wave Details</CardTitle>
             <CardDescription>
-              Set the wave type, time, airports, and notes. Add more waves if this event is more complex.
+              Set the wave type, time, airports, and notes. Add more waves if
+              this event is more complex.
             </CardDescription>
           </div>
         </CardHeader>
@@ -463,7 +513,9 @@ export function SubEventsManagementCard() {
             {firstSubEventSignups.length > 0 ? (
               <div className="space-y-2">
                 {firstSubEventSignups.map((signup) => {
-                  const group = groups.find((g) => g.groupId === signup.groupId);
+                  const group = groups.find(
+                    (g) => g.groupId === signup.groupId
+                  );
                   const groupTag = group?.tag || "N/A";
                   const groupLogo = group?.logoUrl;
 
@@ -471,16 +523,24 @@ export function SubEventsManagementCard() {
                   if (isGroupFlight) {
                     isComplete = !!signup.desiredDepartureTime;
                   } else if (isFlyIn) {
-                    isComplete = !!signup.departureIcao && !!signup.desiredArrivalTime;
+                    isComplete =
+                      !!signup.departureIcao && !!signup.desiredArrivalTime;
                   } else if (isFlyOut) {
-                    isComplete = !!signup.arrivalIcao && !!signup.desiredDepartureTime;
+                    isComplete =
+                      !!signup.arrivalIcao && !!signup.desiredDepartureTime;
                   }
 
                   const departureTime = signup.desiredDepartureTime
-                    ? formatTimeInTimezone(signup.desiredDepartureTime.toDate(), userTimezone)
+                    ? formatTimeInTimezone(
+                        signup.desiredDepartureTime.toDate(),
+                        userTimezone
+                      )
                     : null;
                   const arrivalTime = signup.desiredArrivalTime
-                    ? formatTimeInTimezone(signup.desiredArrivalTime.toDate(), userTimezone)
+                    ? formatTimeInTimezone(
+                        signup.desiredArrivalTime.toDate(),
+                        userTimezone
+                      )
                     : null;
 
                   return (
@@ -506,11 +566,14 @@ export function SubEventsManagementCard() {
                             </div>
                           )}
                           <div>
-                            <div className="font-medium text-sm">{groupTag}</div>
+                            <div className="font-medium text-sm">
+                              {groupTag}
+                            </div>
                             {signup.callsign && (
                               <div className="text-xs text-muted-foreground">
                                 {signup.callsign}
-                                {signup.aircraftType && ` • ${signup.aircraftType}`}
+                                {signup.aircraftType &&
+                                  ` • ${signup.aircraftType}`}
                               </div>
                             )}
                           </div>
@@ -578,7 +641,9 @@ export function SubEventsManagementCard() {
                         {signup.routeDetails && (
                           <div className="flex items-center gap-1.5 text-muted-foreground col-span-2">
                             <ArrowRight className="h-3.5 w-3.5" />
-                            <span className="truncate">{signup.routeDetails}</span>
+                            <span className="truncate">
+                              {signup.routeDetails}
+                            </span>
                           </div>
                         )}
                       </div>
@@ -597,7 +662,10 @@ export function SubEventsManagementCard() {
           </div>
         </CardContent>
 
-        <Dialog open={showAddSubEventDialog} onOpenChange={setShowAddSubEventDialog}>
+        <Dialog
+          open={showAddSubEventDialog}
+          onOpenChange={setShowAddSubEventDialog}
+        >
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>Add Wave</DialogTitle>
@@ -612,15 +680,23 @@ export function SubEventsManagementCard() {
               />
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddSubEventDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddSubEventDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => handleAddSubEvent(addFormDraft)}>Add Wave</Button>
+              <Button onClick={() => handleAddSubEvent(addFormDraft)}>
+                Add Wave
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showEditSubEventDialog} onOpenChange={setShowEditSubEventDialog}>
+        <Dialog
+          open={showEditSubEventDialog}
+          onOpenChange={setShowEditSubEventDialog}
+        >
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>Edit Wave</DialogTitle>
@@ -636,10 +712,15 @@ export function SubEventsManagementCard() {
               />
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditSubEventDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditSubEventDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => handleUpdateSubEvent(editFormDraft)}>Save Changes</Button>
+              <Button onClick={() => handleUpdateSubEvent(editFormDraft)}>
+                Save Changes
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -655,7 +736,10 @@ export function SubEventsManagementCard() {
           <CardDescription>Manage the waves for this event</CardDescription>
         </div>
 
-        <Dialog open={showAddSubEventDialog} onOpenChange={setShowAddSubEventDialog}>
+        <Dialog
+          open={showAddSubEventDialog}
+          onOpenChange={setShowAddSubEventDialog}
+        >
           <DialogTrigger asChild>
             <Button className="flex items-center gap-1">
               <Plus className="h-4 w-4" />
@@ -676,15 +760,23 @@ export function SubEventsManagementCard() {
               />
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAddSubEventDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowAddSubEventDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => handleAddSubEvent(addFormDraft)}>Add Wave</Button>
+              <Button onClick={() => handleAddSubEvent(addFormDraft)}>
+                Add Wave
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
-        <Dialog open={showEditSubEventDialog} onOpenChange={setShowEditSubEventDialog}>
+        <Dialog
+          open={showEditSubEventDialog}
+          onOpenChange={setShowEditSubEventDialog}
+        >
           <DialogContent className="sm:max-w-[550px]">
             <DialogHeader>
               <DialogTitle>Edit Wave</DialogTitle>
@@ -700,10 +792,15 @@ export function SubEventsManagementCard() {
               />
             </ScrollArea>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setShowEditSubEventDialog(false)}>
+              <Button
+                variant="outline"
+                onClick={() => setShowEditSubEventDialog(false)}
+              >
                 Cancel
               </Button>
-              <Button onClick={() => handleUpdateSubEvent(editFormDraft)}>Save Changes</Button>
+              <Button onClick={() => handleUpdateSubEvent(editFormDraft)}>
+                Save Changes
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

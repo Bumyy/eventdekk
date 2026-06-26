@@ -5,17 +5,15 @@ import {
   Card,
   CardContent,
   CardDescription,
-  // CardFooter, // Not strictly needed now
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Loader2 } from "lucide-react"; // For loading spinner
-import eventdekkLogo from "../assets/eventdekk_logo.png"; // Import your logo
+import { Loader2 } from "lucide-react";
+import eventdekkLogo from "../assets/eventdekk_logo.png";
 
-// Make sure this matches your actual backend API URL!
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
-// Simple SVG Icons (replace with better ones if available)
+// Simple SVG Icons
 const GoogleIcon = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -41,7 +39,6 @@ const DiscordIcon = () => (
 );
 
 const LoginPage: React.FC = () => {
-  // Only need isLoading from useAuth now for this component's logic
   const { isLoading } = useAuth();
 
   // --- OAuth Login Redirect Functions ---
@@ -70,8 +67,8 @@ const LoginPage: React.FC = () => {
         <CardContent className="space-y-4 pt-4">
           {/* Google Button */}
           <Button
-            variant="outline" // Standard outline style for Google often works well
-            className="w-full h-12 text-base justify-center gap-3" // Larger text, center content, add gap
+            variant="outline"
+            className="w-full h-12 text-base justify-center gap-3"
             onClick={handleGoogleLogin}
             disabled={isLoading}
           >
@@ -86,10 +83,6 @@ const LoginPage: React.FC = () => {
           </Button>
           {/* Discord Button */}
           <Button
-            // Apply Discord's blurple color using Tailwind (if configured) or inline style
-            // Option 1: Tailwind (if you add the color to your config)
-            // className="w-full h-12 text-base justify-center gap-3 bg-discord-blurple text-white hover:bg-discord-blurple/90"
-            // Option 2: Inline Style (less ideal but works)
             style={{ backgroundColor: "#5865F2", color: "white" }}
             className="w-full h-12 text-base justify-center gap-3 hover:opacity-90" // Add hover effect
             onClick={handleDiscordLogin}
@@ -105,7 +98,6 @@ const LoginPage: React.FC = () => {
             )}
           </Button>
         </CardContent>
-        {/* <CardFooter> - Can be removed if no extra content needed </CardFooter> */}
       </Card>
     </div>
   );

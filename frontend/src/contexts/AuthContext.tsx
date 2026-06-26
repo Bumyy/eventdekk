@@ -95,40 +95,46 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({
     [navigate, location]
   );
 
-  const handleAuthFailure = useCallback((msg: string) => {
-    toast.error(msg);
-    localStorage.removeItem(SDB_AUTH_TOKEN_KEY);
-    localStorage.removeItem("eventdekk_identity");
-    localStorage.removeItem(OAUTH_PROFILE_KEY);
-    sessionStorage.removeItem("eventdekk_anonymous_token");
-    setSdbToken(null);
-    setIsAuthenticated(false);
-    setPendingOAuthProfile(null);
-    navigate("/login");
-  }, [navigate]);
+  const handleAuthFailure = useCallback(
+    (msg: string) => {
+      toast.error(msg);
+      localStorage.removeItem(SDB_AUTH_TOKEN_KEY);
+      localStorage.removeItem("eventdekk_identity");
+      localStorage.removeItem(OAUTH_PROFILE_KEY);
+      sessionStorage.removeItem("eventdekk_anonymous_token");
+      setSdbToken(null);
+      setIsAuthenticated(false);
+      setPendingOAuthProfile(null);
+      navigate("/login");
+    },
+    [navigate]
+  );
 
   const clearPendingOAuthProfile = useCallback(() => {
     localStorage.removeItem(OAUTH_PROFILE_KEY);
     setPendingOAuthProfile(null);
   }, []);
 
-  const fetchLinkedAccounts = useCallback(async (tokenOverride?: string) => {
-    const token = tokenOverride || sdbToken;
-    if (!token) return;
-    try {
-      const response = await fetch(`${API_URL}/auth/linked-accounts`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setLinkedAccounts(data.linkedAccounts);
+  const fetchLinkedAccounts = useCallback(
+    async (tokenOverride?: string) => {
+      const token = tokenOverride || sdbToken;
+      if (!token) return;
+      try {
+        const response = await fetch(`${API_URL}/auth/linked-accounts`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setLinkedAccounts(data.linkedAccounts);
+        }
+      } catch (error) {
+        console.error("Error fetching linked accounts:", error);
       }
-    } catch (error) {
-      console.error("Error fetching linked accounts:", error);
-    }
-  }, [sdbToken]);
+    },
+    [sdbToken]
+  );
 
   const linkGoogle = useCallback(() => {
     if (!sdbToken) return;

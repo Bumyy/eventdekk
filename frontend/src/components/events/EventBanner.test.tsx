@@ -32,8 +32,12 @@ describe("EventBanner", () => {
   };
 
   it("renders event name and description", () => {
-    render(<EventBanner event={mockEvent as Parameters<typeof EventBanner>[0]["event"]} />);
-    
+    render(
+      <EventBanner
+        event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
+      />
+    );
+
     expect(screen.getByText("Test Event")).toBeInTheDocument();
     expect(screen.getByText("A test event description")).toBeInTheDocument();
   });
@@ -43,23 +47,35 @@ describe("EventBanner", () => {
       ...mockEvent,
       bannerUrl: "https://example.com/banner.jpg",
     };
-    
-    render(<EventBanner event={eventWithBanner as Parameters<typeof EventBanner>[0]["event"]} />);
-    
+
+    render(
+      <EventBanner
+        event={eventWithBanner as Parameters<typeof EventBanner>[0]["event"]}
+      />
+    );
+
     const img = screen.getByRole("img");
     expect(img).toHaveAttribute("src", "https://example.com/banner.jpg");
     expect(img).toHaveAttribute("alt", "Test Event");
   });
 
   it("does not render banner image when bannerUrl is null", () => {
-    render(<EventBanner event={mockEvent as Parameters<typeof EventBanner>[0]["event"]} />);
-    
+    render(
+      <EventBanner
+        event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
+      />
+    );
+
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
   });
 
   it("applies correct class names", () => {
-    const { container } = render(<EventBanner event={mockEvent as Parameters<typeof EventBanner>[0]["event"]} />);
-    
+    const { container } = render(
+      <EventBanner
+        event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
+      />
+    );
+
     expect(container.firstChild).toHaveClass("relative", "border-b");
   });
 
@@ -67,7 +83,9 @@ describe("EventBanner", () => {
     render(
       <EventBanner
         event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
-        hostGroup={mockHostGroup as Parameters<typeof EventBanner>[0]["hostGroup"]}
+        hostGroup={
+          mockHostGroup as Parameters<typeof EventBanner>[0]["hostGroup"]
+        }
       />
     );
 
@@ -78,7 +96,9 @@ describe("EventBanner", () => {
     render(
       <EventBanner
         event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
-        hostGroup={mockHostGroup as Parameters<typeof EventBanner>[0]["hostGroup"]}
+        hostGroup={
+          mockHostGroup as Parameters<typeof EventBanner>[0]["hostGroup"]
+        }
       />
     );
 
@@ -97,7 +117,11 @@ describe("EventBanner", () => {
   });
 
   it("does not render host section when hostGroup is undefined", () => {
-    render(<EventBanner event={mockEvent as Parameters<typeof EventBanner>[0]["event"]} />);
+    render(
+      <EventBanner
+        event={mockEvent as Parameters<typeof EventBanner>[0]["event"]}
+      />
+    );
 
     expect(screen.queryByText("Alpha Group")).not.toBeInTheDocument();
   });

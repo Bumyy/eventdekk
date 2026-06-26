@@ -38,7 +38,8 @@ export default function GroupPlanner() {
   const [selectedGroupIds, setSelectedGroupIds] = useState<Set<string>>(
     groupIdBigInt ? new Set([groupIdBigInt.toString()]) : new Set()
   );
-  const [selectedUserIdentity, setSelectedUserIdentity] = useState<string>("all");
+  const [selectedUserIdentity, setSelectedUserIdentity] =
+    useState<string>("all");
   const [showAllGroups, setShowAllGroups] = useState(!groupIdBigInt);
 
   const currentIdentityHex = identity?.toHexString() ?? "";
@@ -65,7 +66,7 @@ export default function GroupPlanner() {
 
   const staffForSelectedGroups = useMemo(() => {
     const selectedGroupSet = selectedGroupIds;
-    
+
     const staffByIdentity = new Map<
       string,
       { displayName: string; callsign?: string; groupTags: Set<string> }
@@ -157,13 +158,23 @@ export default function GroupPlanner() {
     }
 
     return result;
-  }, [events, selectedGroupIds, selectedUserIdentity, subEvents, eventParticipants]);
+  }, [
+    events,
+    selectedGroupIds,
+    selectedUserIdentity,
+    subEvents,
+    eventParticipants,
+  ]);
 
   const filteredSubEvents = useMemo(() => {
     if (!subEvents) return [];
 
-    const eventIdsSet = new Set(filteredEvents.map((e) => e.eventId.toString()));
-    let result = subEvents.filter((se) => eventIdsSet.has(se.eventId.toString()));
+    const eventIdsSet = new Set(
+      filteredEvents.map((e) => e.eventId.toString())
+    );
+    let result = subEvents.filter((se) =>
+      eventIdsSet.has(se.eventId.toString())
+    );
 
     if (selectedUserIdentity !== "all") {
       result = result.filter(

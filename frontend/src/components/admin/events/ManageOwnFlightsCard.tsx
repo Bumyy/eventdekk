@@ -146,8 +146,8 @@ export function ManageOwnFlightsCard() {
                   const isFlyIn = subEvent.subEventType.tag === "FlyIn";
                   const isFlyOut = subEvent.subEventType.tag === "FlyOut";
                   const callsignValue =
-                    ownFlightDetails[subEvent.subEventId.toString()]?.callsign ||
-                    "";
+                    ownFlightDetails[subEvent.subEventId.toString()]
+                      ?.callsign || "";
                   const callsignError =
                     callsignValue.trim().length === 0
                       ? "Callsign is required."
@@ -215,46 +215,105 @@ export function ManageOwnFlightsCard() {
                                 subEvent={subEvent}
                                 callsign={callsignValue}
                                 callsignError={callsignError}
-                                aircraftType={ownFlightDetails[subEvent.subEventId.toString()]?.aircraftType || ""}
-                                liveryId={ownFlightDetails[subEvent.subEventId.toString()]?.liveryId || ""}
+                                timezone={userTimezone}
+                                aircraftType={
+                                  ownFlightDetails[
+                                    subEvent.subEventId.toString()
+                                  ]?.aircraftType || ""
+                                }
+                                liveryId={
+                                  ownFlightDetails[
+                                    subEvent.subEventId.toString()
+                                  ]?.liveryId || ""
+                                }
                                 departureIcao={
                                   isGroupFlight
                                     ? subEvent.groupFlightDepartureIcao || ""
                                     : isFlyOut
                                       ? subEvent.hubIcao || ""
-                                      : ownFlightDetails[subEvent.subEventId.toString()]?.customDepartureIcao || ""
+                                      : ownFlightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.customDepartureIcao || ""
                                 }
                                 arrivalIcao={
                                   isGroupFlight
                                     ? subEvent.groupFlightArrivalIcao || ""
                                     : isFlyIn
                                       ? subEvent.hubIcao || ""
-                                      : ownFlightDetails[subEvent.subEventId.toString()]?.customArrivalIcao || ""
+                                      : ownFlightDetails[
+                                          subEvent.subEventId.toString()
+                                        ]?.customArrivalIcao || ""
                                 }
-                                route={ownFlightDetails[subEvent.subEventId.toString()]?.route || ""}
-                                departureTime={ownFlightDetails[subEvent.subEventId.toString()]?.departureTime}
-                                arrivalTime={ownFlightDetails[subEvent.subEventId.toString()]?.arrivalTime}
+                                route={
+                                  ownFlightDetails[
+                                    subEvent.subEventId.toString()
+                                  ]?.route || ""
+                                }
+                                departureTime={
+                                  ownFlightDetails[
+                                    subEvent.subEventId.toString()
+                                  ]?.departureTime
+                                }
+                                arrivalTime={
+                                  ownFlightDetails[
+                                    subEvent.subEventId.toString()
+                                  ]?.arrivalTime
+                                }
                                 onCallsignChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "callsign", value)
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "callsign",
+                                    value
+                                  )
                                 }
-                                onAircraftChange={(value: AircraftLiveryValue) => {
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "aircraftType", value.aircraftName);
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "liveryId", value.liveryId);
+                                onAircraftChange={(
+                                  value: AircraftLiveryValue
+                                ) => {
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "aircraftType",
+                                    value.aircraftName
+                                  );
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "liveryId",
+                                    value.liveryId
+                                  );
                                 }}
                                 onDepartureIcaoChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "customDepartureIcao", value)
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "customDepartureIcao",
+                                    value
+                                  )
                                 }
                                 onArrivalIcaoChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "customArrivalIcao", value)
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "customArrivalIcao",
+                                    value
+                                  )
                                 }
                                 onRouteChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "route", value)
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "route",
+                                    value
+                                  )
                                 }
                                 onDepartureTimeChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "departureTime", value || "")
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "departureTime",
+                                    value || ""
+                                  )
                                 }
                                 onArrivalTimeChange={(value) =>
-                                  updateOwnFlightDetail(subEvent.subEventId.toString(), "arrivalTime", value || "")
+                                  updateOwnFlightDetail(
+                                    subEvent.subEventId.toString(),
+                                    "arrivalTime",
+                                    value || ""
+                                  )
                                 }
                                 disabled={isSubmittingFlights}
                               />

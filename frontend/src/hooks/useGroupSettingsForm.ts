@@ -35,7 +35,10 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [color, setColor] = useState("#000000");
   const [newCallsignFilter, setNewCallsignFilter] = useState("");
-  const [isManagingCallsignFilter, setIsManagingCallsignFilter] = useState(false);
+  const [newFilterColor, setNewFilterColor] = useState("");
+  const [newFilterLabel, setNewFilterLabel] = useState("");
+  const [isManagingCallsignFilter, setIsManagingCallsignFilter] =
+    useState(false);
   const [discordWebhookUrl, setDiscordWebhookUrl] = useState("");
   const [discordWebhookEnabled, setDiscordWebhookEnabled] = useState(false);
   const [isSavingDiscordWebhook, setIsSavingDiscordWebhook] = useState(false);
@@ -69,8 +72,7 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     }
 
     const group = groups.find((g) => g.groupId === groupId);
-    const isGroupOwnerCeo =
-      group?.ceoIdentity.toHexString() === identityHex;
+    const isGroupOwnerCeo = group?.ceoIdentity.toHexString() === identityHex;
     const hasCeoMembership = memberships.some(
       (m) =>
         m.groupId === groupId &&
@@ -78,7 +80,9 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
         m.permissionLevel.tag === "Ceo"
     );
 
-    setCanManageDiscordWebhook(Boolean(isSuperAdmin || isGroupOwnerCeo || hasCeoMembership));
+    setCanManageDiscordWebhook(
+      Boolean(isSuperAdmin || isGroupOwnerCeo || hasCeoMembership)
+    );
   }, [groupId, groups, memberships, connection, isSuperAdmin]);
 
   useEffect(() => {
@@ -158,7 +162,9 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     } catch (error) {
       console.error("Error updating group:", error);
       toast.error(
-        error instanceof Error ? error.message : "Failed to update group settings"
+        error instanceof Error
+          ? error.message
+          : "Failed to update group settings"
       );
     } finally {
       setIsSaving(false);
@@ -176,8 +182,15 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
 
     try {
       setIsManagingCallsignFilter(true);
-      await connection.reducers.addGroupCallsignFilter({ groupId, words });
+      await connection.reducers.addGroupCallsignFilter({
+        groupId,
+        words,
+        color: newFilterColor || undefined,
+        label: newFilterLabel || undefined,
+      });
       setNewCallsignFilter("");
+      setNewFilterColor("");
+      setNewFilterLabel("");
       toast.success("Callsign format added");
     } catch (error) {
       console.error("Error adding callsign format:", error);
@@ -212,7 +225,9 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     if (!groupId || !connection) return;
 
     if (!canManageDiscordWebhook) {
-      toast.error("Only CEOs and super admins can manage Discord webhook settings");
+      toast.error(
+        "Only CEOs and super admins can manage Discord webhook settings"
+      );
       return;
     }
 
@@ -230,7 +245,10 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
       return;
     }
 
-    if (!parsed.hostname.endsWith("discord.com") || !parsed.pathname.startsWith("/api/webhooks/")) {
+    if (
+      !parsed.hostname.endsWith("discord.com") ||
+      !parsed.pathname.startsWith("/api/webhooks/")
+    ) {
       toast.error("Webhook URL must be a valid Discord webhook endpoint");
       return;
     }
@@ -238,14 +256,16 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     setIsSavingDiscordWebhook(true);
     const toastId = toast.loading("Saving Discord webhook settings...");
     try {
-      const setGroupDiscordWebhook = (connection.reducers as Record<
-        string,
-        (args: {
-          groupId: bigint;
-          webhookUrl: string;
-          enabled: boolean;
-        }) => Promise<void>
-      >).setGroupDiscordWebhook;
+      const setGroupDiscordWebhook = (
+        connection.reducers as Record<
+          string,
+          (args: {
+            groupId: bigint;
+            webhookUrl: string;
+            enabled: boolean;
+          }) => Promise<void>
+        >
+      ).setGroupDiscordWebhook;
 
       if (typeof setGroupDiscordWebhook !== "function") {
         throw new Error(
@@ -292,6 +312,10 @@ export function useGroupSettingsForm({ groupId }: UseGroupSettingsFormArgs) {
     callsignFilters,
     newCallsignFilter,
     setNewCallsignFilter,
+    newFilterColor,
+    setNewFilterColor,
+    newFilterLabel,
+    setNewFilterLabel,
     isManagingCallsignFilter,
     addCallsignFilter,
     removeCallsignFilter,

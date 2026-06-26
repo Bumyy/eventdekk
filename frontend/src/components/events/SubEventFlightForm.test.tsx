@@ -12,7 +12,10 @@ vi.mock("@/components/AircraftLiveryPicker", () => ({
     disabled?: boolean;
   }) => (
     <div data-testid="aircraft-picker">
-      <button disabled={disabled} onClick={() => onChange({ aircraftName: "B738", liveryId: "b738_1" })}>
+      <button
+        disabled={disabled}
+        onClick={() => onChange({ aircraftName: "B738", liveryId: "b738_1" })}
+      >
         Pick Aircraft
       </button>
     </div>
@@ -81,7 +84,12 @@ describe("SubEventFlightForm", () => {
 
   it("calls onCallsignChange when typing in callsign", () => {
     const onCallsignChange = vi.fn();
-    render(<SubEventFlightForm {...defaultProps} onCallsignChange={onCallsignChange} />);
+    render(
+      <SubEventFlightForm
+        {...defaultProps}
+        onCallsignChange={onCallsignChange}
+      />
+    );
     fireEvent.change(screen.getByPlaceholderText("e.g. QFA123"), {
       target: { value: "QFA123" },
     });
@@ -122,7 +130,9 @@ describe("SubEventFlightForm", () => {
 
   it("shows route with group flight label for GroupFlight", () => {
     render(<SubEventFlightForm {...defaultProps} />);
-    expect(screen.getByText("Route (Based on group flight)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Route (Based on group flight)")
+    ).toBeInTheDocument();
   });
 
   it("shows custom route label for non-GroupFlight", () => {
@@ -154,9 +164,17 @@ describe("SubEventFlightForm", () => {
 
   it("calls onAircraftChange when aircraft picker triggers", () => {
     const onAircraftChange = vi.fn();
-    render(<SubEventFlightForm {...defaultProps} onAircraftChange={onAircraftChange} />);
+    render(
+      <SubEventFlightForm
+        {...defaultProps}
+        onAircraftChange={onAircraftChange}
+      />
+    );
     fireEvent.click(screen.getByText("Pick Aircraft"));
-    expect(onAircraftChange).toHaveBeenCalledWith({ aircraftName: "B738", liveryId: "b738_1" });
+    expect(onAircraftChange).toHaveBeenCalledWith({
+      aircraftName: "B738",
+      liveryId: "b738_1",
+    });
   });
 
   it("renders departure and arrival time pickers", () => {
@@ -167,7 +185,11 @@ describe("SubEventFlightForm", () => {
         arrivalTime="2026-01-01T12:00"
       />
     );
-    expect(screen.getByRole("button", { name: "Planned Departure Time" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Planned Arrival Time" })).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Planned Departure Time" })
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Planned Arrival Time" })
+    ).toBeInTheDocument();
   });
 });
